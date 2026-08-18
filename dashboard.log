@@ -1,0 +1,282 @@
+nohup: ignoring input
+
+  You can now view your Streamlit app in your browser.
+
+  URL: http://0.0.0.0:8501
+
+/home/jose.gomes/vobys_dashboard/venv/lib64/python3.6/site-packages/oracledb/__init__.py:39: UserWarning: Python 3.6 is no longer supported by the Python core team. Therefore, support for it is deprecated in python-oracledb and will be removed in a future release
+  warnings.warn(message)
+/home/jose.gomes/vobys_dashboard/venv/lib64/python3.6/site-packages/oracledb/connection.py:45: CryptographyDeprecationWarning: Python 3.6 is no longer supported by the Python core team. Therefore, support for it is deprecated in cryptography. The next release of cryptography will remove support for Python 3.6.
+  from . import base_impl, thick_impl, thin_impl
+--- Logging error ---
+Unhandled exception in thread started by <bound method Thread._bootstrap of <Thread(ScriptRunner.scriptThread, started 140187370608384)>>
+Traceback (most recent call last):
+  File "/home/jose.gomes/vobys_dashboard/venv/lib64/python3.6/site-packages/streamlit/scriptrunner/script_runner.py", line 554, in _run_script
+    exec(code, module.__dict__)
+  File "app.py", line 90, in <module>
+    meses_disponiveis=meses_mapeamento
+  File "/home/jose.gomes/vobys_dashboard/views/inicio.py", line 29, in render
+KeyError: '01'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/usr/lib64/python3.6/logging/__init__.py", line 994, in emit
+    msg = self.format(record)
+  File "/usr/lib64/python3.6/logging/__init__.py", line 840, in format
+    return fmt.format(record)
+  File "/usr/lib64/python3.6/logging/__init__.py", line 585, in format
+    record.exc_text = self.formatException(record.exc_info)
+  File "/usr/lib64/python3.6/logging/__init__.py", line 535, in formatException
+    traceback.print_exception(ei[0], ei[1], tb, None, sio)
+  File "/usr/lib64/python3.6/traceback.py", line 104, in print_exception
+    type(value), value, tb, limit=limit).format(chain=chain):
+  File "/usr/lib64/python3.6/traceback.py", line 509, in __init__
+    capture_locals=capture_locals)
+  File "/usr/lib64/python3.6/traceback.py", line 364, in extract
+    f.line
+  File "/usr/lib64/python3.6/traceback.py", line 286, in line
+    self._line = linecache.getline(self.filename, self.lineno).strip()
+  File "/usr/lib64/python3.6/linecache.py", line 16, in getline
+    lines = getlines(filename, module_globals)
+  File "/usr/lib64/python3.6/linecache.py", line 47, in getlines
+    return updatecache(filename, module_globals)
+  File "/usr/lib64/python3.6/linecache.py", line 137, in updatecache
+    lines = fp.readlines()
+  File "/usr/lib64/python3.6/codecs.py", line 321, in decode
+    (result, consumed) = self._buffer_decode(data, self.errors, final)
+UnicodeDecodeError: 'utf-8' codec can't decode byte 0x80 in position 147: invalid start byte
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/usr/lib64/python3.6/threading.py", line 916, in _bootstrap_inner
+    self.run()
+  File "/usr/lib64/python3.6/threading.py", line 864, in run
+    self._target(*self._args, **self._kwargs)
+  File "/home/jose.gomes/vobys_dashboard/venv/lib64/python3.6/site-packages/streamlit/scriptrunner/script_runner.py", line 293, in _run_script_thread
+    self._run_script(request.rerun_data)
+  File "/home/jose.gomes/vobys_dashboard/venv/lib64/python3.6/site-packages/streamlit/scriptrunner/script_runner.py", line 564, in _run_script
+    handle_uncaught_app_exception(e)
+  File "/home/jose.gomes/vobys_dashboard/venv/lib64/python3.6/site-packages/streamlit/error_util.py", line 96, in handle_uncaught_app_exception
+    LOGGER.warning("Uncaught app exception", exc_info=e)
+  File "/usr/lib64/python3.6/logging/__init__.py", line 1320, in warning
+    self._log(WARNING, msg, args, **kwargs)
+  File "/usr/lib64/python3.6/logging/__init__.py", line 1444, in _log
+    self.handle(record)
+  File "/usr/lib64/python3.6/logging/__init__.py", line 1454, in handle
+    self.callHandlers(record)
+  File "/usr/lib64/python3.6/logging/__init__.py", line 1516, in callHandlers
+    hdlr.handle(record)
+  File "/usr/lib64/python3.6/logging/__init__.py", line 865, in handle
+    self.emit(record)
+  File "/usr/lib64/python3.6/logging/__init__.py", line 1000, in emit
+    self.handleError(record)
+  File "/usr/lib64/python3.6/logging/__init__.py", line 918, in handleError
+    traceback.print_exception(t, v, tb, None, sys.stderr)
+  File "/usr/lib64/python3.6/traceback.py", line 104, in print_exception
+    type(value), value, tb, limit=limit).format(chain=chain):
+  File "/usr/lib64/python3.6/traceback.py", line 522, in __init__
+    self._load_lines()
+  File "/usr/lib64/python3.6/traceback.py", line 534, in _load_lines
+    self.__context__._load_lines()
+  File "/usr/lib64/python3.6/traceback.py", line 532, in _load_lines
+    frame.line
+  File "/usr/lib64/python3.6/traceback.py", line 286, in line
+    self._line = linecache.getline(self.filename, self.lineno).strip()
+  File "/usr/lib64/python3.6/linecache.py", line 16, in getline
+    lines = getlines(filename, module_globals)
+  File "/usr/lib64/python3.6/linecache.py", line 47, in getlines
+    return updatecache(filename, module_globals)
+  File "/usr/lib64/python3.6/linecache.py", line 137, in updatecache
+    lines = fp.readlines()
+  File "/usr/lib64/python3.6/codecs.py", line 321, in decode
+    (result, consumed) = self._buffer_decode(data, self.errors, final)
+UnicodeDecodeError: 'utf-8' codec can't decode byte 0x80 in position 147: invalid start byte
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/usr/lib64/python3.6/threading.py", line 884, in _bootstrap
+    self._bootstrap_inner()
+  File "/usr/lib64/python3.6/threading.py", line 926, in _bootstrap_inner
+    (self.name, _format_exc()), file=_sys.stderr)
+  File "/usr/lib64/python3.6/traceback.py", line 167, in format_exc
+    return "".join(format_exception(*sys.exc_info(), limit=limit, chain=chain))
+  File "/usr/lib64/python3.6/traceback.py", line 121, in format_exception
+    type(value), value, tb, limit=limit).format(chain=chain))
+  File "/usr/lib64/python3.6/traceback.py", line 522, in __init__
+    self._load_lines()
+  File "/usr/lib64/python3.6/traceback.py", line 534, in _load_lines
+    self.__context__._load_lines()
+  File "/usr/lib64/python3.6/traceback.py", line 534, in _load_lines
+    self.__context__._load_lines()
+  File "/usr/lib64/python3.6/traceback.py", line 532, in _load_lines
+    frame.line
+  File "/usr/lib64/python3.6/traceback.py", line 286, in line
+    self._line = linecache.getline(self.filename, self.lineno).strip()
+  File "/usr/lib64/python3.6/linecache.py", line 16, in getline
+    lines = getlines(filename, module_globals)
+  File "/usr/lib64/python3.6/linecache.py", line 47, in getlines
+    return updatecache(filename, module_globals)
+  File "/usr/lib64/python3.6/linecache.py", line 137, in updatecache
+    lines = fp.readlines()
+  File "/usr/lib64/python3.6/codecs.py", line 321, in decode
+    (result, consumed) = self._buffer_decode(data, self.errors, final)
+UnicodeDecodeError: 'utf-8' codec can't decode byte 0x80 in position 147: invalid start byte
+--- Logging error ---
+Unhandled exception in thread started by <bound method Thread._bootstrap of <Thread(ScriptRunner.scriptThread, started 140187370608384)>>
+Traceback (most recent call last):
+  File "/home/jose.gomes/vobys_dashboard/venv/lib64/python3.6/site-packages/streamlit/scriptrunner/script_runner.py", line 554, in _run_script
+    exec(code, module.__dict__)
+  File "app.py", line 90, in <module>
+    meses_disponiveis=meses_mapeamento
+  File "/home/jose.gomes/vobys_dashboard/views/inicio.py", line 29, in render
+KeyError: '01'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/usr/lib64/python3.6/logging/__init__.py", line 994, in emit
+    msg = self.format(record)
+  File "/usr/lib64/python3.6/logging/__init__.py", line 840, in format
+    return fmt.format(record)
+  File "/usr/lib64/python3.6/logging/__init__.py", line 585, in format
+    record.exc_text = self.formatException(record.exc_info)
+  File "/usr/lib64/python3.6/logging/__init__.py", line 535, in formatException
+    traceback.print_exception(ei[0], ei[1], tb, None, sio)
+  File "/usr/lib64/python3.6/traceback.py", line 104, in print_exception
+    type(value), value, tb, limit=limit).format(chain=chain):
+  File "/usr/lib64/python3.6/traceback.py", line 509, in __init__
+    capture_locals=capture_locals)
+  File "/usr/lib64/python3.6/traceback.py", line 364, in extract
+    f.line
+  File "/usr/lib64/python3.6/traceback.py", line 286, in line
+    self._line = linecache.getline(self.filename, self.lineno).strip()
+  File "/usr/lib64/python3.6/linecache.py", line 16, in getline
+    lines = getlines(filename, module_globals)
+  File "/usr/lib64/python3.6/linecache.py", line 47, in getlines
+    return updatecache(filename, module_globals)
+  File "/usr/lib64/python3.6/linecache.py", line 137, in updatecache
+    lines = fp.readlines()
+  File "/usr/lib64/python3.6/codecs.py", line 321, in decode
+    (result, consumed) = self._buffer_decode(data, self.errors, final)
+UnicodeDecodeError: 'utf-8' codec can't decode byte 0x80 in position 147: invalid start byte
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/usr/lib64/python3.6/threading.py", line 916, in _bootstrap_inner
+    self.run()
+  File "/usr/lib64/python3.6/threading.py", line 864, in run
+    self._target(*self._args, **self._kwargs)
+  File "/home/jose.gomes/vobys_dashboard/venv/lib64/python3.6/site-packages/streamlit/scriptrunner/script_runner.py", line 293, in _run_script_thread
+    self._run_script(request.rerun_data)
+  File "/home/jose.gomes/vobys_dashboard/venv/lib64/python3.6/site-packages/streamlit/scriptrunner/script_runner.py", line 564, in _run_script
+    handle_uncaught_app_exception(e)
+  File "/home/jose.gomes/vobys_dashboard/venv/lib64/python3.6/site-packages/streamlit/error_util.py", line 96, in handle_uncaught_app_exception
+    LOGGER.warning("Uncaught app exception", exc_info=e)
+  File "/usr/lib64/python3.6/logging/__init__.py", line 1320, in warning
+    self._log(WARNING, msg, args, **kwargs)
+  File "/usr/lib64/python3.6/logging/__init__.py", line 1444, in _log
+    self.handle(record)
+  File "/usr/lib64/python3.6/logging/__init__.py", line 1454, in handle
+    self.callHandlers(record)
+  File "/usr/lib64/python3.6/logging/__init__.py", line 1516, in callHandlers
+    hdlr.handle(record)
+  File "/usr/lib64/python3.6/logging/__init__.py", line 865, in handle
+    self.emit(record)
+  File "/usr/lib64/python3.6/logging/__init__.py", line 1000, in emit
+    self.handleError(record)
+  File "/usr/lib64/python3.6/logging/__init__.py", line 918, in handleError
+    traceback.print_exception(t, v, tb, None, sys.stderr)
+  File "/usr/lib64/python3.6/traceback.py", line 104, in print_exception
+    type(value), value, tb, limit=limit).format(chain=chain):
+  File "/usr/lib64/python3.6/traceback.py", line 522, in __init__
+    self._load_lines()
+  File "/usr/lib64/python3.6/traceback.py", line 534, in _load_lines
+    self.__context__._load_lines()
+  File "/usr/lib64/python3.6/traceback.py", line 532, in _load_lines
+    frame.line
+  File "/usr/lib64/python3.6/traceback.py", line 286, in line
+    self._line = linecache.getline(self.filename, self.lineno).strip()
+  File "/usr/lib64/python3.6/linecache.py", line 16, in getline
+    lines = getlines(filename, module_globals)
+  File "/usr/lib64/python3.6/linecache.py", line 47, in getlines
+    return updatecache(filename, module_globals)
+  File "/usr/lib64/python3.6/linecache.py", line 137, in updatecache
+    lines = fp.readlines()
+  File "/usr/lib64/python3.6/codecs.py", line 321, in decode
+    (result, consumed) = self._buffer_decode(data, self.errors, final)
+UnicodeDecodeError: 'utf-8' codec can't decode byte 0x80 in position 147: invalid start byte
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/usr/lib64/python3.6/threading.py", line 884, in _bootstrap
+    self._bootstrap_inner()
+  File "/usr/lib64/python3.6/threading.py", line 926, in _bootstrap_inner
+    (self.name, _format_exc()), file=_sys.stderr)
+  File "/usr/lib64/python3.6/traceback.py", line 167, in format_exc
+    return "".join(format_exception(*sys.exc_info(), limit=limit, chain=chain))
+  File "/usr/lib64/python3.6/traceback.py", line 121, in format_exception
+    type(value), value, tb, limit=limit).format(chain=chain))
+  File "/usr/lib64/python3.6/traceback.py", line 522, in __init__
+    self._load_lines()
+  File "/usr/lib64/python3.6/traceback.py", line 534, in _load_lines
+    self.__context__._load_lines()
+  File "/usr/lib64/python3.6/traceback.py", line 534, in _load_lines
+    self.__context__._load_lines()
+  File "/usr/lib64/python3.6/traceback.py", line 532, in _load_lines
+    frame.line
+  File "/usr/lib64/python3.6/traceback.py", line 286, in line
+    self._line = linecache.getline(self.filename, self.lineno).strip()
+  File "/usr/lib64/python3.6/linecache.py", line 16, in getline
+    lines = getlines(filename, module_globals)
+  File "/usr/lib64/python3.6/linecache.py", line 47, in getlines
+    return updatecache(filename, module_globals)
+  File "/usr/lib64/python3.6/linecache.py", line 137, in updatecache
+    lines = fp.readlines()
+  File "/usr/lib64/python3.6/codecs.py", line 321, in decode
+    (result, consumed) = self._buffer_decode(data, self.errors, final)
+UnicodeDecodeError: 'utf-8' codec can't decode byte 0x80 in position 147: invalid start byte
+2026-05-16 19:27:58.245 Uncaught app exception
+Traceback (most recent call last):
+  File "/home/jose.gomes/vobys_dashboard/venv/lib64/python3.6/site-packages/streamlit/scriptrunner/script_runner.py", line 554, in _run_script
+    exec(code, module.__dict__)
+  File "app.py", line 95, in <module>
+    meses_disponiveis=meses_mapeamento
+TypeError: render() got an unexpected keyword argument 'conn'
+2026-05-16 19:28:03.307 Uncaught app exception
+Traceback (most recent call last):
+  File "/home/jose.gomes/vobys_dashboard/venv/lib64/python3.6/site-packages/streamlit/scriptrunner/script_runner.py", line 554, in _run_script
+    exec(code, module.__dict__)
+  File "app.py", line 95, in <module>
+    meses_disponiveis=meses_mapeamento
+  File "/home/jose.gomes/vobys_dashboard/views/responsavel.py", line 215, in render
+    "ORGAO": st.column_config.TextColumn("\u00D3RG\u00C3O / SCHEMA"),
+AttributeError: module 'streamlit' has no attribute 'column_config'
+2026-05-16 19:31:14.115 Uncaught app exception
+Traceback (most recent call last):
+  File "/home/jose.gomes/vobys_dashboard/venv/lib64/python3.6/site-packages/streamlit/scriptrunner/script_runner.py", line 554, in _run_script
+    exec(code, module.__dict__)
+  File "app.py", line 111, in <module>
+    meses_disponiveis=meses_mapeamento
+TypeError: render() got an unexpected keyword argument 'conn'
+2026-05-16 20:23:29.720 Uncaught exception in write_error
+Traceback (most recent call last):
+  File "/home/jose.gomes/vobys_dashboard/venv/lib64/python3.6/site-packages/tornado/web.py", line 1704, in _execute
+  File "/home/jose.gomes/vobys_dashboard/venv/lib64/python3.6/site-packages/tornado/web.py", line 2576, in get
+  File "/home/jose.gomes/vobys_dashboard/venv/lib64/python3.6/site-packages/tornado/web.py", line 2778, in validate_absolute_path
+tornado.web.HTTPError: HTTP 404: Not Found
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/home/jose.gomes/vobys_dashboard/venv/lib64/python3.6/site-packages/tornado/web.py", line 1217, in send_error
+  File "/home/jose.gomes/vobys_dashboard/venv/lib64/python3.6/site-packages/streamlit/server/routes.py", line 90, in write_error
+  File "/home/jose.gomes/vobys_dashboard/venv/lib64/python3.6/site-packages/tornado/web.py", line 863, in render
+  File "/home/jose.gomes/vobys_dashboard/venv/lib64/python3.6/site-packages/tornado/web.py", line 1009, in render_string
+  File "/home/jose.gomes/vobys_dashboard/venv/lib64/python3.6/site-packages/tornado/template.py", line 446, in load
+  File "/home/jose.gomes/vobys_dashboard/venv/lib64/python3.6/site-packages/tornado/template.py", line 477, in _create_template
+FileNotFoundError: [Errno 2] No such file or directory: '/home/jose.gomes/vobys_dashboard/venv/lib64/python3.6/site-packages/streamlit/static/index.html'

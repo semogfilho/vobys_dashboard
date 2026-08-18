@@ -1,0 +1,69 @@
+[usuario."jose.gomes"]
+nome = "José Gomes"
+email = "jose.filho@mv.com.br"
+senha_hash = "6b86b273ff34fce19d6b804eff5a3f5747ada4eaa22f1d49c01e52ddb7875b4b"
+tipo = "a"
+requer_reset = "nao"
+
+[usuario."pedro.mendes"]
+nome = "Pedro Mendes"
+email = "pedromendesfilho@gmail.com"
+senha_hash = "3d9cf8bbda12670cba72c47d1271127c549e41fd998116240978d5bc66dbb90d"
+tipo = "g"
+requer_reset = "nao"
+
+[usuario.comum1]
+nome = "Usuario Comum1"
+email = "jose.filho@mv.com.br"
+tipo = "g"
+senha_hash = "6b86b273ff34fce19d6b804eff5a3f5747ada4eaa22f1d49c01e52ddb7875b4b"
+requer_reset = "nao"
+
+[usuario.comum2]
+nome = "Usuário Comum2"
+email = "jose.filho@mv.com.br"
+tipo = "c"
+senha_hash = "d4735e3a265e16eee03f59718b9b5d03019c07d8b6c51f90da3a666eec13ab35"
+requer_reset = "nao"
+
+[usuario."pedro.bessa"]
+nome = "Pedro Reagnait"
+email = "pedro.bessa@aquila.com.br"
+senha_hash = "6b86b273ff34fce19d6b804eff5a3f5747ada4eaa22f1d49c01e52ddb7875b4b"
+tipo = "g"
+requer_reset = "nao"
+
+[usuario.comum3]
+nome = "usuario_comum_3"
+email = "jose.filho@mv.com.br"
+tipo = "c"
+senha_hash = "4d888a94d80b6bf0422057414ff544466231884e7b2b2cd3c6e14e078a9548ab"
+requer_reset = "sim"
+
+[usuario.gerente1]
+nome = "Gerente 1"
+email = "semogfilho@gmail.com"
+tipo = "g"
+senha_hash = "3ddb318a8fe1be7e065ca13bc3c1aa7a416010475d80758d08d631557ed38652"
+requer_reset = "sim"
+
+[usuario."evandro.macedo"]
+nome = "Evandro Macedo Santana"
+email = "evandromsantana@hotmail.com"
+tipo = "g"
+senha_hash = "e115d2e8691f9dcb0e7a5b29a71ff442b51f89439dc5d324a03f7403eac1d67e"
+requer_reset = "sim"
+
+[usuario.valdiano]
+nome = "Valdiano Cadê o Baiano"
+email = "evandromsantana@hotmail.com"
+tipo = "c"
+senha_hash = "ec07ef880833ec63b1f40f1c426946df682cd6fede9277183f2797092b2372cb"
+requer_reset = "sim"
+
+[usuario.gerente2]
+nome = "GERENTE 2"
+email = "semogfilho@gmail.com"
+tipo = "g"
+senha_hash = "c109f9350cbf54f29bed5c78ba3cc7e231eac6f3a3e30dc77e90db5b7fba2dc3"
+requer_reset = "sim"
