@@ -117,7 +117,7 @@ def render(conn, ano_selecionado, mes_chave, meses_disponiveis):
             total_abertos = int(df_pivot[df_pivot['STATUS_INTEGRA'] == 'ABERTO']['TOTAL'].sum()) if not df_pivot.empty and 'STATUS_INTEGRA' in df_pivot.columns else 0
 
             # Alertas: Inconsistências e Erros
-            total_erros = int(df_pivot[df_pivot['STATUS_INTEGRA'].str.contains('ERRO|INCONSISTENCIA', na=False)]['TOTAL'].sum()) if not df_pivot.empty and 'STATUS_INTEGRA' in df_pivot.columns else 0
+            total_erros = int(df_pivot[df_pivot['STATUS_INTEGRA'].str.contains('ERRO|INCONSISTENCIA|EXCLUIDO', na=False)]['TOTAL'].sum()) if not df_pivot.empty and 'STATUS_INTEGRA' in df_pivot.columns else 0
             pct_erros = (total_erros / total_geral * 100) if total_geral > 0 else 0.0
 
             # CÁLCULO DE EFICIÊNCIA
@@ -132,7 +132,7 @@ def render(conn, ano_selecionado, mes_chave, meses_disponiveis):
 
             with c1: st.metric(".. Volume Total", int(total_geral))
             with c2: st.metric(".. Total Aberto", int(total_abertos))
-            with c3: st.metric(".. Inconsistências / Erros", int(total_erros), f"{pct_erros:.1f}% Impacto", delta_color="inverse")
+            with c3: st.metric(".. Inconsistências / Erros/ Excluidos", int(total_erros), f"{pct_erros:.1f}% Impacto", delta_color="inverse")
             with c4: st.metric("Taxa de Eficiência", f"{taxa_eficiencia:.1f}%")
 
             with c5:
