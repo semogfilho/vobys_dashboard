@@ -261,25 +261,56 @@ def renderizar_dados_bancarios(conn, ano, mes, auth_ui, novos_dados_bancario):
                         user_sistema = st.session_state.get("login_atual", "SISTEMA")
 
                         def processar_item_sefaz(idx, cpf_cru, matricula_atual, nome_atual):
+                            print(f"\n--- INICIANDO ANÁLISE DO CPF ---")
+                            print(f"CPF bruto recebido: {cpf_cru} | Nome: {nome_atual}")
+                            input("[DEBUG] Pressione ENTER para limpar o CPF...")
+
                             digitos_puros = re.sub(r'\D', '', str(cpf_cru)).zfill(11)
+                            print(f"-> Digitos puros obtidos: {digitos_puros}")
+                            input("[DEBUG] Pressione ENTER para validar tamanho e repetição...")
 
                             if len(digitos_puros) != 11 or len(set(digitos_puros)) == 1:
+                                print("-> FALHA: Tamanho inválido ou dígitos repetidos.")
                                 return idx, "CPF INVÁLIDO"
+                            
+                            print("-> Tamanho OK (11 dígitos).")
+                            input("[DEBUG] Pressione ENTER para converter em lista de inteiros...")
 
-                            def validar_digitos_cpf(c):
-                                soma = sum(int(c[i]) * (10 - i) for i in range(9))
-                                digito1 = (soma * 10) % 11
-                                if digito1 == 10: digito1 = 0
-                                if digito1 != int(c[9]): return False
+                            nums = [int(dig) for dig in digitos_puros]
+                            print(f"-> Lista de números: {nums}")
+                            input("[DEBUG] Pressione ENTER para calcular o 1º Dígito Verificador...")
 
-                                soma = sum(int(c[i]) * (11 - i) for i in range(10))
-                                digito2 = (soma * 10) % 11
-                                if digito2 == 10: digito2 = 0
-                                return digito2 == int(c[10])
+                            # 1º Dígito Verificador
+                            soma1 = sum(nums[i] * (i + 1) for i in range(9))
+                            resto1 = soma1 % 11
+                            if resto1 == 10: 
+                                resto1 = 0
+                                
+                            print(f"-> 1º DV: Soma = {soma1} | Resto % 11 = {resto1} | Dígito no CPF = {nums[9]}")
+                            input("[DEBUG] Pressione ENTER para comparar o 1º Dígito...")
 
-                            if not validar_digitos_cpf(digitos_puros):
+                            if resto1 != nums[9]: 
+                                print("-> FALHA: 1º Dígito Verificador não bateu!")
                                 return idx, "CPF INVÁLIDO"
+                                
+                            print("-> 1º Dígito APROVADO!")
+                            input("[DEBUG] Pressione ENTER para calcular o 2º Dígito Verificador...")
 
+                            # 2º Dígito Verificador
+                            soma2 = sum(nums[i] * i for i in range(10))
+                            resto2 = soma2 % 11
+                            if resto2 == 10: 
+                                resto2 = 0
+                                
+                            print(f"-> 2º DV: Soma = {soma2} | Resto % 11 = {resto2} | Dígito no CPF = {nums[10]}")
+                            input("[DEBUG] Pressione ENTER para comparar o 2º Dígito e finalizar...")
+
+                            if resto2 != nums[10]:
+                                print("-> FALHA: 2º Dígito Verificador não bateu!")
+                                return idx, "CPF INVÁLIDO"
+                            
+                            print("-> SUCESSO ABSOLUTO: CPF Válido!")
+                            
                             p_cpf_fmt = f"{digitos_puros[:3]}.{digitos_puros[3:6]}.{digitos_puros[6:9]}-{digitos_puros[9:]}"
                             p_cpf_limpo = digitos_puros
                             p_mat = str(matricula_atual)
