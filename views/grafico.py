@@ -38,10 +38,12 @@ def render(conn, ano_selecionado, mes_chave, meses_disponiveis):
                 WHEN STATUS_VOBYS = 'P' THEN 'PENDENTE'
                 WHEN STATUS_VOBYS = 'T' THEN 'TRANSMITIDO'
                 WHEN STATUS_VOBYS = 'A' THEN 'ABERTO'
+                WHEN STATUS_VOBYS = 'V' THEN 'VALIDADO'
                 WHEN STATUS_VOBYS = 'F' THEN 'FECHADO'
                 WHEN STATUS_VOBYS = 'I' THEN 'INCONSISTENCIA DE CADASTRO'
                 WHEN STATUS_VOBYS = 'O' THEN 'OUTRAS INCONSISTENCIAS'
                 WHEN STATUS_VOBYS = 'E' THEN 'ERRO'
+                WHEN STATUS_VOBYS = 'X' THEN 'EXCLUIDO'
                 ELSE 'ABERTO'
             END AS STATUS,
             COUNT(*) AS QTD
@@ -92,7 +94,8 @@ def render(conn, ano_selecionado, mes_chave, meses_disponiveis):
                     'INCONSISTENCIA DE CADASTRO': '#fbbc04',
                     'PENDENTE': '#9aa0a6',
                     'TRANSMITIDO': '#1e8e3e',
-                    'FECHADO': '#343a40'
+                    'FECHADO': '#343a40',
+                    'EXCLUIDO': '#bdc1c6'
                 }
 
                 if tipo_grafico == "Rosca (com Linhas)":

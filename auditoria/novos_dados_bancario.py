@@ -6,9 +6,30 @@ import re  # ADICIONE ESTA LINHA AQUI
 import requests
 import json
 
+def atualizar_status_sefaz(conn, id_envio, novo_status):
+    """
+    Atualiza o status retornado pela SEFAZ na tabela de auditoria.
+    """
+    cursor = conn.cursor()
+    try:
+        sql_update = """
+            UPDATE AUDITORIA_ENVIOS_SEFAZ 
+            SET STATUS_SEFAZ = :status 
+            WHERE ID_ENVIO = :id
+        """
+        cursor.execute(sql_update, {'status': novo_status, 'id': id_envio})
+        conn.commit()
+        print(f"Status atualizado para ID {id_envio}: {novo_status}")
+    except Exception as e:
+        print(f"Erro ao atualizar status: {e}")
+        conn.rollback()
+    finally:
+        cursor.close()
+
+
 def atualizar_status_auditoria(conn, df):
     """
-    Atualiza de forma rápida apenas os campos (W) [ENVIADO e DATA_ENVIO]
+    Atualiza de forma rápida apenas os campos [ENVIADO, DATA_ENVIO e SEFAZ]
     consultando diretamente a tabela AUDITORIA_ENVIOS_SEFAZ.
     """
     if df is None or df.empty or 'CPF' not in df.columns:
@@ -19,22 +40,23 @@ def atualizar_status_auditoria(conn, df):
         cpfs = [str(cpf) for cpf in df['CPF'].dropna().unique()]
         if not cpfs:
             return df
-        
+
         placeholders = ','.join([f":cpf{i}" for i in range(len(cpfs))])
         params = {f"cpf{i}": cpf for i, cpf in enumerate(cpfs)}
 
+        # Adicionado STATUS_SEFAZ na consulta
         sql = f"""
-            SELECT CPF, RETORNO_API, DATA_ENVIO 
-            FROM AUDITORIA_ENVIOS_SEFAZ 
+            SELECT CPF, RETORNO_API, DATA_ENVIO, STATUS_SEFAZ
+            FROM AUDITORIA_ENVIOS_SEFAZ
             WHERE CPF IN ({placeholders})
         """
-        
+
         df_audit = pd.read_sql(sql, conn, params=params)
-        
+
         if not df_audit.empty:
             # Padroniza o formato da data para string igual fizemos no SELECT principal
             df_audit['DATA_ENVIO_STR'] = pd.to_datetime(df_audit['DATA_ENVIO']).dt.strftime('%d/%m/%Y %H:%M:%S')
-            
+
             # Define o status ENVIADO com base no retorno_api
             def calcula_enviado(retorno):
                 if pd.isnull(retorno):
@@ -46,17 +68,24 @@ def atualizar_status_auditoria(conn, df):
                 return 'ERRO'
 
             df_audit['ENVIADO'] = df_audit['RETORNO_API'].apply(calcula_enviado)
-            
+
             # Mapeia de volta para o DataFrame principal usando o CPF como chave
             map_enviado = df_audit.set_index('CPF')['ENVIADO'].to_dict()
             map_data = df_audit.set_index('CPF')['DATA_ENVIO_STR'].to_dict()
+            map_sefaz = df_audit.set_index('CPF')['STATUS_SEFAZ'].to_dict() # Mapeamento do status SEFAZ
 
             df['ENVIADO'] = df['CPF'].map(map_enviado).fillna('NÃO')
             df['DATA_ENVIO'] = df['CPF'].map(map_data)
             
+            # Atualiza a coluna SEFAZ na tela apenas se houver valor gravado no banco
+            if 'SEFAZ' in df.columns:
+                df['SEFAZ'] = df['CPF'].map(map_sefaz).fillna(df['SEFAZ'])
+            else:
+                df['SEFAZ'] = df['CPF'].map(map_sefaz)
+
     except Exception as e:
         print(f"DEBUG: Erro ao atualizar status leve: {e}")
-        
+
     return df
 
 
@@ -407,8 +436,8 @@ def registrar_envio(conn, lista, json_payload, retorno_status):
             DELETE FROM AUDITORIA_ENVIOS_SEFAZ 
             WHERE CPF = :cpf AND MATRICULA = :matricula;
 
-            INSERT INTO AUDITORIA_ENVIOS_SEFAZ (ID_ENVIO, CPF, MATRICULA, NOME, DATA_ENVIO, JSON_ENVIO, RETORNO_API, USUARIO_ENVIO)
-            VALUES (SEQ_AUD_ENVIOS_SEFAZ.NEXTVAL, :cpf, :matricula, :nome, SYSDATE, :json, :ret, :usuario_envio);
+            INSERT INTO AUDITORIA_ENVIOS_SEFAZ (ID_ENVIO, CPF, MATRICULA, NOME, DATA_ENVIO, JSON_ENVIO, RETORNO_API, USUARIO_ENVIO, STATUS_SEFAZ)
+            VALUES (SEQ_AUD_ENVIOS_SEFAZ.NEXTVAL, :cpf, :matricula, :nome, SYSDATE, :json, :ret, :usuario_envio, :status_sefaz);
         END;
         """
         
@@ -419,7 +448,8 @@ def registrar_envio(conn, lista, json_payload, retorno_status):
                 'nome': item['NOME_ATUAL'], 
                 'json': json_payload, 
                 'ret': retorno_status,
-                'usuario_envio': usuario_final # Adicionado aqui
+                'usuario_envio': usuario_final, # Adicionado aqui
+                'status_sefaz': '✅ MATRÍCULA ATIVA' # Ou o status adequado para o envio bem-sucedido
             } 
             for item in lista
         ]
@@ -472,6 +502,7 @@ def listar_novatos_bancario(conn, ano, mes):
         FROM all_tables 
         WHERE table_name = 'FOLHA_FUNC' 
         AND owner LIKE 'SW_%'
+        --AND owner LIKE 'SW_SEDUC'
         AND owner NOT IN ('SW_FUNPREV', 'SW_REENVIO')
     """)
     todos_schemas = [row[0] for row in cursor.fetchall()]
@@ -502,6 +533,7 @@ def listar_novatos_bancario(conn, ano, mes):
            ELSE 'ERRO'
         END AS ENVIADO
         ,TO_CHAR(hist.DATA_ENVIO, 'DD/MM/YYYY HH24:MI:SS') AS DATA_ENVIO
+        ,hist.STATUS_SEFAZ AS SEFAZ  -- <--- ADICIONADO AQUI PARA TRAZER O STATUS PERSISTIDO
         FROM {schema}.folha_func ff
         INNER JOIN {schema}.folha f_tab ON f_tab.id_folha = ff.id_folha
         INNER JOIN sw_publico.pessoa p ON p.id_pessoa = FF.ID_PESSOA_FUNCIONARIO
@@ -536,6 +568,7 @@ def listar_novatos_bancario(conn, ano, mes):
                    ELSE 'ERRO'
                END AS ENVIADO
         ,TO_CHAR(hist.DATA_ENVIO, 'DD/MM/YYYY HH24:MI:SS') AS DATA_ENVIO
+        ,hist.STATUS_SEFAZ AS SEFAZ  -- <--- ADICIONADO AQUI PARA TRAZER O STATUS PERSISTIDO
         FROM {schema}.Estagiario_Pagamento ff
         INNER JOIN {schema}.Estag_Folha f_tab ON f_tab.id_folha = ff.id_folha
         INNER JOIN {schema}.estagiario e ON e.id_estagiario = ff.id_estagiario

@@ -33,7 +33,7 @@ def get_query_detalhe_erros(ano, mes):
          AND uo.rn = 1 
         WHERE si.ANO = {ano} 
           AND si.MES = {int(mes)} 
-          AND si.STATUS_VOBYS = 'E'
+          AND si.STATUS_VOBYS in ('X', 'E')
         ORDER BY si.ID_SIAFE_EVENTO_INTEGRACAO DESC
     """
     return query

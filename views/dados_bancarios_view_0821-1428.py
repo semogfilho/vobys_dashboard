@@ -12,14 +12,11 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 def formatar_cpf(val_cpf):
-    """Formata uma string de CPF para o padrão 000.000.000-00 de forma segura"""
-    if not val_cpf or pd.isna(val_cpf):
-        return ""
-    # Remove tudo que não for dígito e garante 11 caracteres com zeros à esquerda
-    digitos = re.sub(r'\D', '', str(val_cpf)).zfill(11)
+    """Formata uma string de CPF para o padrão 000.000.000-00"""
+    digitos = re.sub(r'\D', '', str(val_cpf))
     if len(digitos) == 11:
         return f"{digitos[:3]}.{digitos[3:6]}.{digitos[6:9]}-{digitos[9:]}"
-    return str(val_cpf)
+    return val_cpf  # Retorna original se não tiver 11 dígitos
 
 def consultar_credor_sefaz_individual(ano, cpf_ou_credor, matricula_para_conferir):
     """Consulta o credor na SEFAZ e valida se a matrícula específica existe nos dados bancários (tratando strings com ';')"""
@@ -28,8 +25,8 @@ def consultar_credor_sefaz_individual(ano, cpf_ou_credor, matricula_para_conferi
         senha = st.secrets["sefaz"]["SIAFE_SENHA"]
         BASE_URL = st.secrets["sefaz"]["BASE_URL"]
 
-        cpf_limpo = re.sub(r'\D', '', str(cpf_ou_credor)).zfill(11)
-        matricula_limpa = re.sub(r'\D', '', str(matricula_para_conferir).split('.')[0])
+        cpf_limpo = re.sub(r'\D', '', str(cpf_ou_credor))
+        matricula_limpa = re.sub(r'\D', '', str(matricula_para_conferir))
 
         if not cpf_limpo:
             return "CPF Inválido"
@@ -110,11 +107,13 @@ def renderizar_dados_bancarios(conn, ano, mes, auth_ui, novos_dados_bancario):
                     ]
 
                     # Limpa o CPF para comparação garantida
-                    df_temp['CPF_LIMPO'] = df_temp['CPF'].astype(str).str.replace(r'\D', '', regex=True).str.zfill(11)
+                    df_temp['CPF_LIMPO'] = df_temp['CPF'].astype(str).str.replace(r'\D', '', regex=True)
 
+                    # Máscara combinando os CPFs de exceção E o órgão SEDUC
                     mask_cpfs = df_temp['CPF_LIMPO'].isin(cpfs_excecao)
                     mask_seduc = df_temp['ORGAO'].astype(str).str.upper() == 'SEDUC'
 
+                    # Remove a coluna auxiliar de limpeza de forma segura
                     df_temp = df_temp.drop(columns=['CPF_LIMPO'], errors='ignore')
                 # -----------------------------------------------------------
 
@@ -143,7 +142,7 @@ def renderizar_dados_bancarios(conn, ano, mes, auth_ui, novos_dados_bancario):
                     st.stop()
 
                 for idx, registro in enumerate(registros):
-                    cpf_reg = re.sub(r'\D', '', str(registro['CPF'])).zfill(11)
+                    cpf_reg = ''.join(filter(str.isdigit, str(registro['CPF'])))
                     schema_dinamico = f"SW_{registro.get('ORGAO')}"
 
                     dados_busca = novos_dados_bancario.buscar_dados_completos(conn, schema_dinamico, registro['COD_INSTITUCIONAL'])
@@ -157,8 +156,7 @@ def renderizar_dados_bancarios(conn, ano, mes, auth_ui, novos_dados_bancario):
                     st.subheader(f"JSON: {registro.get('NOME_ATUAL')}")
                     st.json(payload)
 
-                    df_cpf_str = st.session_state.df_bancario['CPF'].astype(str)
-                    mask = (df_cpf_str.str.replace(r'\D', '', regex=True).str.zfill(11) == cpf_reg) & \
+                    mask = (st.session_state.df_bancario['CPF'].astype(str).str.replace(r'\D', '', regex=True) == cpf_reg) & \
                            (st.session_state.df_bancario['COD_INSTITUCIONAL'] == registro['COD_INSTITUCIONAL'])
 
                     if registro.get("SOMENTE_VISUALIZAR", True):
@@ -195,9 +193,7 @@ def renderizar_dados_bancarios(conn, ano, mes, auth_ui, novos_dados_bancario):
             # -------------------------------------------------------------
             else:
                 df_exibicao = st.session_state.df_bancario.copy()
-                
-                # Formata o CPF corretamente para exibição amigável
-                df_exibicao['CPF'] = df_exibicao['CPF'].apply(formatar_cpf)
+                df_exibicao['CPF'] = df_exibicao['CPF'].astype(str).str.replace(r'\D', '', regex=True)
 
                 if 'DATA_ENVIO' in df_exibicao.columns:
                     df_exibicao['DATA_ENVIO'] = pd.to_datetime(
@@ -236,15 +232,20 @@ def renderizar_dados_bancarios(conn, ano, mes, auth_ui, novos_dados_bancario):
                         finalizar_button = st.form_submit_button("Finalizar e Atualizar Tela")
 
                 if checar_sefaz_button:
+                    # 1. Atualiza o estado da sessão com os checkboxes marcados no editor atual
                     if "ENVIAR" in df_editado.columns:
                         st.session_state.df_bancario["ENVIAR"] = df_editado["ENVIAR"]
 
                     df_atual = st.session_state.df_bancario
+
+                    # 2. Verifica se há algum registro explicitamente marcado na coluna 'ENVIAR'
                     indices_marcados = df_atual[df_atual["ENVIAR"] == True].index.tolist()
 
                     if indices_marcados:
+                        # Se houver itens marcados, checa APENAS eles
                         indices_pendentes = indices_marcados
                     else:
+                        # Se nenhum estiver marcado, o comportamento padrão é checar todos os pendentes/não ativos
                         nao_enviado_ou_erro = df_atual['ENVIADO'].isin(['NÃO', '⏳ NÃO', 'ERRO']) | df_atual['ENVIADO'].isna()
                         nao_ativo = df_atual['SEFAZ'] != '✅ MATRÍCULA ATIVA'
                         nao_sim = df_atual['ENVIADO'] != 'SIM'
@@ -260,34 +261,30 @@ def renderizar_dados_bancarios(conn, ano, mes, auth_ui, novos_dados_bancario):
 
                         user_sistema = st.session_state.get("login_atual", "SISTEMA")
 
+
                         def processar_item_sefaz(idx, cpf_cru, matricula_atual, nome_atual):
-                            digitos_puros = re.sub(r'\D', '', str(cpf_cru)).zfill(11)
+                            # --- INVESTIGAÇÃO DE CAUSA RAIZ ---
+                            print("\n" + "="*50)
+                            print(f"[DEBUG-RAIZ] Processando indice DataFrame: {idx}")
+                            print(f"[DEBUG-RAIZ] Tipo de cpf_cru: {type(cpf_cru)} | Valor: {repr(cpf_cru)}")
+                            print(f"[DEBUG-RAIZ] Tipo de matricula: {type(matricula_atual)} | Valor: {repr(matricula_atual)}")
+                            print(f"[DEBUG-RAIZ] Tipo de nome: {type(nome_atual)} | Valor: {repr(nome_atual)}")
+                            
+                            # Vamos ver o que o formatar_cpf devolve exatamente
+                            cpf_fmt_teste = formatar_cpf(cpf_cru)
+                            print(f"[DEBUG-RAIZ] Resultado de formatar_cpf: {type(cpf_fmt_teste)} | Valor: {repr(cpf_fmt_teste)} | Tamanho: {len(str(cpf_fmt_teste))}")
+                            print("="*50 + "\n")
+                            # ----------------------------------
 
-                            if len(digitos_puros) != 11 or len(set(digitos_puros)) == 1:
-                                return idx, "CPF INVÁLIDO"
+                            res_visual = consultar_credor_sefaz_individual(ano, cpf_cru, matricula_atual)
+                            cpf_formatado = formatar_cpf(cpf_cru)
 
-                            def validar_digitos_cpf(c):
-                                soma = sum(int(c[i]) * (10 - i) for i in range(9))
-                                digito1 = (soma * 10) % 11
-                                if digito1 == 10: digito1 = 0
-                                if digito1 != int(c[9]): return False
-
-                                soma = sum(int(c[i]) * (11 - i) for i in range(10))
-                                digito2 = (soma * 10) % 11
-                                if digito2 == 10: digito2 = 0
-                                return digito2 == int(c[10])
-
-                            if not validar_digitos_cpf(digitos_puros):
-                                return idx, "CPF INVÁLIDO"
-
-                            p_cpf_fmt = f"{digitos_puros[:3]}.{digitos_puros[3:6]}.{digitos_puros[6:9]}-{digitos_puros[9:]}"
-                            p_cpf_limpo = digitos_puros
+                            p_cpf_limpo = str(''.join(filter(str.isdigit, cpf_formatado)))
+                            p_cpf_fmt = str(cpf_formatado)
                             p_mat = str(matricula_atual)
                             p_nome = str(nome_atual)
-                            p_usr = str(user_sistema)
-
-                            res_visual = consultar_credor_sefaz_individual(ano, p_cpf_limpo, p_mat)
                             p_status = str(res_visual)
+                            p_usr = str(user_sistema)
 
                             try:
                                 cursor = conn.cursor()
@@ -313,7 +310,8 @@ def renderizar_dados_bancarios(conn, ano, mes, auth_ui, novos_dados_bancario):
                                 cursor.close()
                             except Exception as e_db:
                                 conn.rollback()
-                                raise e_db
+                                # Se der erro, vamos injetar o valor exato no log da exceção para você ver na tela do Streamlit
+                                raise Exception(f"Erro com CPF_FMT ({repr(p_cpf_fmt)} - tam: {len(p_cpf_fmt)}) | CPF_LIMPO ({repr(p_cpf_limpo)}) | Original do erro: {e_db}")
 
                             return idx, res_visual
 
@@ -324,7 +322,7 @@ def renderizar_dados_bancarios(conn, ano, mes, auth_ui, novos_dados_bancario):
                             future_to_idx = {}
                             for idx in indices_pendentes:
                                 row = st.session_state.df_bancario.loc[idx]
-                                cpf_cru = row.get('CPF', '')
+                                cpf_cru = ''.join(filter(str.isdigit, str(row.get('CPF', ''))))
                                 matricula_atual = row.get('COD_INSTITUCIONAL', '')
                                 nome_atual = row.get('NOME_ATUAL', 'Sem Nome')
 
@@ -347,13 +345,7 @@ def renderizar_dados_bancarios(conn, ano, mes, auth_ui, novos_dados_bancario):
 
                         progress_bar.empty()
                         status_text.empty()
-
-                        # ---> ATUALIZAÇÃO AUTOMÁTICA ADICIONADA AQUI <---
-                        if 'df_bancario' in st.session_state and not st.session_state.df_bancario.empty:
-                            st.session_state.df_bancario = atualizar_status_auditoria(conn, st.session_state.df_bancario)
-                            carregar_dados_bancarios.clear()
-
-                        st.success("Checagem em lote na SEFAZ concluída e tela atualizada!")
+                        st.success("Checagem em lote na SEFAZ concluída!")
                         st.rerun()
 
                 if submit_button:
@@ -374,13 +366,13 @@ def renderizar_dados_bancarios(conn, ano, mes, auth_ui, novos_dados_bancario):
                         st.rerun()
 
                 if finalizar_button:
-                    if "ENVIAR" in df_editado.columns:
-                        st.session_state.df_bancario["ENVIAR"] = df_editado["ENVIAR"]
+                   if "ENVIAR" in df_editado.columns:
+                       st.session_state.df_bancario["ENVIAR"] = df_editado["ENVIAR"]
 
-                    if 'df_bancario' in st.session_state and not st.session_state.df_bancario.empty:
-                        st.session_state.df_bancario = atualizar_status_auditoria(conn, st.session_state.df_bancario)
+                   if 'df_bancario' in st.session_state and not st.session_state.df_bancario.empty:
+                       st.session_state.df_bancario = atualizar_status_auditoria(conn, st.session_state.df_bancario)
 
-                    st.rerun()
+                   st.rerun()
 
                 st.divider()
 
@@ -391,7 +383,7 @@ def renderizar_dados_bancarios(conn, ano, mes, auth_ui, novos_dados_bancario):
                     btn_buscar = st.button("Buscar CPF na Competência", key="btn_buscar_cpf")
 
                 if btn_buscar and cpf_busca:
-                    st.session_state['cpf_buscado_ativo'] = ''.join(filter(str.isdigit, cpf_busca)).zfill(11)
+                    st.session_state['cpf_buscado_ativo'] = ''.join(filter(str.isdigit, cpf_busca))
 
                 if st.session_state.get('cpf_buscado_ativo'):
                     cpf_limpo = st.session_state['cpf_buscado_ativo']
@@ -400,9 +392,9 @@ def renderizar_dados_bancarios(conn, ano, mes, auth_ui, novos_dados_bancario):
                         st.warning("Por favor, informe um CPF válido contendo números.")
                         del st.session_state['cpf_buscado_ativo']
                     else:
-                        df_cpf_str = st.session_state.df_bancario['CPF'].astype(str)
-                        mask_cpf = df_cpf_str.str.replace(r'\D', '', regex=True).str.zfill(11) == cpf_limpo
+                        mask_cpf = st.session_state.df_bancario['CPF'].astype(str).str.replace(r'\D', '', regex=True) == cpf_limpo
 
+                        # --- BARRA DE PROGRESSO PARA BUSCA AVULSA ---
                         barra_avulsa = st.progress(0)
                         status_avulsa = st.empty()
 
@@ -424,7 +416,6 @@ def renderizar_dados_bancarios(conn, ano, mes, auth_ui, novos_dados_bancario):
                             st.session_state.df_bancario.loc[mask_cpf, 'ENVIAR'] = True
 
                             df_loc_exib = st.session_state.df_bancario[mask_cpf].copy()
-                            df_loc_exib['CPF'] = df_loc_exib['CPF'].apply(formatar_cpf)
                             if "SOMENTE_VISUALIZAR" in df_loc_exib.columns:
                                 df_loc_exib = df_loc_exib.drop(columns=["SOMENTE_VISUALIZAR"])
 
@@ -453,7 +444,6 @@ def renderizar_dados_bancarios(conn, ano, mes, auth_ui, novos_dados_bancario):
                                 st.success(f"{len(df_encontrado)} registro(s) localizado(s) e adicionado(s)!")
 
                                 df_busc_exib = df_encontrado.copy()
-                                df_busc_exib['CPF'] = df_busc_exib['CPF'].apply(formatar_cpf)
                                 if "SOMENTE_VISUALIZAR" in df_busc_exib.columns:
                                     df_busc_exib = df_busc_exib.drop(columns=["SOMENTE_VISUALIZAR"])
 

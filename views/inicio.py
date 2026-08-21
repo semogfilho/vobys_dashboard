@@ -71,6 +71,7 @@ def render(conn, ano_selecionado, mes_chave, meses_disponiveis):
                 WHEN STATUS_VOBYS = 'I' THEN 'INCONSISTENCIA DE CADASTRO'
                 WHEN STATUS_VOBYS = 'O' THEN 'OUTRAS INCONSISTENCIA'
                 WHEN STATUS_VOBYS = 'E' THEN 'ERRO'
+                WHEN STATUS_VOBYS = 'X' THEN 'EXCLUIDO'
                 ELSE 'ABERTO'
             END AS STATUS,
             IND_TIPO_REQUISICAO AS TIPO,
@@ -137,7 +138,7 @@ def render(conn, ano_selecionado, mes_chave, meses_disponiveis):
             with c5:
                 st.write("Ações")
                 if total_erros > 0:
-                    with st.popover("Ver Erros"):
+                    with st.popover("Ver Erros/Excluidos"):
                         col_pop_btn, col_pop_titulo = st.columns([1, 3])
 
                         with col_pop_btn:

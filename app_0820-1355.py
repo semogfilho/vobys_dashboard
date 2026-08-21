@@ -44,7 +44,7 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(BASE_DIR, "views"))
 sys.path.insert(0, os.path.join(BASE_DIR, ".streamlit"))
 
-import auth_ui, inicio, grafico, app_siafe, responsavel, arquivos, usuarios, auditoria_integracao, auditoria_folha, valida_bb, inconsistencia_sefaz_view, consulta_credor_view
+import auth_ui, inicio, grafico, app_siafe, responsavel, arquivos, usuarios, auditoria_integracao, auditoria_folha, valida_bb, inconsistencia_sefaz_view
 
 def reload_views():
     importlib.reload(auth_ui)
@@ -58,7 +58,6 @@ def reload_views():
     importlib.reload(auditoria_folha)
     importlib.reload(valida_bb)
     importlib.reload(inconsistencia_sefaz_view)
-    importlib.reload(consulta_credor_view)
 
 reload_views()
 
@@ -66,18 +65,18 @@ reload_views()
 # 5. Validação final de menu
 def get_opcoes():
     opcoes_base = ["Inicio", "Grafico", "Pagto Pendente", "Responsavel", "Arquivos/ID", "Auditoria", "Auditoria Folha"]
-
-    # Se for admin ('a'), adiciona as opções exclusivas da SEFAZ
+    
+    # Se for admin ('a'), adiciona a opção exclusiva de Inconsistência Cadastro SEFAZ e Usuários
     if st.session_state.get("perfil_usuario") == 'a':
         opcoes_base.append("Inconsistencia Cadastro SEFAZ")
-        opcoes_base.append("Consulta Credor SEFAZ")
-
+    
     if st.session_state.get("perfil_usuario") in ['a', 'g', 'c']:
         return opcoes_base + ["Usuários"]
-
+        
     return opcoes_base
 
 opcoes = get_opcoes()
+# Acesso seguro: se não existir, já inicializa com "Inicio"
 menu_atual_seguro = st.session_state.get("menu_atual", "Inicio")
 
 if menu_atual_seguro not in opcoes:
@@ -133,16 +132,20 @@ if "perfil_usuario" in st.session_state:
     os.environ["CURRENT_USER_PROFILE"] = st.session_state.perfil_usuario
 
 with st.sidebar:
+# CSS otimizado para compactar o topo
     st.markdown("""
         <style>
+            /* Reduz o padding do container da sidebar */
             [data-testid="stSidebar"] > div:first-child {
                 padding-top: 0.5rem !important;
             }
+            /* Diminui o tamanho do título e remove margens externas */
             .titulo-ntgd {
                 font-size: 2rem !important;
                 margin-top: -1.5rem !important;
                 margin-bottom: -0.5rem !important;
             }
+            /* Ajusta o divisor para ficar mais próximo */
             div[data-testid="stMarkdown"] hr {
                 margin-top: 0.5rem !important;
                 margin-bottom: 0.5rem !important;
@@ -175,6 +178,7 @@ with st.sidebar:
     menu = st.radio("Menu:", opcoes, index=opcoes.index(st.session_state.menu_atual), key="menu_principal")
     st.session_state.menu_atual = menu
 
+# Lógica para as subopções de Auditoria Folha
     if st.session_state.menu_atual == "Auditoria Folha":
         with st.container(border=True):
             st.caption("Subopções de Auditoria:")
@@ -190,6 +194,7 @@ with st.sidebar:
                 key="sub_menu_auditoria"
             )
 
+# 3. O Botão Sair (POR ÚLTIMO, dentro do container flex)
     st.markdown('<div class="botao-sair-container">', unsafe_allow_html=True)
     if st.button("Sair"):
         for key in list(st.session_state.keys()): del st.session_state[key]
@@ -197,6 +202,7 @@ with st.sidebar:
         st.rerun()
     st.markdown('</div>', unsafe_allow_html=True)
 
+# --- 5. RENDERIZAÇÃO ---
 try:
     db = st.secrets["database"]
     conn = oracledb.connect(user=db["db_user"], password=db["db_pass"], dsn=db["db_dsn"])
@@ -220,11 +226,6 @@ try:
     elif menu_selecionado == "Inconsistencia Cadastro SEFAZ":
         if st.session_state.perfil_usuario == 'a':
             inconsistencia_sefaz_view.renderizar_inconsistencia_sefaz(ano, mes, auth_ui)
-        else:
-            st.error("Acesso negado.")
-    elif menu_selecionado == "Consulta Credor SEFAZ":
-        if st.session_state.perfil_usuario == 'a':
-            consulta_credor_view.renderizar_consulta_credor(ano, mes)
         else:
             st.error("Acesso negado.")
     elif menu_selecionado == "Validação BB":
