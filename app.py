@@ -156,7 +156,7 @@ with st.sidebar:
     st.markdown(f"### 👤 {st.session_state.get('nome_usuario', 'Usuário')}")
     hoje = datetime.date.today()
 
-    if hoje.day >= 23:
+    if hoje.day >= 21:
         if hoje.month == 12:
             mes_sugerido, ano_sugerido = 1, hoje.year + 1
         else:

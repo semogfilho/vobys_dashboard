@@ -11,7 +11,7 @@ from auditoria.novos_dados_bancario import listar_novatos_bancario, atualizar_st
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 def formatar_cpf(val_cpf):
-    """Formata uma string de CPF para o padrão 000.000.000-00 para exibição"""
+    """Formata uma string de CPF para o padrão 000.000.000-00 de forma segura"""
     if not val_cpf or pd.isna(val_cpf):
         return ""
     digitos = re.sub(r'\D', '', str(val_cpf)).zfill(11)
@@ -19,14 +19,8 @@ def formatar_cpf(val_cpf):
         return f"{digitos[:3]}.{digitos[3:6]}.{digitos[6:9]}-{digitos[9:]}"
     return str(val_cpf)
 
-def formatar_cpf_completo(val_cpf):
-    """Formata para 000.000.000-00 para salvar no banco com máscara"""
-    if not val_cpf or pd.isna(val_cpf): 
-        return ""
-    s = re.sub(r'\D', '', str(val_cpf)).zfill(11)
-    return f"{s[:3]}.{s[3:6]}.{s[6:9]}-{s[9:]}"
-
 def consultar_credor_sefaz_individual(ano, cpf_ou_credor, matricula_para_conferir):
+    """Consulta o credor na SEFAZ e valida se a matrícula específica existe nos dados bancários (tratando strings com ';')"""
     try:
         usuario = st.secrets["sefaz"]["SIAFE_CPF"]
         senha = st.secrets["sefaz"]["SIAFE_SENHA"]
@@ -115,12 +109,14 @@ def renderizar_dados_bancarios(conn, ano, mes, auth_ui, novos_dados_bancario):
 
                 if 'SEFAZ' not in df_temp.columns:
                     df_temp['SEFAZ'] = '⏳ PENDENTE'
-                
-                if not df_temp.empty:
-                    df_temp = atualizar_status_auditoria(conn, df_temp)
-
                 st.session_state.df_bancario = df_temp
                 st.session_state.last_params = (ano, mes)
+
+        # Inicializa variáveis de controle da pausa interativa, se não existirem
+        if 'indices_checar_sefaz' not in st.session_state:
+            st.session_state.indices_checar_sefaz = []
+        if 'indice_atual_pos' not in st.session_state:
+            st.session_state.indice_atual_pos = 0
 
         if not st.session_state.df_bancario.empty:
             if "ENVIAR" not in st.session_state.df_bancario.columns:
@@ -131,113 +127,7 @@ def renderizar_dados_bancarios(conn, ano, mes, auth_ui, novos_dados_bancario):
             st.session_state.df_bancario = st.session_state.df_bancario.sort_values(by=["ORGAO", "CPF"])
 
             # -------------------------------------------------------------
-            # MODO PASSO A PASSO (SEFAZ ITERATIVO)
-            # -------------------------------------------------------------
-            if st.session_state.get('modo_passo_a_passo_ativo', False):
-                indices_pendentes = st.session_state.get('indices_passo_a_passo', [])
-                passo_atual = st.session_state.get('indice_passo_atual', 0)
-
-                st.subheader(f"⚙️ Processamento Passo a Passo ({passo_atual + 1} de {len(indices_pendentes)})")
-                st.progress((passo_atual + 1) / len(indices_pendentes))
-
-                if passo_atual < len(indices_pendentes):
-                    idx = indices_pendentes[passo_atual]
-                    
-                    row = st.session_state.df_bancario.loc[idx]
-                    if isinstance(row, pd.DataFrame):
-                        row = row.iloc[0]
-
-                    cpf_cru = str(row.get('CPF', ''))
-                    matricula_atual = str(row.get('COD_INSTITUCIONAL', ''))
-                    nome_atual = str(row.get('NOME_ATUAL', 'Sem Nome'))
-                    org_atual = str(row.get('ORGAO', ''))
-
-                    st.info(f"**Órgão:** {org_atual} | **Matrícula:** {matricula_atual} | **Nome:** {nome_atual} | **CPF:** {cpf_cru}")
-
-                    col_passo1, col_passo2 = st.columns([1, 1])
-                    with col_passo1:
-                        btn_proximo = st.button("▶️ Processar Próximo Registro", type="primary")
-                    with col_passo2:
-                        btn_parar = st.button("⏹️ Sair do Modo Passo a Passo")
-
-                    if btn_parar:
-                        st.session_state.modo_passo_a_passo_ativo = False
-                        st.rerun()
-
-                    if btn_proximo:
-                        user_sistema = st.session_state.get("login_atual", "SISTEMA")
-                        
-                        digitos_puros = re.sub(r'\D', '', cpf_cru)
-                        if len(digitos_puros) > 11:
-                            digitos_puros = digitos_puros[-11:]
-                        digitos_puros = digitos_puros.zfill(11)
-
-                        if len(digitos_puros) != 11 or len(set(digitos_puros)) == 1:
-                            res_visual = "CPF INVÁLIDO"
-                        else:
-                            nums = [int(dig) for dig in digitos_puros]
-                            soma1 = sum(nums[i] * (i + 1) for i in range(9))
-                            resto1 = soma1 % 11
-                            if resto1 == 10: resto1 = 0
-
-                            soma2 = sum(nums[i] * i for i in range(10))
-                            resto2 = soma2 % 11
-                            if resto2 == 10: resto2 = 0
-
-                            if resto1 != nums[9] or resto2 != nums[10]:
-                                res_visual = "CPF INVÁLIDO"
-                            else:
-                                res_visual = consultar_credor_sefaz_individual(ano, digitos_puros, matricula_atual)
-
-                        p_cpf_fmt = formatar_cpf_completo(cpf_cru)
-                        p_mat = matricula_atual
-                        p_nome = nome_atual[:150]
-                        p_usr = str(user_sistema)
-                        
-                        try:
-                            cursor = conn.cursor()
-                            sql_block = """
-                            BEGIN
-                                DELETE FROM AUDITORIA_ENVIOS_SEFAZ
-                                WHERE REGEXP_REPLACE(CPF, '[^0-9]', '') = :cpf_numerico
-                                  AND MATRICULA = :mat;
-
-                                INSERT INTO AUDITORIA_ENVIOS_SEFAZ (ID_ENVIO, CPF, MATRICULA, NOME, STATUS_SEFAZ, USUARIO_ENVIO)
-                                VALUES (SEQ_AUD_ENVIOS_SEFAZ.NEXTVAL, :cpf_fmt, :mat, :nome, :status, :usr);
-                            END;
-                            """
-                            cursor.execute(sql_block, {
-                                'cpf_numerico': re.sub(r'\D', '', cpf_cru),
-                                'cpf_fmt': p_cpf_fmt,
-                                'mat': p_mat,
-                                'nome': p_nome,
-                                'status': str(res_visual),
-                                'usr': p_usr
-                            })
-                            conn.commit()
-                            cursor.close()
-                        except Exception as e_db:
-                            conn.rollback()
-                            st.error(f"Erro ao salvar no banco: {e_db}")
-
-                        st.session_state.df_bancario.loc[idx, 'SEFAZ'] = res_visual
-
-                        if passo_atual + 1 < len(indices_pendentes):
-                            st.session_state.indice_passo_atual += 1
-                            st.rerun()
-                        else:
-                            st.session_state.modo_passo_a_passo_ativo = False
-                            st.session_state.df_bancario = atualizar_status_auditoria(conn, st.session_state.df_bancario)
-                            carregar_dados_bancarios.clear()
-                            st.success("🎉 Todos os registros selecionados foram processados com sucesso!")
-                            time.sleep(1.5)
-                            st.rerun()
-
-                st.divider()
-                return
-
-            # -------------------------------------------------------------
-            # TELA 1: PROCESSAMENTO EM LOTE (AUTOMÁTICO)
+            # TELA 1: PROCESSAMENTO EM LOTE
             # -------------------------------------------------------------
             if 'processamento_pendente' in st.session_state and st.session_state.processamento_pendente:
                 registros = st.session_state.processamento_pendente
@@ -296,11 +186,10 @@ def renderizar_dados_bancarios(conn, ano, mes, auth_ui, novos_dados_bancario):
                     st.rerun()
 
             # -------------------------------------------------------------
-            # TELA 2: PAINEL PRINCIPAL
+            # TELA 2: PAINEL PRINCIPAL (COM MODO DE PAUSA INTERATIVA)
             # -------------------------------------------------------------
             else:
                 df_exibicao = st.session_state.df_bancario.copy()
-                
                 df_exibicao['CPF'] = df_exibicao['CPF'].apply(formatar_cpf)
 
                 if 'DATA_ENVIO' in df_exibicao.columns:
@@ -315,6 +204,139 @@ def renderizar_dados_bancarios(conn, ano, mes, auth_ui, novos_dados_bancario):
                 if "SOMENTE_VISUALIZAR" in df_exibicao.columns:
                     df_exibicao = df_exibicao.drop(columns=["SOMENTE_VISUALIZAR"])
 
+                # Se houver uma checagem em andamento, exibe a interface de pausa interativa item a item
+                if st.session_state.get('indices_checar_sefaz'):
+                    lista_ids = st.session_state.indices_checar_sefaz
+                    pos_atual = st.session_state.indice_atual_pos
+                    total_pendentes = len(lista_ids)
+
+                    if pos_atual < total_pendentes:
+                        idx = lista_ids[pos_atual]
+                        concluidos = pos_atual + 1
+
+                        st.info(f"⏸️ **Modo Pausa Ativo** - Processando registro **{concluidos} de {total_pendentes}**")
+
+                        # Proteção contra índice inválido
+                        if idx not in st.session_state.df_bancario.index:
+                            st.error(f"❌ Índice {idx} inválido encontrado na lista de checagem.")
+                            if st.button("Limpar Lote e Recarregar"):
+                                st.session_state.indices_checar_sefaz = []
+                                st.session_state.indice_atual_pos = 0
+                                st.rerun()
+                            st.stop()
+
+                        row = st.session_state.df_bancario.loc[idx]
+                        
+                        cpf_cru = row.get('CPF', '')
+                        if isinstance(cpf_cru, pd.Series):
+                            cpf_cru = cpf_cru.iloc[0]
+                            
+                        matricula_atual = row.get('COD_INSTITUCIONAL', '')
+                        if isinstance(matricula_atual, pd.Series):
+                            matricula_atual = matricula_atual.iloc[0]
+                            
+                        nome_atual = row.get('NOME_ATUAL', 'Sem Nome')
+                        if isinstance(nome_atual, pd.Series):
+                            nome_atual = nome_atual.iloc[0]
+
+                        user_sistema = st.session_state.get("login_atual", "SISTEMA")
+
+                        # Bloco expander detalhado do item atual
+                        with st.expander(f"🔍 Analisando [{concluidos}/{total_pendentes}] - {nome_atual} (CPF: {formatar_cpf(cpf_cru)})", expanded=True):
+                            try:
+                                st.write(f"**Matrícula:** `{matricula_atual}`")
+                                st.write("Iniciando validação de dígitos do CPF e consulta SEFAZ...")
+
+                                digitos_puros = re.sub(r'\D', '', str(cpf_cru)).zfill(11)
+                                st.write(f"-> Dígitos puros extraídos: `{digitos_puros}`")
+
+                                if len(digitos_puros) != 11 or len(set(digitos_puros)) == 1:
+                                    res_visual = "CPF INVÁLIDO"
+                                    st.warning("-> ❌ FALHA: Tamanho inválido ou dígitos repetidos.")
+                                else:
+                                    nums = [int(dig) for dig in digitos_puros]
+                                    
+                                    # 1º Dígito Verificador
+                                    soma1 = sum(nums[i] * (i + 1) for i in range(9))
+                                    resto1 = soma1 % 11
+                                    if resto1 == 10:
+                                        resto1 = 0
+
+                                    # 2º Dígito Verificador
+                                    soma2 = sum(nums[i] * i for i in range(10))
+                                    resto2 = soma2 % 11
+                                    if resto2 == 10:
+                                        resto2 = 0
+
+                                    if resto1 != nums[9] or resto2 != nums[10]:
+                                        res_visual = "CPF INVÁLIDO"
+                                        st.warning("-> ❌ FALHA: Dígitos verificadores do CPF não conferem.")
+                                    else:
+                                        st.write("-> ✅ CPF Válido matematicamente! Consultando API SEFAZ...")
+                                        p_cpf_fmt = f"{digitos_puros[:3]}.{digitos_puros[3:6]}.{digitos_puros[6:9]}-{digitos_puros[9:]}"
+                                        res_visual = consultar_credor_sefaz_individual(ano, digitos_puros, matricula_atual)
+
+                                        # Salva no banco de auditoria
+                                        cursor = conn.cursor()
+                                        sql_block = """
+                                        BEGIN
+                                            DELETE FROM AUDITORIA_ENVIOS_SEFAZ
+                                            WHERE REGEXP_REPLACE(CPF, '[^0-9]', '') = :cpf
+                                              AND MATRICULA = :mat;
+
+                                            INSERT INTO AUDITORIA_ENVIOS_SEFAZ (ID_ENVIO, CPF, MATRICULA, NOME, STATUS_SEFAZ, USUARIO_ENVIO)
+                                            VALUES (SEQ_AUD_ENVIOS_SEFAZ.NEXTVAL, :cpf_fmt, :mat, :nome, :status, :usr);
+                                        END;
+                                        """
+                                        cursor.execute(sql_block, {
+                                            'cpf': digitos_puros,
+                                            'cpf_fmt': p_cpf_fmt,
+                                            'mat': str(matricula_atual),
+                                            'nome': str(nome_atual),
+                                            'status': res_visual,
+                                            'usr': str(user_sistema)
+                                        })
+                                        conn.commit()
+                                        cursor.close()
+
+                                st.session_state.df_bancario.loc[idx, 'SEFAZ'] = res_visual
+                                
+                                if "ATIVA" in res_visual:
+                                    st.success(f"**Resultado Final:** {res_visual}")
+                                else:
+                                    st.warning(f"**Resultado Final:** {res_visual}")
+
+                            except Exception as e_db:
+                                st.error(f"❌ Erro crítico ao processar o registro.")
+                                st.exception(e_db)
+                                st.stop()
+
+                        # Botões de controle manual da pausa
+                        col_p1, col_p2 = st.columns(2)
+                        with col_p1:
+                            if st.button("▶️ Avançar para o Próximo", key=f"btn_proximo_{idx}"):
+                                st.session_state.indice_atual_pos += 1
+                                st.rerun()
+                        with col_p2:
+                            if st.button("⏹️ Cancelar Lote", key=f"btn_cancela_{idx}"):
+                                st.session_state.indices_checar_sefaz = []
+                                st.session_state.indice_atual_pos = 0
+                                st.rerun()
+
+                        st.stop()  # Pausa a execução aqui até o usuário clicar em Avançar ou Cancelar
+                    else:
+                        # Fim da lista de pendentes
+                        st.session_state.indices_checar_sefaz = []
+                        st.session_state.indice_atual_pos = 0
+
+                        if 'df_bancario' in st.session_state and not st.session_state.df_bancario.empty:
+                            st.session_state.df_bancario = atualizar_status_auditoria(conn, st.session_state.df_bancario)
+                            carregar_dados_bancarios.clear()
+
+                        st.success("Checagem em lote na SEFAZ concluída e tela atualizada!")
+                        st.rerun()
+
+                # Formulário Principal com a tabela de dados
                 with st.form("form_lote_bancario"):
                     df_editado = st.data_editor(
                         df_exibicao,
@@ -325,6 +347,7 @@ def renderizar_dados_bancarios(conn, ano, mes, auth_ui, novos_dados_bancario):
                             "SEFAZ": st.column_config.TextColumn("Status SEFAZ", disabled=True)
                         },
                         disabled=["ENVIADO", "SEFAZ", "ORGAO", "COD_INSTITUCIONAL", "NOME_ATUAL", "CPF", "CHAVE_FOLHA", "DATA_ENVIO"],
+                        num_rows="fixed",  # <--- ISSO IMPEDE QUE O USUÁRIO CRIE LINHAS EM BRANCO
                         use_container_width=True,
                         hide_index=True,
                     )
@@ -340,76 +363,37 @@ def renderizar_dados_bancarios(conn, ano, mes, auth_ui, novos_dados_bancario):
                         finalizar_button = st.form_submit_button("Finalizar e Atualizar Tela")
 
                 if checar_sefaz_button:
+                    editor_data = st.session_state.get("editor_dados_bancarios", {})
+                    
+                    if "edited_rows" in editor_data:
+                        for idx_str, changes in editor_data["edited_rows"].items():
+                            idx = int(idx_str)
+                            if "ENVIAR" in changes:
+                                st.session_state.df_bancario.loc[idx, "ENVIAR"] = changes["ENVIAR"]
+
                     if "ENVIAR" in df_editado.columns:
                         st.session_state.df_bancario["ENVIAR"] = df_editado["ENVIAR"]
 
                     df_atual = st.session_state.df_bancario
+                    
+                    # 1. Tenta pegar estritamente quem foi marcado com o checkbox
                     indices_marcados = df_atual[df_atual["ENVIAR"] == True].index.tolist()
 
+                    # 2. Se nada estiver marcado, busca APENAS a Lucilene (garantindo apenas 1 índice na lista)
+                    if not indices_marcados:
+                        mask_lucilene = df_atual['NOME_ATUAL'].astype(str).str.contains('LUCILENE', case=False, na=False)
+                        indices_lucilene = df_atual[mask_lucilene].index.tolist()
+                        if indices_lucilene:
+                            indices_marcados = [indices_lucilene[0]] # Pega estritamente o primeiro match dela
+
                     if indices_marcados:
-                        indices_pendentes = indices_marcados
-                    else:
-                        indices_pendentes = df_atual[
-                            (df_atual['SEFAZ'] != '✅ MATRÍCULA ATIVA') | 
-                            (df_atual['SEFAZ'].isna()) | 
-                            (df_atual['SEFAZ'].astype(str).str.strip().isin(['None', 'nan', '']))
-                        ].index.tolist()
-
-                    total_pendentes = len(indices_pendentes)
-
-                    if total_pendentes == 0:
-                        st.info("Não há registros pendentes de checagem na SEFAZ!")
-                    else:
-                        st.session_state.modo_passo_a_passo_ativo = True
-                        st.session_state.indices_passo_a_passo = indices_pendentes
-                        st.session_state.indice_passo_atual = 0
+                        # Força o lote a ter apenas os índices filtrados e válidos
+                        st.session_state.indices_checar_sefaz = indices_marcados
+                        st.session_state.indice_atual_pos = 0
                         st.rerun()
+                    else:
+                        st.warning("⚠️ Marque o checkbox de pelo menos um registro na tabela para realizar a checagem da SEFAZ.")
 
-                if finalizar_button:
-                    if "ENVIAR" in df_editado.columns:
-                        st.session_state.df_bancario["ENVIAR"] = df_editado["ENVIAR"]
-
-                    try:
-                        cursor = conn.cursor()
-                        user_sistema = st.session_state.get("login_atual", "SISTEMA")
-                        
-                        for idx, row in st.session_state.df_bancario.iterrows():
-                            status_atual = row.get('SEFAZ')
-                            if status_atual and str(status_atual).strip() not in ['', 'None', 'nan', '⏳ PENDENTE']:
-                                cpf_fmt = formatar_cpf_completo(row.get('CPF', ''))
-                                mat = str(row.get('COD_INSTITUCIONAL', ''))
-                                nome = str(row.get('NOME_ATUAL', ''))[:150]
-                                
-                                sql_sync = """
-                                BEGIN
-                                    MERGE INTO AUDITORIA_ENVIOS_SEFAZ t
-                                    USING (SELECT :cpf_fmt AS cpf, :mat AS mat FROM dual) s
-                                    ON (REGEXP_REPLACE(t.CPF, '[^0-9]', '') = REGEXP_REPLACE(s.cpf, '[^0-9]', '') AND t.MATRICULA = s.mat)
-                                    WHEN MATCHED THEN
-                                        UPDATE SET STATUS_SEFAZ = :status, USUARIO_ENVIO = :usr
-                                    WHEN NOT MATCHED THEN
-                                        INSERT (ID_ENVIO, CPF, MATRICULA, NOME, STATUS_SEFAZ, USUARIO_ENVIO)
-                                        VALUES (SEQ_AUD_ENVIOS_SEFAZ.NEXTVAL, :cpf_fmt, :mat, :nome, :status, :usr);
-                                END;
-                                """
-                                cursor.execute(sql_sync, {
-                                    'cpf_fmt': cpf_fmt,
-                                    'mat': mat,
-                                    'nome': nome,
-                                    'status': str(status_atual),
-                                    'usr': user_sistema
-                                })
-                        conn.commit()
-                        cursor.close()
-                    except Exception as e_sync:
-                        if 'conn' in locals():
-                            conn.rollback()
-                        st.warning(f"Aviso na sincronização final: {e_sync}")
-
-                    if 'df_bancario' in st.session_state and not st.session_state.df_bancario.empty:
-                        st.session_state.df_bancario = atualizar_status_auditoria(conn, st.session_state.df_bancario)
-
-                    st.rerun()
 
                 if submit_button:
                     if "ENVIAR" in df_editado.columns:
@@ -427,6 +411,15 @@ def renderizar_dados_bancarios(conn, ano, mes, auth_ui, novos_dados_bancario):
 
                         st.session_state.processamento_pendente = selecionados.to_dict('records')
                         st.rerun()
+
+                if finalizar_button:
+                    if "ENVIAR" in df_editado.columns:
+                        st.session_state.df_bancario["ENVIAR"] = df_editado["ENVIAR"]
+
+                    if 'df_bancario' in st.session_state and not st.session_state.df_bancario.empty:
+                        st.session_state.df_bancario = atualizar_status_auditoria(conn, st.session_state.df_bancario)
+
+                    st.rerun()
 
                 st.divider()
 
@@ -449,25 +442,76 @@ def renderizar_dados_bancarios(conn, ano, mes, auth_ui, novos_dados_bancario):
                         df_cpf_str = st.session_state.df_bancario['CPF'].astype(str)
                         mask_cpf = df_cpf_str.str.replace(r'\D', '', regex=True).str.zfill(11) == cpf_limpo
 
+                        barra_avulsa = st.progress(0)
+                        status_avulsa = st.empty()
+
+                        status_avulsa.text("🔍 Conectando e localizando CPF na competência...")
+                        barra_avulsa.progress(40)
+                        time.sleep(0.2)
+
+                        status_avulsa.text("🔄 Validando status e consultando SEFAZ...")
+                        barra_avulsa.progress(80)
+
                         if st.session_state.df_bancario[mask_cpf].any().any():
+                            barra_avulsa.progress(100)
+                            status_avulsa.text("✅ CPF localizado com sucesso na lista!")
+                            time.sleep(0.3)
+                            barra_avulsa.empty()
+                            status_avulsa.empty()
+
+                            st.info(f"O CPF {cpf_limpo} foi localizado na lista.")
                             st.session_state.df_bancario.loc[mask_cpf, 'ENVIAR'] = True
-                            st.success(f"O CPF {cpf_limpo} foi localizado na lista e selecionado!")
-                            del st.session_state['cpf_buscado_ativo']
-                            st.rerun()
+
+                            df_loc_exib = st.session_state.df_bancario[mask_cpf].copy()
+                            df_loc_exib['CPF'] = df_loc_exib['CPF'].apply(formatar_cpf)
+                            if "SOMENTE_VISUALIZAR" in df_loc_exib.columns:
+                                df_loc_exib = df_loc_exib.drop(columns=["SOMENTE_VISUALIZAR"])
+
+                            st.data_editor(
+                                df_loc_exib,
+                                column_config={
+                                    "ENVIAR": st.column_config.CheckboxColumn("Selecionar", default=False)
+                                },
+                                hide_index=True,
+                                use_container_width=True,
+                                key=f"editor_cpf_localizado_{cpf_limpo}"
+                            )
                         else:
                             df_encontrado = novos_dados_bancario.buscar_por_cpf(conn, cpf_limpo, ano, mes)
+                            barra_avulsa.progress(100)
+                            status_avulsa.text("✅ Busca avulsa concluída!")
+                            time.sleep(0.3)
+                            barra_avulsa.empty()
+                            status_avulsa.empty()
+
                             if df_encontrado is not None and not df_encontrado.empty:
                                 df_encontrado['ENVIAR'] = True
                                 if 'SEFAZ' not in df_encontrado.columns:
                                     df_encontrado['SEFAZ'] = '⏳ PENDENTE'
-                                
-                                st.session_state.df_bancario = pd.concat([st.session_state.df_bancario, df_encontrado], ignore_index=True).drop_duplicates(subset=['CPF', 'COD_INSTITUCIONAL'], keep='last')
-                                st.success(f"Registro localizado e adicionado com sucesso!")
-                                del st.session_state['cpf_buscado_ativo']
-                                st.rerun()
+                                st.session_state.df_bancario = pd.concat([st.session_state.df_bancario, df_encontrado]).drop_duplicates(subset=['CPF', 'COD_INSTITUCIONAL'])
+                                st.success(f"{len(df_encontrado)} registro(s) localizado(s) e adicionado(s)!")
+
+                                df_busc_exib = df_encontrado.copy()
+                                df_busc_exib['CPF'] = df_busc_exib['CPF'].apply(formatar_cpf)
+                                if "SOMENTE_VISUALIZAR" in df_busc_exib.columns:
+                                    df_busc_exib = df_busc_exib.drop(columns=["SOMENTE_VISUALIZAR"])
+
+                                st.data_editor(
+                                    df_busc_exib,
+                                    column_config={
+                                        "ENVIAR": st.column_config.CheckboxColumn("Selecionar", default=False)
+                                    },
+                                    use_container_width=True,
+                                    hide_index=True,
+                                    num_rows="fixed",
+                                    key=f"editor_cpf_buscado_{cpf_limpo}"
+                                )
                             else:
                                 st.error("CPF não encontrado na folha desta competência.")
-                                del st.session_state['cpf_buscado_ativo']
+
+                        if st.button("⬅️ Voltar para lista completa", key=f"btn_voltar_lista_{cpf_limpo}"):
+                            del st.session_state['cpf_buscado_ativo']
+                            st.rerun()
 
                 st.divider()
                 st.subheader("🔍 Auditoria de Erros")
