@@ -102,7 +102,7 @@ def renderizar_dados_bancarios(conn, ano, mes, auth_ui, novos_dados_bancario):
         if 'df_bancario' not in st.session_state or st.session_state.get('last_params') != (ano, mes):
             with st.spinner("Buscando dados no banco..."):
                 df_temp = carregar_dados_bancarios(ano, mes)
-                df_temp = df_temp.reset_index(drop=True)  # <-- Adicione isso aqui
+                df_temp = df_temp.reset_index(drop=True)
 
                 if 'CPF' in df_temp.columns and 'ORGAO' in df_temp.columns:
                     cpfs_excecao = [
@@ -120,7 +120,7 @@ def renderizar_dados_bancarios(conn, ano, mes, auth_ui, novos_dados_bancario):
                 if not df_temp.empty:
                     df_temp = atualizar_status_auditoria(conn, df_temp)
 
-                st.session_state.df_bancario = df_temp
+                st.session_state.df_bancario = df_temp.reset_index(drop=True)
                 st.session_state.last_params = (ano, mes)
 
         if not st.session_state.df_bancario.empty:
@@ -129,7 +129,7 @@ def renderizar_dados_bancarios(conn, ano, mes, auth_ui, novos_dados_bancario):
             if "SEFAZ" not in st.session_state.df_bancario.columns:
                 st.session_state.df_bancario["SEFAZ"] = '⏳ PENDENTE'
 
-            st.session_state.df_bancario = st.session_state.df_bancario.sort_values(by=["ORGAO", "CPF"])
+            st.session_state.df_bancario = st.session_state.df_bancario.sort_values(by=["ORGAO", "CPF"]).reset_index(drop=True)
 
             # -------------------------------------------------------------
             # MODO PASSO A PASSO (SEFAZ ITERATIVO)
@@ -301,11 +301,7 @@ def renderizar_dados_bancarios(conn, ano, mes, auth_ui, novos_dados_bancario):
             # -------------------------------------------------------------
             else:
                 df_exibicao = st.session_state.df_bancario.copy()
-
-                # Garante que o índice seja limpo e sequencial para evitar conflitos
                 df_exibicao = df_exibicao.reset_index(drop=True)
-                
-                # Adiciona coluna de índice real garantindo unicidade por linha
                 df_exibicao['_INDEX_REAL'] = df_exibicao.index
 
                 df_exibicao['CPF'] = df_exibicao['CPF'].apply(formatar_cpf)
@@ -330,7 +326,7 @@ def renderizar_dados_bancarios(conn, ano, mes, auth_ui, novos_dados_bancario):
                             "ENVIAR": st.column_config.CheckboxColumn("Selecionar", default=False),
                             "DATA_ENVIO": st.column_config.TextColumn("Data de Envio", disabled=True),
                             "SEFAZ": st.column_config.TextColumn("Status SEFAZ", disabled=True),
-                            "_INDEX_REAL": None  # Oculta a coluna de controle do índice
+                            "_INDEX_REAL": None
                         },
                         disabled=["ENVIADO", "SEFAZ", "ORGAO", "COD_INSTITUCIONAL", "NOME_ATUAL", "CPF", "CHAVE_FOLHA", "DATA_ENVIO"],
                         use_container_width=True,
@@ -347,31 +343,25 @@ def renderizar_dados_bancarios(conn, ano, mes, auth_ui, novos_dados_bancario):
                     with col_btn3:
                         finalizar_button = st.form_submit_button("Finalizar e Atualizar Tela")
 
-                # Os tratamentos dos botões devem vir logo APÓS o fechamento do bloco 'with st.form(...):'
                 if checar_sefaz_button:
-                    # Sincroniza o estado do editor com o DataFrame principal da sessão
                     if "ENVIAR" in df_editado.columns and "_INDEX_REAL" in df_editado.columns:
                         for _, row_tela in df_editado.iterrows():
                             idx_real = row_tela.get('_INDEX_REAL')
                             if idx_real is not None and idx_real in st.session_state.df_bancario.index:
                                 st.session_state.df_bancario.loc[idx_real, 'ENVIAR'] = row_tela.get('ENVIAR', False)
 
-                    # Pega diretamente as linhas marcadas do DataFrame editado
                     selecionados_checar = df_editado[df_editado["ENVIAR"] == True]
 
-                    # Debug visual (opcional: você pode comentar ou remover se não precisar mais ver sempre)
                     if not selecionados_checar.empty:
                         indices_pendentes = selecionados_checar['_INDEX_REAL'].dropna().astype(int).tolist()
                         st.success(f"Processando {len(indices_pendentes)} registros marcados para a SEFAZ.")
                     else:
-                        # Fallback para pendentes gerais se nada estiver marcado
                         indices_pendentes = st.session_state.df_bancario[
                             (st.session_state.df_bancario['SEFAZ'] != '✅ MATRÍCULA ATIVA') |
                             (st.session_state.df_bancario['SEFAZ'].isna())
                         ].index.tolist()
                         st.info("Nenhum selecionado manualmente. Processando todos os pendentes gerais.")
 
-                    # Inicia o fluxo passo a passo
                     if indices_pendentes:
                         st.session_state.modo_passo_a_passo_ativo = True
                         st.session_state.indices_passo_a_passo = indices_pendentes
@@ -379,7 +369,6 @@ def renderizar_dados_bancarios(conn, ano, mes, auth_ui, novos_dados_bancario):
                         st.rerun()
                     else:
                         st.warning("Não há registros pendentes para processar.")
-
 
                 if finalizar_button:
                     if "ENVIAR" in df_editado.columns and "_INDEX_REAL" in df_editado.columns:
@@ -494,7 +483,10 @@ def renderizar_dados_bancarios(conn, ano, mes, auth_ui, novos_dados_bancario):
                                     df_encontrado['ENVIAR'] = True
                                     if 'SEFAZ' not in df_encontrado.columns:
                                         df_encontrado['SEFAZ'] = '⏳ PENDENTE'
-                                    st.session_state.df_bancario = pd.concat([st.session_state.df_bancario, df_encontrado]).drop_duplicates(subset=['CPF', 'COD_INSTITUCIONAL'])
+                                    
+                                    # CORREÇÃO CRÍTICA DE ÍNDICES: Concatena e imediatamente reseta o índice mantendo a integridade
+                                    st.session_state.df_bancario = pd.concat([st.session_state.df_bancario, df_encontrado]).drop_duplicates(subset=['CPF', 'COD_INSTITUCIONAL']).reset_index(drop=True)
+                                    
                                     st.success(f"{len(df_encontrado)} registro(s) localizado(s) e adicionado(s)!")
 
                                     df_busc_exib = df_encontrado.copy()
