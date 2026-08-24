@@ -363,7 +363,7 @@ def renderizar_dados_bancarios(conn, ano, mes, auth_ui, novos_dados_bancario):
                         st.info("Nenhum selecionado manualmente. Processando todos os pendentes gerais.")
 
                     if indices_pendentes:
-                        st.session_state.modo_passo_a_passo_ativo = True
+                        st.session_state.modo_passo_a_passo_ativo = False
                         st.session_state.indices_passo_a_passo = indices_pendentes
                         st.session_state.indice_passo_atual = 0
                         st.rerun()
