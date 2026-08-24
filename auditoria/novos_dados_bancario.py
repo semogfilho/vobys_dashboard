@@ -89,6 +89,13 @@ def atualizar_status_auditoria(conn, df):
     return df
 
 
+import streamlit as st
+import pandas as pd
+import re
+
+import pandas as pd
+import streamlit as st
+
 def buscar_por_cpf(conn, cpf_limpo, ano, mes):
     mes_int = int(mes)
     cursor = conn.cursor()
@@ -100,12 +107,26 @@ def buscar_por_cpf(conn, cpf_limpo, ano, mes):
     cursor.close()
 
     lista_resultados = [] # Inicializa uma lista para acumular os DFs
+    total_schemas = len(schemas)
 
-    for schema in schemas:
+    # Cria a barra de progresso no Streamlit
+    barra_progresso = st.progress(0, text="Iniciando varredura nos órgãos...")
+
+    for i, schema in enumerate(schemas):
+        nome_orgao = schema.replace('SW_', '')
+        
+        # Atualiza o progresso visual a cada schema percorrido
+        if total_schemas > 0:
+            percentual = (i + 1) / total_schemas
+            barra_progresso.progress(
+                percentual, 
+                text=f"Consultando órgão: {nome_orgao} ({i + 1}/{total_schemas})..."
+            )
+
         sql = f"""
             SELECT * FROM (
-                SELECT '{schema.replace('SW_', '')}' AS ORGAO,
-                       ff.cod_institucional, phn.nome AS NOME_ATUAL, doc.cpf_pessoa AS CPF, 'NÃO' AS ENVIADO, f.chave_folha
+                SELECT '{nome_orgao}' AS ORGAO,
+                        ff.cod_institucional, phn.nome AS NOME_ATUAL, doc.cpf_pessoa AS CPF, 'NÃO' AS ENVIADO, f.chave_folha
                 FROM {schema}.folha_func ff
                 INNER JOIN {schema}.folha f ON f.id_folha = ff.id_folha
                 INNER JOIN sw_publico.pessoa p ON p.id_pessoa = ff.id_pessoa_funcionario
@@ -116,8 +137,8 @@ def buscar_por_cpf(conn, cpf_limpo, ano, mes):
 
                 UNION ALL
 
-                SELECT '{schema.replace('SW_', '')}' AS ORGAO,
-                       pv.cod_institucional, phn.nome AS NOME_ATUAL, doc.cpf_pessoa AS CPF, 'NÃO' AS ENVIADO, ef.mascara chave_folha
+                SELECT '{nome_orgao}' AS ORGAO,
+                        pv.cod_institucional, phn.nome AS NOME_ATUAL, doc.cpf_pessoa AS CPF, 'NÃO' AS ENVIADO, ef.mascara chave_folha
                 FROM {schema}.Estagiario_Pagamento ep
                 INNER JOIN {schema}.Estag_Folha ef ON ef.id_folha = ep.id_folha
                 INNER JOIN {schema}.estagiario e ON e.id_estagiario = ep.id_estagiario
@@ -133,10 +154,13 @@ def buscar_por_cpf(conn, cpf_limpo, ano, mes):
             df = pd.read_sql(sql, conn, params={'cpf': cpf_limpo, 'ano': int(ano), 'mes': mes_int})
             if not df.empty:
                 print(f"DEBUG: CPF {cpf_limpo} encontrado em {schema}")
-                lista_resultados.append(df) # Adiciona o resultado encontrado à lista
+                lista_resultados.append(df)
         except Exception as e:
             print(f"DEBUG: Erro no schema {schema}: {e}")
             continue
+
+    # Finaliza a barra de progresso 100%
+    barra_progresso.progress(1.0, text="Varredura de CPFs concluída!")
 
     # Consolida todos os resultados encontrados em um único DataFrame
     if lista_resultados:
