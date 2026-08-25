@@ -112,6 +112,10 @@ def renderizar_dados_bancarios(conn, ano, mes, auth_ui, novos_dados_bancario):
                     df_temp['CPF_LIMPO'] = df_temp['CPF'].astype(str).str.replace(r'\D', '', regex=True).str.zfill(11)
                     mask_cpfs = df_temp['CPF_LIMPO'].isin(cpfs_excecao)
                     mask_seduc = df_temp['ORGAO'].astype(str).str.upper() == 'SEDUC'
+                    # 💡 APLICANDO O FILTRO: Mantém apenas a SEDUC OU os CPFs de exceção
+                    #df_temp = df_temp[mask_seduc | mask_cpfs].copy()
+                    #df_temp = df_temp[mask_seduc].copy()
+                    
                     df_temp = df_temp.drop(columns=['CPF_LIMPO'], errors='ignore')
 
                 if 'SEFAZ' not in df_temp.columns:
@@ -139,7 +143,8 @@ def renderizar_dados_bancarios(conn, ano, mes, auth_ui, novos_dados_bancario):
                 passo_atual = st.session_state.get('indice_passo_atual', 0)
 
                 st.subheader(f"⚙️ Processamento Passo a Passo ({passo_atual + 1} de {len(indices_pendentes)})")
-                st.progress((passo_atual + 1) / len(indices_pendentes))
+                if len(indices_pendentes) > 0:
+                    st.progress(min((passo_atual + 1) / len(indices_pendentes), 1.0))
 
                 if passo_atual < len(indices_pendentes):
                     idx = indices_pendentes[passo_atual]
@@ -163,6 +168,8 @@ def renderizar_dados_bancarios(conn, ano, mes, auth_ui, novos_dados_bancario):
 
                     if btn_parar:
                         st.session_state.modo_passo_a_passo_ativo = False
+                        st.session_state.indices_passo_a_passo = []
+                        st.session_state.indice_passo_atual = 0
                         st.rerun()
 
                     if btn_proximo:
@@ -228,6 +235,7 @@ def renderizar_dados_bancarios(conn, ano, mes, auth_ui, novos_dados_bancario):
                             st.rerun()
                         else:
                             st.session_state.modo_passo_a_passo_ativo = False
+                            st.session_state.indices_passo_a_passo = []
                             st.session_state.df_bancario = atualizar_status_auditoria(conn, st.session_state.df_bancario)
                             carregar_dados_bancarios.clear()
                             st.success("🎉 Todos os registros selecionados foram processados com sucesso!")
@@ -279,6 +287,7 @@ def renderizar_dados_bancarios(conn, ano, mes, auth_ui, novos_dados_bancario):
 
                             if sucesso:
                                 st.session_state.df_bancario.loc[mask, 'ENVIADO'] = 'SIM'
+                                st.session_state.df_bancario.loc[mask, 'SEFAZ'] = "✅ MATRÍCULA ATIVA"
                                 st.success(f"Gravado com sucesso: {registro.get('NOME_ATUAL')}")
                             else:
                                 st.session_state.df_bancario.loc[mask, 'ENVIADO'] = 'ERRO'
@@ -333,13 +342,15 @@ def renderizar_dados_bancarios(conn, ano, mes, auth_ui, novos_dados_bancario):
                         hide_index=True,
                     )
 
-                    col_btn1, col_chk, col_btn2, col_btn3 = st.columns([1.2, 1, 1.2, 1.2])
+                    col_btn1, col_chk, col_btn2, col_btn3, col_chk_passo = st.columns([1.2, 1, 1.2, 1.2, 1.2])
                     with col_btn1:
                         submit_button = st.form_submit_button("Confirmar Envio Selecionados")
                     with col_chk:
                         chk_visualizar = st.checkbox("Somente Visualizar?", value=True, key="chk_somente_visualizar_geral")
                     with col_btn2:
                         checar_sefaz_button = st.form_submit_button("CHECAR SEFAZ")
+                    with col_chk_passo:
+                        chk_usar_passo_a_passo = st.checkbox("Modo Passo a Passo?", value=False, key="chk_ativar_passo_a_passo")
                     with col_btn3:
                         finalizar_button = st.form_submit_button("Finalizar e Atualizar Tela")
 
@@ -350,27 +361,96 @@ def renderizar_dados_bancarios(conn, ano, mes, auth_ui, novos_dados_bancario):
                             if idx_real is not None and idx_real in st.session_state.df_bancario.index:
                                 st.session_state.df_bancario.loc[idx_real, 'ENVIAR'] = row_tela.get('ENVIAR', False)
 
-                    # Garante que valores vazios/NaN não quebrem a comparação booleana
                     df_editado["ENVIAR"] = df_editado["ENVIAR"].fillna(False)
                     selecionados_checar = df_editado[df_editado["ENVIAR"] == True]
 
                     if not selecionados_checar.empty:
                         indices_pendentes = selecionados_checar['_INDEX_REAL'].dropna().astype(int).tolist()
-                        st.success(f"Processando {len(indices_pendentes)} registros marcados para a SEFAZ.")
                     else:
                         indices_pendentes = st.session_state.df_bancario[
-                            (st.session_state.df_bancario['SEFAZ'] != '✅ MATRÍCULA ATIVAA') |
+                            (st.session_state.df_bancario['SEFAZ'] != '✅ MATRÍCULA ATIVA') |
                             (st.session_state.df_bancario['SEFAZ'].isna())
                         ].index.tolist()
-                        #st.info("Nenhum selecionado manualmente. Processando todos os pendentes gerais.")
-                        st.success(f"Nenhum selecionado manualmente. Processando todos pendentes ({len(indices_pendentes)} registros).")
-                        time.sleep(2.5)
 
                     if indices_pendentes:
-                        st.session_state.modo_passo_a_passo_ativo = False
-                        st.session_state.indices_passo_a_passo = indices_pendentes
-                        st.session_state.indice_passo_atual = 0
-                        st.rerun()
+                        if chk_usar_passo_a_passo:
+                            st.session_state.modo_passo_a_passo_ativo = True
+                            st.session_state.indices_passo_a_passo = indices_pendentes
+                            st.session_state.indice_passo_atual = 0
+                            st.rerun()
+                        else:
+                            # PROCESSAMENTO AUTOMÁTICO DE TODOS OS PENDENTES EM LOTE
+                            user_sistema = st.session_state.get("login_atual", "SISTEMA")
+                            my_bar = st.progress(0, text="Iniciando checagem automática na SEFAZ...")
+                            total_reg = len(indices_pendentes)
+
+                            cursor = conn.cursor()
+                            for i, idx in enumerate(indices_pendentes):
+                                row = st.session_state.df_bancario.loc[idx]
+                                cpf_cru = str(row.get('CPF', ''))
+                                matricula_atual = str(row.get('COD_INSTITUCIONAL', ''))
+                                nome_atual = str(row.get('NOME_ATUAL', 'Sem Nome'))
+
+                                digitos_puros = re.sub(r'\D', '', cpf_cru)
+                                if len(digitos_puros) > 11:
+                                    digitos_puros = digitos_puros[-11:]
+                                digitos_puros = digitos_puros.zfill(11)
+
+                                if len(digitos_puros) != 11 or len(set(digitos_puros)) == 1:
+                                    res_visual = "CPF INVÁLIDO"
+                                else:
+                                    nums = [int(dig) for dig in digitos_puros]
+                                    soma1 = sum(nums[j] * (j + 1) for j in range(9))
+                                    resto1 = soma1 % 11
+                                    if resto1 == 10: resto1 = 0
+
+                                    soma2 = sum(nums[j] * j for j in range(10))
+                                    resto2 = soma2 % 11
+                                    if resto2 == 10: resto2 = 0
+
+                                    if resto1 != nums[9] or resto2 != nums[10]:
+                                        res_visual = "CPF INVÁLIDO"
+                                    else:
+                                        res_visual = consultar_credor_sefaz_individual(ano, digitos_puros, matricula_atual)
+
+                                p_cpf_fmt = formatar_cpf_completo(cpf_cru)
+                                p_mat = matricula_atual
+                                p_nome = nome_atual[:150]
+                                p_usr = str(user_sistema)
+
+                                try:
+                                    sql_block = """
+                                    BEGIN
+                                        DELETE FROM AUDITORIA_ENVIOS_SEFAZ
+                                        WHERE REGEXP_REPLACE(CPF, '[^0-9]', '') = :cpf_numerico
+                                          AND MATRICULA = :mat;
+
+                                        INSERT INTO AUDITORIA_ENVIOS_SEFAZ (ID_ENVIO, CPF, MATRICULA, NOME, STATUS_SEFAZ, USUARIO_ENVIO)
+                                        VALUES (SEQ_AUD_ENVIOS_SEFAZ.NEXTVAL, :cpf_fmt, :mat, :nome, :status, :usr);
+                                    END;
+                                    """
+                                    cursor.execute(sql_block, {
+                                        'cpf_numerico': re.sub(r'\D', '', cpf_cru),
+                                        'cpf_fmt': p_cpf_fmt,
+                                        'mat': p_mat,
+                                        'nome': p_nome,
+                                        'status': str(res_visual),
+                                        'usr': p_usr
+                                    })
+                                    conn.commit()
+                                except Exception:
+                                    conn.rollback()
+
+                                st.session_state.df_bancario.loc[idx, 'SEFAZ'] = res_visual
+                                my_bar.progress((i + 1) / total_reg, text=f"Processando {i+1} de {total_reg}: {nome_atual}")
+
+                            cursor.close()
+                            my_bar.empty()
+                            st.session_state.df_bancario = atualizar_status_auditoria(conn, st.session_state.df_bancario)
+                            carregar_dados_bancarios.clear()
+                            st.success("🎉 Checagem em lote finalizada com sucesso!")
+                            time.sleep(1.5)
+                            st.rerun()
                     else:
                         st.warning("Não há registros pendentes para processar.")
 
@@ -487,10 +567,9 @@ def renderizar_dados_bancarios(conn, ano, mes, auth_ui, novos_dados_bancario):
                                     df_encontrado['ENVIAR'] = True
                                     if 'SEFAZ' not in df_encontrado.columns:
                                         df_encontrado['SEFAZ'] = '⏳ PENDENTE'
-                                    
-                                    # CORREÇÃO CRÍTICA DE ÍNDICES: Concatena e imediatamente reseta o índice mantendo a integridade
+
                                     st.session_state.df_bancario = pd.concat([st.session_state.df_bancario, df_encontrado]).drop_duplicates(subset=['CPF', 'COD_INSTITUCIONAL']).reset_index(drop=True)
-                                    
+
                                     st.success(f"{len(df_encontrado)} registro(s) localizado(s) e adicionado(s)!")
 
                                     df_busc_exib = df_encontrado.copy()
