@@ -556,11 +556,20 @@ def renderizar_dados_bancarios(conn, ano, mes, auth_ui, novos_dados_bancario):
                 # =========================================================
                 # SEÇÃO DE CONSULTA DE CPF AVULSO
                 # =========================================================
-                col1, col2 = st.columns([1, 1])
-                with col1:
-                    cpf_busca = st.text_input("Consultar CPF avulso:", placeholder="Digite o CPF...", key="input_cpf_avulso")
-                with col2:
-                    btn_buscar = st.button("Buscar CPF na Competência", key="btn_buscar_cpf")
+                with st.container(border=True):
+                    st.markdown("##### 🔎 Consulta Rápida de CPF")
+                    
+                    col_input, col_btn = st.columns([3, 1], vertical_alignment="bottom")
+                    
+                    with col_input:
+                        cpf_busca = st.text_input(
+                            "Consultar CPF avulso:", 
+                            placeholder="Digite o CPF...", 
+                            key="input_cpf_avulso",
+                            label_visibility="collapsed"
+                        )
+                    with col_btn:
+                        btn_buscar = st.button("Buscar na Competência", key="btn_buscar_cpf", use_container_width=True)
 
                 if btn_buscar and cpf_busca:
                     st.session_state['cpf_buscado_ativo'] = ''.join(filter(str.isdigit, cpf_busca)).zfill(11)
