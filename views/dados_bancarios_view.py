@@ -338,17 +338,39 @@ def renderizar_dados_bancarios(conn, ano, mes, auth_ui, novos_dados_bancario):
                         hide_index=True,
                     )
 
-                    col_btn1, col_chk, col_btn2, col_btn3, col_chk_passo = st.columns([1.2, 1, 1.2, 1.2, 1.2])
-                    with col_btn1:
-                        submit_button = st.form_submit_button("Confirmar Envio Selecionados")
-                    with col_chk:
-                        chk_visualizar = st.checkbox("Somente Visualizar?", value=True, key="chk_somente_visualizar_geral")
-                    with col_btn2:
-                        checar_sefaz_button = st.form_submit_button("CHECAR SEFAZ")
-                    with col_chk_passo:
-                        chk_usar_passo_a_passo = st.checkbox("Modo Passo a Passo?", value=False, key="chk_ativar_passo_a_passo")
-                    with col_btn3:
-                        finalizar_button = st.form_submit_button("Finalizar e Atualizar Tela")
+                    # Estilização CSS para compactar e aproximar os blocos com elegância
+                    st.markdown("""
+                        <style>
+                        div[data-testid="stVerticalBlock"] div[data-testid="stContainer"] {
+                            border-radius: 8px;
+                            padding: 8px 10px 4px 10px;
+                            background-color: rgba(150, 150, 150, 0.02);
+                            border: 1px solid rgba(150, 150, 150, 0.12);
+                        }
+                        /* Compacta o espaçamento vertical interno dos containers */
+                        div[data-testid="stVerticalBlock"] div[data-testid="stContainer"] div[data-testid="stVerticalBlock"] {
+                            gap: 0.2rem !important;
+                        }
+                        </style>
+                    """, unsafe_allow_html=True)
+
+                    col_bloco1, col_bloco2, col_bloco3 = st.columns([1.3, 1.3, 1.0], gap="small")
+
+                    with col_bloco1:
+                        with st.container(border=True):
+                            submit_button = st.form_submit_button("🚀 Confirmar Envio", use_container_width=True)
+                            chk_visualizar = st.checkbox("Somente Visualizar?", value=True, key="chk_somente_visualizar_geral")
+
+                    with col_bloco2:
+                        with st.container(border=True):
+                            checar_sefaz_button = st.form_submit_button("🔍 CHECAR SEFAZ", use_container_width=True)
+                            chk_usar_passo_a_passo = st.checkbox("Modo Passo a Passo?", value=False, key="chk_ativar_passo_a_passo")
+
+                    with col_bloco3:
+                        with st.container(border=True):
+                            finalizar_button = st.form_submit_button("💾 Finalizar Tela", use_container_width=True)
+                            st.markdown("<div style='height: 29px;'></div>", unsafe_allow_html=True)
+
 
                 # =========================================================
                 # TRATAMENTO DOS BOTÕES DO FORMULÁRIO (ISOLADOS POR IF/ELIF)
