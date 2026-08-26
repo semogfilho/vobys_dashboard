@@ -65,11 +65,11 @@ reload_views()
 
 # 5. Validação final de menu
 def get_opcoes():
-    opcoes_base = ["Inicio", "Grafico", "Pagto Pendente", "Responsavel", "Arquivos/ID", "Auditoria", "Auditoria Folha", "Consulta Credor SEFAZ"]
+    opcoes_base = ["Inicio", "Grafico", "Pagto Pendente", "Responsavel", "Arquivos/ID", "Auditoria", "Auditoria Folha", "Consulta Credor SEFAZ", "Relatório de Inconsistências SEFAZ"]
 
     # Se for admin ('a'), adiciona as opções exclusivas da SEFAZ
-    if st.session_state.get("perfil_usuario") in ['a'] :
-        opcoes_base.append("Inconsistencia Cadastro SEFAZ")
+    #if st.session_state.get("perfil_usuario") in ['a'] :
+    #    opcoes_base.append("Relatório de Inconsistências SEFAZ")
 
     #if st.session_state.get("perfil_usuario") in ['g'] :
     #    opcoes_base.append("Consulta Credor SEFAZ")
@@ -219,7 +219,7 @@ try:
     elif menu_selecionado == "Auditoria": auditoria_integracao.render(conn, ano, mes)
     elif menu_selecionado == "Auditoria Folha": auditoria_folha.render(conn, ano, mes, st.session_state.sub_menu_auditoria)
     elif menu_selecionado == "Usuários": usuarios.render(conn, st.session_state.perfil_usuario)
-    elif menu_selecionado == "Inconsistencia Cadastro SEFAZ": inconsistencia_sefaz_view.renderizar_inconsistencia_sefaz(ano, mes, auth_ui)
+    elif menu_selecionado == "Relatório de Inconsistências SEFAZ": inconsistencia_sefaz_view.renderizar_inconsistencia_sefaz(ano, mes, auth_ui)
     elif menu_selecionado == "Consulta Credor SEFAZ": consulta_credor_view.renderizar_consulta_credor(ano, mes)
     elif menu_selecionado == "Validação BB":
        if st.session_state.perfil_usuario == 'a': valida_bb.render(conn)

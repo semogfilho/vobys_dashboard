@@ -112,10 +112,6 @@ def renderizar_dados_bancarios(conn, ano, mes, auth_ui, novos_dados_bancario):
                     df_temp['CPF_LIMPO'] = df_temp['CPF'].astype(str).str.replace(r'\D', '', regex=True).str.zfill(11)
                     mask_cpfs = df_temp['CPF_LIMPO'].isin(cpfs_excecao)
                     mask_seduc = df_temp['ORGAO'].astype(str).str.upper() == 'SEDUC'
-                    # 💡 APLICANDO O FILTRO: Mantém apenas a SEDUC OU os CPFs de exceção
-                    #df_temp = df_temp[mask_seduc | mask_cpfs].copy()
-                    #df_temp = df_temp[mask_seduc].copy()
-                    
                     df_temp = df_temp.drop(columns=['CPF_LIMPO'], errors='ignore')
 
                 if 'SEFAZ' not in df_temp.columns:
@@ -287,7 +283,7 @@ def renderizar_dados_bancarios(conn, ano, mes, auth_ui, novos_dados_bancario):
 
                             if sucesso:
                                 st.session_state.df_bancario.loc[mask, 'ENVIADO'] = 'SIM'
-                                st.session_state.df_bancario.loc[mask, 'SEFAZ'] = "✅ MATRÍCULA ATIVA"
+                                st.session_state.df_bancario.loc[mask, 'SEFAZ'] = '✅ MATRÍCULA ATIVA'
                                 st.success(f"Gravado com sucesso: {registro.get('NOME_ATUAL')}")
                             else:
                                 st.session_state.df_bancario.loc[mask, 'ENVIADO'] = 'ERRO'
@@ -354,7 +350,30 @@ def renderizar_dados_bancarios(conn, ano, mes, auth_ui, novos_dados_bancario):
                     with col_btn3:
                         finalizar_button = st.form_submit_button("Finalizar e Atualizar Tela")
 
-                if checar_sefaz_button:
+                # =========================================================
+                # TRATAMENTO DOS BOTÕES DO FORMULÁRIO (ISOLADOS POR IF/ELIF)
+                # =========================================================
+                if submit_button:
+                    if "ENVIAR" in df_editado.columns and "_INDEX_REAL" in df_editado.columns:
+                        for _, row_tela in df_editado.iterrows():
+                            idx_real = row_tela.get('_INDEX_REAL')
+                            if idx_real is not None and idx_real in st.session_state.df_bancario.index:
+                                st.session_state.df_bancario.loc[idx_real, 'ENVIAR'] = row_tela.get('ENVIAR', False)
+
+                    selecionados = st.session_state.df_bancario[st.session_state.df_bancario["ENVIAR"] == True].copy()
+                    if selecionados.empty:
+                        st.warning("Nenhum registro selecionado!")
+                    else:
+                        selecionados["SOMENTE_VISUALIZAR"] = chk_visualizar
+
+                        if not chk_visualizar:
+                            if not auth_ui.verificar_credenciais_sefaz():
+                                st.stop()
+
+                        st.session_state.processamento_pendente = selecionados.to_dict('records')
+                        st.rerun()
+
+                elif checar_sefaz_button:
                     if "ENVIAR" in df_editado.columns and "_INDEX_REAL" in df_editado.columns:
                         for _, row_tela in df_editado.iterrows():
                             idx_real = row_tela.get('_INDEX_REAL')
@@ -379,7 +398,6 @@ def renderizar_dados_bancarios(conn, ano, mes, auth_ui, novos_dados_bancario):
                             st.session_state.indice_passo_atual = 0
                             st.rerun()
                         else:
-                            # PROCESSAMENTO AUTOMÁTICO DE TODOS OS PENDENTES EM LOTE
                             user_sistema = st.session_state.get("login_atual", "SISTEMA")
                             my_bar = st.progress(0, text="Iniciando checagem automática na SEFAZ...")
                             total_reg = len(indices_pendentes)
@@ -454,7 +472,7 @@ def renderizar_dados_bancarios(conn, ano, mes, auth_ui, novos_dados_bancario):
                     else:
                         st.warning("Não há registros pendentes para processar.")
 
-                if finalizar_button:
+                elif finalizar_button:
                     if "ENVIAR" in df_editado.columns and "_INDEX_REAL" in df_editado.columns:
                         for _, row_tela in df_editado.iterrows():
                             idx_real = row_tela.get('_INDEX_REAL')
@@ -465,33 +483,41 @@ def renderizar_dados_bancarios(conn, ano, mes, auth_ui, novos_dados_bancario):
                         cursor = conn.cursor()
                         user_sistema = st.session_state.get("login_atual", "SISTEMA")
 
+                        # Prepara a lista de parâmetros para envio em lote (bulk/executemany)
+                        dados_para_lote = []
                         for idx, row in st.session_state.df_bancario.iterrows():
                             status_atual = row.get('SEFAZ')
                             if status_atual and str(status_atual).strip() not in ['', 'None', 'nan', '⏳ PENDENTE']:
                                 cpf_fmt = formatar_cpf_completo(row.get('CPF', ''))
                                 mat = str(row.get('COD_INSTITUCIONAL', ''))
                                 nome = str(row.get('NOME_ATUAL', ''))[:150]
-
-                                sql_sync = """
-                                BEGIN
-                                    MERGE INTO AUDITORIA_ENVIOS_SEFAZ t
-                                    USING (SELECT :cpf_fmt AS cpf, :mat AS mat FROM dual) s
-                                    ON (REGEXP_REPLACE(t.CPF, '[^0-9]', '') = REGEXP_REPLACE(s.cpf, '[^0-9]', '') AND t.MATRICULA = s.mat)
-                                    WHEN MATCHED THEN
-                                        UPDATE SET STATUS_SEFAZ = :status, USUARIO_ENVIO = :usr
-                                    WHEN NOT MATCHED THEN
-                                        INSERT (ID_ENVIO, CPF, MATRICULA, NOME, STATUS_SEFAZ, USUARIO_ENVIO)
-                                        VALUES (SEQ_AUD_ENVIOS_SEFAZ.NEXTVAL, :cpf_fmt, :mat, :nome, :status, :usr);
-                                END;
-                                """
-                                cursor.execute(sql_sync, {
+                                
+                                # Adiciona os parâmetros em formato de dicionário ou tupla para o executemany
+                                dados_para_lote.append({
                                     'cpf_fmt': cpf_fmt,
                                     'mat': mat,
                                     'nome': nome,
                                     'status': str(status_atual),
                                     'usr': user_sistema
                                 })
+
+                        if dados_para_lote:
+                            sql_sync = """
+                            BEGIN
+                                MERGE INTO AUDITORIA_ENVIOS_SEFAZ t
+                                USING (SELECT :cpf_fmt AS cpf, :mat AS mat FROM dual) s
+                                ON (REGEXP_REPLACE(t.CPF, '[^0-9]', '') = REGEXP_REPLACE(s.cpf, '[^0-9]', '') AND t.MATRICULA = s.mat)
+                                WHEN MATCHED THEN
+                                    UPDATE SET STATUS_SEFAZ = :status, USUARIO_ENVIO = :usr
+                                WHEN NOT MATCHED THEN
+                                    INSERT (ID_ENVIO, CPF, MATRICULA, NOME, STATUS_SEFAZ, USUARIO_ENVIO)
+                                    VALUES (SEQ_AUD_ENVIOS_SEFAZ.NEXTVAL, :cpf_fmt, :mat, :nome, :status, :usr);
+                            END;
+                            """
+                        # Executa tudo de uma vez só com executemany (milhares de vezes mais rápido)
+                        cursor.executemany(sql_sync, dados_para_lote)
                         conn.commit()
+                        
                         cursor.close()
                     except Exception as e_sync:
                         if 'conn' in locals():
@@ -503,28 +529,11 @@ def renderizar_dados_bancarios(conn, ano, mes, auth_ui, novos_dados_bancario):
 
                     st.rerun()
 
-                if submit_button:
-                    if "ENVIAR" in df_editado.columns and "_INDEX_REAL" in df_editado.columns:
-                        for _, row_tela in df_editado.iterrows():
-                            idx_real = row_tela.get('_INDEX_REAL')
-                            if idx_real is not None and idx_real in st.session_state.df_bancario.index:
-                                st.session_state.df_bancario.loc[idx_real, 'ENVIAR'] = row_tela.get('ENVIAR', False)
-
-                    selecionados = st.session_state.df_bancario[st.session_state.df_bancario["ENVIAR"] == True].copy()
-                    if selecionados.empty:
-                        st.warning("Nenhum registro selecionado!")
-                    else:
-                        selecionados["SOMENTE_VISUALIZAR"] = chk_visualizar
-
-                        if not chk_visualizar:
-                            if not auth_ui.verificar_credenciais_sefaz():
-                                st.stop()
-
-                        st.session_state.processamento_pendente = selecionados.to_dict('records')
-                        st.rerun()
-
                 st.divider()
 
+                # =========================================================
+                # SEÇÃO DE CONSULTA DE CPF AVULSO
+                # =========================================================
                 col1, col2 = st.columns([1, 1])
                 with col1:
                     cpf_busca = st.text_input("Consultar CPF avulso:", placeholder="Digite o CPF...", key="input_cpf_avulso")
