@@ -26,6 +26,36 @@ def formatar_cpf_completo(val_cpf):
     s = re.sub(r'\D', '', str(val_cpf)).zfill(11)
     return f"{s[:3]}.{s[3:6]}.{s[6:9]}-{s[9:]}"
 
+def validar_cpf_matematico(val_cpf):
+    """Valida matematicamente se o CPF é real (módulo 11 e dígitos repetidos)"""
+    digitos_puros = re.sub(r'\D', '', str(val_cpf))
+    if len(digitos_puros) > 11:
+        digitos_puros = digitos_puros[-11:]
+    digitos_puros = digitos_puros.zfill(11)
+
+    if len(digitos_puros) != 11 or len(set(digitos_puros)) == 1:
+        return False
+
+    nums = [int(dig) for dig in digitos_puros]
+    
+    # Validação do 1º dígito verificador
+    soma1 = sum(nums[i] * (i + 1) for i in range(9))
+    resto1 = soma1 % 11
+    if resto1 == 10: 
+        resto1 = 0
+    if resto1 != nums[9]:
+        return False
+
+    # Validação do 2º dígito verificador
+    soma2 = sum(nums[i] * i for i in range(10))
+    resto2 = soma2 % 11
+    if resto2 == 10: 
+        resto2 = 0
+    if resto2 != nums[10]:
+        return False
+
+    return True
+
 def consultar_credor_sefaz_individual(ano, cpf_ou_credor, matricula_para_conferir):
     try:
         usuario = st.secrets["sefaz"]["SIAFE_CPF"]
@@ -94,6 +124,25 @@ def renderizar_dados_bancarios(conn, ano, mes, auth_ui, novos_dados_bancario):
     try:
         mes_exibicao = "13º" if int(mes) == 13 else f"{int(mes):02d}"
         st.subheader(f"🏦 Dados Bancários (Novatos) ({mes_exibicao}/{ano})")
+
+        # =========================================================
+        # CSS PARA COMPACTAR ESPAÇAMENTOS AO MÍNIMO POSSÍVEL
+        # =========================================================
+        st.markdown("""
+            <style>
+            div[data-testid="stVerticalBlock"] {
+                gap: 0.3rem !important;
+            }
+            hr {
+                margin-top: 0.6rem !important;
+                margin-bottom: 0.6rem !important;
+            }
+            div[data-testid="stContainer"] {
+                padding-top: 4px !important;
+                padding-bottom: 4px !important;
+            }
+            </style>
+        """, unsafe_allow_html=True)
 
         @st.cache_data(ttl=600, show_spinner=False)
         def carregar_dados_bancarios(ano, mes):
@@ -176,22 +225,10 @@ def renderizar_dados_bancarios(conn, ano, mes, auth_ui, novos_dados_bancario):
                             digitos_puros = digitos_puros[-11:]
                         digitos_puros = digitos_puros.zfill(11)
 
-                        if len(digitos_puros) != 11 or len(set(digitos_puros)) == 1:
+                        if not validar_cpf_matematico(digitos_puros):
                             res_visual = "CPF INVÁLIDO"
                         else:
-                            nums = [int(dig) for dig in digitos_puros]
-                            soma1 = sum(nums[i] * (i + 1) for i in range(9))
-                            resto1 = soma1 % 11
-                            if resto1 == 10: resto1 = 0
-
-                            soma2 = sum(nums[i] * i for i in range(10))
-                            resto2 = soma2 % 11
-                            if resto2 == 10: resto2 = 0
-
-                            if resto1 != nums[9] or resto2 != nums[10]:
-                                res_visual = "CPF INVÁLIDO"
-                            else:
-                                res_visual = consultar_credor_sefaz_individual(ano, digitos_puros, matricula_atual)
+                            res_visual = consultar_credor_sefaz_individual(ano, digitos_puros, matricula_atual)
 
                         p_cpf_fmt = formatar_cpf_completo(cpf_cru)
                         p_mat = matricula_atual
@@ -354,7 +391,7 @@ def renderizar_dados_bancarios(conn, ano, mes, auth_ui, novos_dados_bancario):
                         st.rerun()
 
                 # =========================================================
-                # BARRA DE AÇÕES ENQUADRADA ABAIXO DA TABELA
+                # 2. BARRA DE AÇÕES ENQUADRADA ABAIXO DA TABELA
                 # =========================================================
                 with st.container(border=True):
                     col_a, col_b, col_c = st.columns([1.2, 1.2, 2.2], vertical_alignment="center")
@@ -372,8 +409,6 @@ def renderizar_dados_bancarios(conn, ano, mes, auth_ui, novos_dados_bancario):
                         total_marcados = int(st.session_state.df_bancario["ENVIAR"].sum()) if "ENVIAR" in st.session_state.df_bancario.columns else 0
                         total_geral = len(st.session_state.df_bancario)
                         st.markdown(f"<div style='text-align: right; font-weight: 600; color: #555; padding-right: 5px;'>📊 Selecionados: <span style='color: #0068c9;'>{total_marcados}</span> de {total_geral}</div>", unsafe_allow_html=True)
-
-                st.markdown("<br>", unsafe_allow_html=True)
 
                 # =========================================================
                 # 3. BOTÕES DE AÇÃO INFERIORES (Confirmar Envio, Checar Sefaz, Finalizar)
@@ -460,22 +495,10 @@ def renderizar_dados_bancarios(conn, ano, mes, auth_ui, novos_dados_bancario):
                                     digitos_puros = digitos_puros[-11:]
                                 digitos_puros = digitos_puros.zfill(11)
 
-                                if len(digitos_puros) != 11 or len(set(digitos_puros)) == 1:
+                                if not validar_cpf_matematico(digitos_puros):
                                     res_visual = "CPF INVÁLIDO"
                                 else:
-                                    nums = [int(dig) for dig in digitos_puros]
-                                    soma1 = sum(nums[j] * (j + 1) for j in range(9))
-                                    resto1 = soma1 % 11
-                                    if resto1 == 10: resto1 = 0
-
-                                    soma2 = sum(nums[j] * j for j in range(10))
-                                    resto2 = soma2 % 11
-                                    if resto2 == 10: resto2 = 0
-
-                                    if resto1 != nums[9] or resto2 != nums[10]:
-                                        res_visual = "CPF INVÁLIDO"
-                                    else:
-                                        res_visual = consultar_credor_sefaz_individual(ano, digitos_puros, matricula_atual)
+                                    res_visual = consultar_credor_sefaz_individual(ano, digitos_puros, matricula_atual)
 
                                 p_cpf_fmt = formatar_cpf_completo(cpf_cru)
                                 p_mat = matricula_atual
@@ -529,7 +552,6 @@ def renderizar_dados_bancarios(conn, ano, mes, auth_ui, novos_dados_bancario):
                         cursor = conn.cursor()
                         user_sistema = st.session_state.get("login_atual", "SISTEMA")
 
-                        # Prepara a lista de parâmetros para envio em lote (bulk/executemany)
                         dados_para_lote = []
                         for idx, row in st.session_state.df_bancario.iterrows():
                             status_atual = row.get('SEFAZ')
@@ -538,7 +560,6 @@ def renderizar_dados_bancarios(conn, ano, mes, auth_ui, novos_dados_bancario):
                                 mat = str(row.get('COD_INSTITUCIONAL', ''))
                                 nome = str(row.get('NOME_ATUAL', ''))[:150]
                                 
-                                # Adiciona os parâmetros em formato de dicionário ou tupla para o executemany
                                 dados_para_lote.append({
                                     'cpf_fmt': cpf_fmt,
                                     'mat': mat,
@@ -560,9 +581,8 @@ def renderizar_dados_bancarios(conn, ano, mes, auth_ui, novos_dados_bancario):
                                     VALUES (SEQ_AUD_ENVIOS_SEFAZ.NEXTVAL, :cpf_fmt, :mat, :nome, :status, :usr);
                             END;
                             """
-                        # Executa tudo de uma vez só com executemany (milhares de vezes mais rápido)
-                        cursor.executemany(sql_sync, dados_para_lote)
-                        conn.commit()
+                            cursor.executemany(sql_sync, dados_para_lote)
+                            conn.commit()
                         
                         cursor.close()
                     except Exception as e_sync:
@@ -595,15 +615,29 @@ def renderizar_dados_bancarios(conn, ano, mes, auth_ui, novos_dados_bancario):
                     with col_btn:
                         btn_buscar = st.button("Buscar na Competência", key="btn_buscar_cpf", use_container_width=True)
 
+                # Limpa o estado se o input for esvaziado
+                if not cpf_busca or not cpf_busca.strip():
+                    if 'cpf_buscado_ativo' in st.session_state:
+                        del st.session_state['cpf_buscado_ativo']
+                
                 if btn_buscar and cpf_busca:
-                    st.session_state['cpf_buscado_ativo'] = ''.join(filter(str.isdigit, cpf_busca)).zfill(11)
+                    cpf_limpo_temp = ''.join(filter(str.isdigit, cpf_busca)).zfill(11)
+                    
+                    # VALIDAÇÃO PRÉVIA: Se o CPF for matematicamente inválido, bloqueia na hora sem rodar nada!
+                    if not validar_cpf_matematico(cpf_limpo_temp):
+                        st.error("❌ O CPF digitado é matematicamente inválido. Verifique os dígitos informados.")
+                        if 'cpf_buscado_ativo' in st.session_state:
+                            del st.session_state['cpf_buscado_ativo']
+                    else:
+                        st.session_state['cpf_buscado_ativo'] = cpf_limpo_temp
 
                 if st.session_state.get('cpf_buscado_ativo'):
                     cpf_limpo = st.session_state['cpf_buscado_ativo']
 
                     if not cpf_limpo:
                         st.warning("Por favor, informe um CPF válido contendo números.")
-                        del st.session_state['cpf_buscado_ativo']
+                        if 'cpf_buscado_ativo' in st.session_state:
+                            del st.session_state['cpf_buscado_ativo']
                     else:
                         mask_cpf = st.session_state.df_bancario['CPF'].astype(str).str.replace(r'\D', '', regex=True) == cpf_limpo
 
@@ -654,7 +688,8 @@ def renderizar_dados_bancarios(conn, ano, mes, auth_ui, novos_dados_bancario):
                                     st.error("CPF não encontrado na folha desta competência.")
 
                         if st.button("⬅️ Voltar para lista completa", key=f"btn_voltar_lista_{cpf_limpo}"):
-                            del st.session_state['cpf_buscado_ativo']
+                            if 'cpf_buscado_ativo' in st.session_state:
+                                del st.session_state['cpf_buscado_ativo']
                             st.rerun()
 
                 st.divider()
