@@ -37,7 +37,7 @@ def render(conn, ano, mes, sub_opcao):
 
             # Função para aplicar estilo de destaque em vermelho na coluna SITUACAO
             def colorir_situacao(val):
-                if val in ['registro duplicado', 'Fora da Sequencia (001)', 'Fora da sequencia (020)']:
+                if val in ['Estrutural SEFAZ duplicado', 'Codigo de Arquivo Fora da Sequencia (001)', 'Codigo de Arquivo Fora da sequencia (020)']:
                     return 'color: #ff4b4b; font-weight: bold;'
                 return ''
 
@@ -64,9 +64,9 @@ def render(conn, ano, mes, sub_opcao):
                 }
             )
 
-            # --- SOMA DA QUANTIDADE DE REGISTROS ---
-            total_registros = df_consistencia['QTDE_REGISTROS'].sum()
-            st.metric(label="📌 Total Geral de Registros", value=f"{total_registros:,.0f}".replace(",", "."))
+            # --- TOTAL DE REGISTROS LISTADOS ---
+            total_linhas = len(df_consistencia)
+            st.metric(label="📌 Total de Registros Listados", value=f"{total_linhas:,.0f}".replace(",", "."))
 
         else:
             st.warning("Nenhum registro encontrado para o filtro selecionado.")
