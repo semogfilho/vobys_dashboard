@@ -323,53 +323,77 @@ def renderizar_dados_bancarios(conn, ano, mes, auth_ui, novos_dados_bancario):
                 if "SOMENTE_VISUALIZAR" in df_exibicao.columns:
                     df_exibicao = df_exibicao.drop(columns=["SOMENTE_VISUALIZAR"])
 
-                with st.form("form_lote_bancario"):
-                    df_editado = st.data_editor(
-                        df_exibicao,
-                        key="editor_dados_bancarios",
-                        column_config={
-                            "ENVIAR": st.column_config.CheckboxColumn("Selecionar", default=False),
-                            "DATA_ENVIO": st.column_config.TextColumn("Data de Envio", disabled=True),
-                            "SEFAZ": st.column_config.TextColumn("Status SEFAZ", disabled=True),
-                            "_INDEX_REAL": None
-                        },
-                        disabled=["ENVIADO", "SEFAZ", "ORGAO", "COD_INSTITUCIONAL", "NOME_ATUAL", "CPF", "CHAVE_FOLHA", "DATA_ENVIO"],
-                        use_container_width=True,
-                        hide_index=True,
-                    )
+                # =========================================================
+                # 1. EDITOR DE DADOS (Tabela exibida primeiro)
+                # =========================================================
+                df_editado = st.data_editor(
+                    df_exibicao,
+                    key="editor_dados_bancarios",
+                    column_config={
+                        "ENVIAR": st.column_config.CheckboxColumn("Selecionar", default=False),
+                        "DATA_ENVIO": st.column_config.TextColumn("Data de Envio", disabled=True),
+                        "SEFAZ": st.column_config.TextColumn("Status SEFAZ", disabled=True),
+                        "_INDEX_REAL": None
+                    },
+                    disabled=["ENVIADO", "SEFAZ", "ORGAO", "COD_INSTITUCIONAL", "NOME_ATUAL", "CPF", "CHAVE_FOLHA", "DATA_ENVIO"],
+                    use_container_width=True,
+                    hide_index=True,
+                )
 
-                    # Estilização CSS para compactar e aproximar os blocos com elegância
-                    st.markdown("""
-                        <style>
-                        div[data-testid="stVerticalBlock"] div[data-testid="stContainer"] {
-                            border-radius: 8px;
-                            padding: 8px 10px 4px 10px;
-                            background-color: rgba(150, 150, 150, 0.02);
-                            border: 1px solid rgba(150, 150, 150, 0.12);
-                        }
-                        /* Compacta o espaçamento vertical interno dos containers */
-                        div[data-testid="stVerticalBlock"] div[data-testid="stContainer"] div[data-testid="stVerticalBlock"] {
-                            gap: 0.2rem !important;
-                        }
-                        </style>
-                    """, unsafe_allow_html=True)
+                # Sincroniza imediatamente o que foi marcado/desmarcado na tabela com a session_state
+                if "ENVIAR" in df_editado.columns and "_INDEX_REAL" in df_editado.columns:
+                    mudou = False
+                    for _, row_tela in df_editado.iterrows():
+                        idx_real = row_tela.get('_INDEX_REAL')
+                        val_tela = row_tela.get('ENVIAR', False)
+                        if idx_real is not None and idx_real in st.session_state.df_bancario.index:
+                            if st.session_state.df_bancario.loc[idx_real, 'ENVIAR'] != val_tela:
+                                st.session_state.df_bancario.loc[idx_real, 'ENVIAR'] = val_tela
+                                mudou = True
+                    if mudou:
+                        st.rerun()
 
-                    col_bloco1, col_bloco2, col_bloco3 = st.columns([1.3, 1.3, 1.0], gap="small")
+                # =========================================================
+                # BARRA DE AÇÕES ENQUADRADA ABAIXO DA TABELA
+                # =========================================================
+                with st.container(border=True):
+                    col_a, col_b, col_c = st.columns([1.2, 1.2, 2.2], vertical_alignment="center")
+                    
+                    with col_a:
+                        if st.button("☑ Marcar Todos", use_container_width=True, key="btn_marcar_todos_geral"):
+                            st.session_state.df_bancario["ENVIAR"] = True
+                            st.rerun()
+                    with col_b:
+                        if st.button("☐ Desmarcar Todos", use_container_width=True, key="btn_desmarcar_todos_geral"):
+                            st.session_state.df_bancario["ENVIAR"] = False
+                            st.rerun()
+                            
+                    with col_c:
+                        total_marcados = int(st.session_state.df_bancario["ENVIAR"].sum()) if "ENVIAR" in st.session_state.df_bancario.columns else 0
+                        total_geral = len(st.session_state.df_bancario)
+                        st.markdown(f"<div style='text-align: right; font-weight: 600; color: #555; padding-right: 5px;'>📊 Selecionados: <span style='color: #0068c9;'>{total_marcados}</span> de {total_geral}</div>", unsafe_allow_html=True)
 
-                    with col_bloco1:
-                        with st.container(border=True):
-                            submit_button = st.form_submit_button("🚀 Confirmar Envio", use_container_width=True)
-                            chk_visualizar = st.checkbox("Somente Visualizar?", value=True, key="chk_somente_visualizar_geral")
+                st.markdown("<br>", unsafe_allow_html=True)
 
-                    with col_bloco2:
-                        with st.container(border=True):
-                            checar_sefaz_button = st.form_submit_button("🔍 CHECAR SEFAZ", use_container_width=True)
-                            chk_usar_passo_a_passo = st.checkbox("Modo Passo a Passo?", value=False, key="chk_ativar_passo_a_passo")
+                # =========================================================
+                # 3. BOTÕES DE AÇÃO INFERIORES (Confirmar Envio, Checar Sefaz, Finalizar)
+                # =========================================================
+                col_bloco1, col_bloco2, col_bloco3 = st.columns([1.3, 1.3, 1.0], gap="small")
 
-                    with col_bloco3:
-                        with st.container(border=True):
-                            finalizar_button = st.form_submit_button("💾 Finalizar Tela", use_container_width=True)
-                            st.markdown("<div style='height: 29px;'></div>", unsafe_allow_html=True)
+                with col_bloco1:
+                    with st.container(border=True):
+                        submit_button = st.button("🚀 Confirmar Envio", use_container_width=True, key="btn_conf_envio")
+                        chk_visualizar = st.checkbox("Somente Visualizar?", value=True, key="chk_somente_visualizar_geral")
+
+                with col_bloco2:
+                    with st.container(border=True):
+                        checar_sefaz_button = st.button("🔍 CHECAR SEFAZ", use_container_width=True, key="btn_checar_sefaz_geral")
+                        chk_usar_passo_a_passo = st.checkbox("Modo Passo a Passo?", value=False, key="chk_ativar_passo_a_passo")
+
+                with col_bloco3:
+                    with st.container(border=True):
+                        finalizar_button = st.button("💾 Finalizar Tela", use_container_width=True, key="btn_finalizar_tela_geral")
+                        st.markdown("<div style='height: 29px;'></div>", unsafe_allow_html=True)
 
 
                 # =========================================================
