@@ -19,16 +19,36 @@ def render(conn, ano, mes, sub_opcao):
     if sub_opcao == "Consistência Folha":
         mes_exibicao = "13º" if int(mes) == 13 else f"{int(mes):02d}"
 
-        st.subheader(f"📊 Consistência da Folha ({mes_exibicao}/{ano})")
-        df_consistencia = tipo_folha_x_tipo_arquivo_sefaz.executar_auditoria(conn, ano, mes)
+        # Layout com colunas para posicionar o checkbox próximo ao título
+        col_tit, col_chk = st.columns([3, 1])
+        with col_tit:
+            st.subheader(f"📊 Consistência da Folha ({mes_exibicao}/{ano})")
+        with col_chk:
+            # Checkbox para alternar o modo de visão
+            filtrar_inconsistencias = st.checkbox("🔍 Apenas Inconsistências", value=False)
+
+        # Passa o estado do checkbox para a função
+        df_consistencia = tipo_folha_x_tipo_arquivo_sefaz.executar_auditoria(conn, ano, mes, apenas_inconsistentes=filtrar_inconsistencias)
 
         if df_consistencia is not None and not df_consistencia.empty:
             for col in ['DATA_FECHAMENTO', 'DATA_CADASTRO']:
                 if col in df_consistencia.columns:
                     df_consistencia[col] = pd.to_datetime(df_consistencia[col], errors='coerce')
 
+            # Função para aplicar estilo de destaque em vermelho na coluna SITUACAO
+            def colorir_situacao(val):
+                if val in ['registro duplicado', 'Fora da Sequencia (001)', 'Fora da sequencia (020)']:
+                    return 'color: #ff4b4b; font-weight: bold;'
+                return ''
+
+            # Aplica o estilo se a coluna SITUACAO existir no DataFrame
+            if 'SITUACAO' in df_consistencia.columns:
+                df_exibicao = df_consistencia.style.applymap(colorir_situacao, subset=['SITUACAO'])
+            else:
+                df_exibicao = df_consistencia
+
             st.dataframe(
-                df_consistencia,
+                df_exibicao,
                 use_container_width=True,
                 hide_index=True,
                 column_config={
@@ -37,11 +57,19 @@ def render(conn, ano, mes, sub_opcao):
                     ),
                     "DATA_CADASTRO": st.column_config.DatetimeColumn(
                         "Data Cadastro", format="DD-MM-YYYY HH:mm:ss"
+                    ),
+                    "SITUACAO": st.column_config.TextColumn(
+                        "Situação", help="Status da consistência estrutural do arquivo"
                     )
                 }
             )
+
+            # --- SOMA DA QUANTIDADE DE REGISTROS ---
+            total_registros = df_consistencia['QTDE_REGISTROS'].sum()
+            st.metric(label="📌 Total Geral de Registros", value=f"{total_registros:,.0f}".replace(",", "."))
+
         else:
-            st.warning("Nenhum registro de inconsistência encontrado para o período selecionado.")
+            st.warning("Nenhum registro encontrado para o filtro selecionado.")
 
     # Opção 2: Auditoria de Integridade (Batimento)
     elif sub_opcao == "Auditoria de Integridade":
