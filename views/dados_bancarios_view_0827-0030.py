@@ -126,7 +126,7 @@ def renderizar_dados_bancarios(conn, ano, mes, auth_ui, novos_dados_bancario):
         st.subheader(f"🏦 Dados Bancários (Novatos) ({mes_exibicao}/{ano})")
 
         # =========================================================
-        # CSS PARA COMPACTAR
+        # CSS PARA COMPACTAR ESPAÇAMENTOS AO MÍNIMO POSSÍVEL
         # =========================================================
         st.markdown("""
             <style>
@@ -168,7 +168,6 @@ def renderizar_dados_bancarios(conn, ano, mes, auth_ui, novos_dados_bancario):
 
                 if not df_temp.empty:
                     df_temp = atualizar_status_auditoria(conn, df_temp)
-                    df_temp['_SEFAZ_ORIGINAL'] = df_temp['SEFAZ']
 
                 st.session_state.df_bancario = df_temp.reset_index(drop=True)
                 st.session_state.last_params = (ano, mes)
@@ -178,39 +177,8 @@ def renderizar_dados_bancarios(conn, ano, mes, auth_ui, novos_dados_bancario):
                 st.session_state.df_bancario["ENVIAR"] = False
             if "SEFAZ" not in st.session_state.df_bancario.columns:
                 st.session_state.df_bancario["SEFAZ"] = '⏳ PENDENTE'
-            if "_SEFAZ_ORIGINAL" not in st.session_state.df_bancario.columns:
-                st.session_state.df_bancario["_SEFAZ_ORIGINAL"] = st.session_state.df_bancario["SEFAZ"]
 
             st.session_state.df_bancario = st.session_state.df_bancario.sort_values(by=["ORGAO", "CPF"]).reset_index(drop=True)
-
-            # =========================================================
-            # POPOVER / PAINEL FLUTUANTE DE RESUMO DA CHECAGEM SEFAZ
-            # =========================================================
-            if 'resumo_checar_sefaz' in st.session_state:
-                resultados_lote = st.session_state.resumo_checar_sefaz["resultados"]
-                resumos_status = [res[4] for res in resultados_lote]
-                contagem_status = pd.Series(resumos_status).value_counts()
-
-                st.success("🎉 Checagem em lote finalizada com sucesso!")
-                
-                with st.popover("📊 Ver Resumo da Checagem SEFAZ", use_container_width=False):
-                    st.markdown("#### 📊 Resumo da Checagem SEFAZ")
-                    st.markdown("<p style='color: #666; font-size: 0.9rem;'>Visão consolidada da quantidade de registros por status.</p>", unsafe_allow_html=True)
-                    st.divider()
-                    
-                    num_colunas = max(len(contagem_status), 1)
-                    cols_resumo = st.columns(num_colunas)
-                    
-                    for i, (status_nome, qtd) in enumerate(contagem_status.items()):
-                        with cols_resumo[i]:
-                            st.metric(label=str(status_nome), value=int(qtd))
-
-                    st.markdown("")
-                    if st.button("✖️ Fechar Resumo", type="primary", key="btn_fechar_resumo_sefaz", use_container_width=True):
-                        del st.session_state.resumo_checar_sefaz
-                        st.rerun()
-                
-                st.divider()
 
             # -------------------------------------------------------------
             # MODO PASSO A PASSO (SEFAZ ITERATIVO)
@@ -294,7 +262,6 @@ def renderizar_dados_bancarios(conn, ano, mes, auth_ui, novos_dados_bancario):
                             st.error(f"Erro ao salvar no banco: {e_db}")
 
                         st.session_state.df_bancario.loc[idx, 'SEFAZ'] = res_visual
-                        st.session_state.df_bancario.loc[idx, '_SEFAZ_ORIGINAL'] = res_visual
 
                         if passo_atual + 1 < len(indices_pendentes):
                             st.session_state.indice_passo_atual += 1
@@ -354,7 +321,6 @@ def renderizar_dados_bancarios(conn, ano, mes, auth_ui, novos_dados_bancario):
                             if sucesso:
                                 st.session_state.df_bancario.loc[mask, 'ENVIADO'] = 'SIM'
                                 st.session_state.df_bancario.loc[mask, 'SEFAZ'] = '✅ MATRÍCULA ATIVA'
-                                st.session_state.df_bancario.loc[mask, '_SEFAZ_ORIGINAL'] = '✅ MATRÍCULA ATIVA'
                                 st.success(f"Gravado com sucesso: {registro.get('NOME_ATUAL')}")
                             else:
                                 st.session_state.df_bancario.loc[mask, 'ENVIADO'] = 'ERRO'
@@ -393,8 +359,6 @@ def renderizar_dados_bancarios(conn, ano, mes, auth_ui, novos_dados_bancario):
 
                 if "SOMENTE_VISUALIZAR" in df_exibicao.columns:
                     df_exibicao = df_exibicao.drop(columns=["SOMENTE_VISUALIZAR"])
-                if "_SEFAZ_ORIGINAL" in df_exibicao.columns:
-                    df_exibicao = df_exibicao.drop(columns=["_SEFAZ_ORIGINAL"])
 
                 # =========================================================
                 # 1. EDITOR DE DADOS (Tabela exibida primeiro)
@@ -516,41 +480,15 @@ def renderizar_dados_bancarios(conn, ano, mes, auth_ui, novos_dados_bancario):
                             st.rerun()
                         else:
                             user_sistema = st.session_state.get("login_atual", "SISTEMA")
-                            my_bar = st.progress(0, text="Autenticando e iniciando checagem controlada na SEFAZ...")
-                            
-                            token_global = None
-                            BASE_URL = ""
-                            try:
-                                usuario = st.secrets["sefaz"]["SIAFE_CPF"]
-                                senha = st.secrets["sefaz"]["SIAFE_SENHA"]
-                                BASE_URL = st.secrets["sefaz"]["BASE_URL"]
-                                
-                                sess_auth = requests.Session()
-                                sess_auth.verify = False
-                                r_auth = sess_auth.post(f"{BASE_URL}/auth", json={"usuario": usuario, "senha": senha}, timeout=15)
-                                if r_auth.status_code == 200:
-                                    token_global = r_auth.json().get("token")
-                            except Exception as e_auth:
-                                st.error(f"Erro ao autenticar previamente: {e_auth}")
-                                st.stop()
-
+                            my_bar = st.progress(0, text="Iniciando checagem automática na SEFAZ...")
                             total_reg = len(indices_pendentes)
-                            concluidos = 0
-                            resultados_processados = []
 
-                            s_seq = requests.Session()
-                            s_seq.verify = False
-                            s_seq.headers.update({
-                                "Content-Type": "application/json",
-                                "Authorization": f"Bearer {token_global}"
-                            })
-
-                            for idx in indices_pendentes:
+                            cursor = conn.cursor()
+                            for i, idx in enumerate(indices_pendentes):
                                 row = st.session_state.df_bancario.loc[idx]
                                 cpf_cru = str(row.get('CPF', ''))
                                 matricula_atual = str(row.get('COD_INSTITUCIONAL', ''))
                                 nome_atual = str(row.get('NOME_ATUAL', 'Sem Nome'))
-                                ano_ref = ano
 
                                 digitos_puros = re.sub(r'\D', '', cpf_cru)
                                 if len(digitos_puros) > 11:
@@ -560,47 +498,7 @@ def renderizar_dados_bancarios(conn, ano, mes, auth_ui, novos_dados_bancario):
                                 if not validar_cpf_matematico(digitos_puros):
                                     res_visual = "CPF INVÁLIDO"
                                 else:
-                                    try:
-                                        url = f"{BASE_URL}/apoio-geral/credor/{ano_ref}/{digitos_puros}"
-                                        r = s_seq.get(url, timeout=30)
-
-                                        if r.status_code == 200:
-                                            data = r.json()
-                                            if isinstance(data, dict):
-                                                dados_bancarios = data.get("dadosBancarios", data.get("domiciliosBancario", []))
-                                                existe_matricula = False
-                                                mat_limpa = re.sub(r'\D', '', str(matricula_atual).split('.')[0])
-                                                for v in dados_bancarios:
-                                                    raw_val = str(v.get("idFuncional", v.get("matricula", "")))
-                                                    for p in raw_val.split(";"):
-                                                        if re.sub(r'\D', '', p) == mat_limpa:
-                                                            existe_matricula = True
-                                                            break
-                                                    if existe_matricula:
-                                                        break
-                                                res_visual = "✅ MATRÍCULA ATIVA" if existe_matricula else "⚠️ MATRÍCULA NÃO ENCONTRADA"
-                                            else:
-                                                res_visual = "NÃO CADASTRADO"
-                                        elif r.status_code == 404:
-                                            res_visual = "NÃO CADASTRADO"
-                                        else:
-                                            res_visual = f"ERRO API ({r.status_code})"
-                                    except requests.exceptions.Timeout:
-                                        res_visual = "ERRO TIMEOUT"
-                                    except Exception:
-                                        res_visual = "ERRO CONEXÃO"
-
-                                resultados_processados.append((idx, cpf_cru, matricula_atual, nome_atual, res_visual))
-                                
-                                concluidos += 1
-                                my_bar.progress(concluidos / total_reg, text=f"Processando ({concluidos}/{total_reg}) - Matrícula: {matricula_atual}")
-                                
-                                time.sleep(0.1)
-
-                            cursor = conn.cursor()
-                            for idx, cpf_cru, matricula_atual, nome_atual, res_visual in resultados_processados:
-                                st.session_state.df_bancario.loc[idx, 'SEFAZ'] = res_visual
-                                st.session_state.df_bancario.loc[idx, '_SEFAZ_ORIGINAL'] = res_visual
+                                    res_visual = consultar_credor_sefaz_individual(ano, digitos_puros, matricula_atual)
 
                                 p_cpf_fmt = formatar_cpf_completo(cpf_cru)
                                 p_mat = matricula_atual
@@ -630,14 +528,15 @@ def renderizar_dados_bancarios(conn, ano, mes, auth_ui, novos_dados_bancario):
                                 except Exception:
                                     conn.rollback()
 
+                                st.session_state.df_bancario.loc[idx, 'SEFAZ'] = res_visual
+                                my_bar.progress((i + 1) / total_reg, text=f"Processando {i+1} de {total_reg}: {nome_atual}")
+
                             cursor.close()
                             my_bar.empty()
                             st.session_state.df_bancario = atualizar_status_auditoria(conn, st.session_state.df_bancario)
                             carregar_dados_bancarios.clear()
-                            
-                            st.session_state.resumo_checar_sefaz = {
-                                "resultados": resultados_processados
-                            }
+                            st.success("🎉 Checagem em lote finalizada com sucesso!")
+                            time.sleep(1.5)
                             st.rerun()
                     else:
                         st.warning("Não há registros pendentes para processar.")
@@ -654,46 +553,36 @@ def renderizar_dados_bancarios(conn, ano, mes, auth_ui, novos_dados_bancario):
                         user_sistema = st.session_state.get("login_atual", "SISTEMA")
 
                         dados_para_lote = []
-                        indices_atualizados = []
-
                         for idx, row in st.session_state.df_bancario.iterrows():
                             status_atual = row.get('SEFAZ')
-                            status_original = row.get('_SEFAZ_ORIGINAL')
-                            
-                            if status_atual != status_original or (status_atual and str(status_atual).strip() not in ['', 'None', 'nan', '⏳ PENDENTE']):
-                                cpf_cru = str(row.get('CPF', ''))
-                                cpf_numerico = re.sub(r'\D', '', cpf_cru)
-                                cpf_fmt = formatar_cpf_completo(cpf_cru)
+                            if status_atual and str(status_atual).strip() not in ['', 'None', 'nan', '⏳ PENDENTE']:
+                                cpf_fmt = formatar_cpf_completo(row.get('CPF', ''))
                                 mat = str(row.get('COD_INSTITUCIONAL', ''))
                                 nome = str(row.get('NOME_ATUAL', ''))[:150]
                                 
                                 dados_para_lote.append({
-                                    'cpf_num': cpf_numerico,
                                     'cpf_fmt': cpf_fmt,
                                     'mat': mat,
                                     'nome': nome,
                                     'status': str(status_atual),
                                     'usr': user_sistema
                                 })
-                                indices_atualizados.append((idx, status_atual))
 
                         if dados_para_lote:
-                            sql_delete = """
-                            DELETE FROM AUDITORIA_ENVIOS_SEFAZ
-                            WHERE REGEXP_REPLACE(CPF, '[^0-9]', '') = :cpf_num
-                              AND MATRICULA = :mat
+                            sql_sync = """
+                            BEGIN
+                                MERGE INTO AUDITORIA_ENVIOS_SEFAZ t
+                                USING (SELECT :cpf_fmt AS cpf, :mat AS mat FROM dual) s
+                                ON (REGEXP_REPLACE(t.CPF, '[^0-9]', '') = REGEXP_REPLACE(s.cpf, '[^0-9]', '') AND t.MATRICULA = s.mat)
+                                WHEN MATCHED THEN
+                                    UPDATE SET STATUS_SEFAZ = :status, USUARIO_ENVIO = :usr
+                                WHEN NOT MATCHED THEN
+                                    INSERT (ID_ENVIO, CPF, MATRICULA, NOME, STATUS_SEFAZ, USUARIO_ENVIO)
+                                    VALUES (SEQ_AUD_ENVIOS_SEFAZ.NEXTVAL, :cpf_fmt, :mat, :nome, :status, :usr);
+                            END;
                             """
-                            cursor.executemany(sql_delete, [{'cpf_num': d['cpf_num'], 'mat': d['mat']} for d in dados_para_lote])
-
-                            sql_insert = """
-                            INSERT INTO AUDITORIA_ENVIOS_SEFAZ (ID_ENVIO, CPF, MATRICULA, NOME, STATUS_SEFAZ, USUARIO_ENVIO)
-                            VALUES (SEQ_AUD_ENVIOS_SEFAZ.NEXTVAL, :cpf_fmt, :mat, :nome, :status, :usr)
-                            """
-                            cursor.executemany(sql_insert, dados_para_lote)
+                            cursor.executemany(sql_sync, dados_para_lote)
                             conn.commit()
-
-                            for idx, status_atual in indices_atualizados:
-                                st.session_state.df_bancario.loc[idx, '_SEFAZ_ORIGINAL'] = status_atual
                         
                         cursor.close()
                     except Exception as e_sync:
@@ -726,6 +615,7 @@ def renderizar_dados_bancarios(conn, ano, mes, auth_ui, novos_dados_bancario):
                     with col_btn:
                         btn_buscar = st.button("Buscar na Competência", key="btn_buscar_cpf", use_container_width=True)
 
+                # Limpa o estado se o input for esvaziado
                 if not cpf_busca or not cpf_busca.strip():
                     if 'cpf_buscado_ativo' in st.session_state:
                         del st.session_state['cpf_buscado_ativo']
@@ -733,6 +623,7 @@ def renderizar_dados_bancarios(conn, ano, mes, auth_ui, novos_dados_bancario):
                 if btn_buscar and cpf_busca:
                     cpf_limpo_temp = ''.join(filter(str.isdigit, cpf_busca)).zfill(11)
                     
+                    # VALIDAÇÃO PRÉVIA: Se o CPF for matematicamente inválido, bloqueia na hora sem rodar nada!
                     if not validar_cpf_matematico(cpf_limpo_temp):
                         st.error("❌ O CPF digitado é matematicamente inválido. Verifique os dígitos informados.")
                         if 'cpf_buscado_ativo' in st.session_state:
@@ -758,8 +649,6 @@ def renderizar_dados_bancarios(conn, ano, mes, auth_ui, novos_dados_bancario):
                                 df_loc_exib = st.session_state.df_bancario[mask_cpf].copy()
                                 if "SOMENTE_VISUALIZAR" in df_loc_exib.columns:
                                     df_loc_exib = df_loc_exib.drop(columns=["SOMENTE_VISUALIZAR"])
-                                if "_SEFAZ_ORIGINAL" in df_loc_exib.columns:
-                                    df_loc_exib = df_loc_exib.drop(columns=["_SEFAZ_ORIGINAL"])
 
                                 st.data_editor(
                                     df_loc_exib,
@@ -776,7 +665,6 @@ def renderizar_dados_bancarios(conn, ano, mes, auth_ui, novos_dados_bancario):
                                     df_encontrado['ENVIAR'] = True
                                     if 'SEFAZ' not in df_encontrado.columns:
                                         df_encontrado['SEFAZ'] = '⏳ PENDENTE'
-                                    df_encontrado['_SEFAZ_ORIGINAL'] = df_encontrado['SEFAZ']
 
                                     st.session_state.df_bancario = pd.concat([st.session_state.df_bancario, df_encontrado]).drop_duplicates(subset=['CPF', 'COD_INSTITUCIONAL']).reset_index(drop=True)
 
@@ -785,8 +673,6 @@ def renderizar_dados_bancarios(conn, ano, mes, auth_ui, novos_dados_bancario):
                                     df_busc_exib = df_encontrado.copy()
                                     if "SOMENTE_VISUALIZAR" in df_busc_exib.columns:
                                         df_busc_exib = df_busc_exib.drop(columns=["SOMENTE_VISUALIZAR"])
-                                    if "_SEFAZ_ORIGINAL" in df_busc_exib.columns:
-                                        df_busc_exib = df_busc_exib.drop(columns=["_SEFAZ_ORIGINAL"])
 
                                     st.data_editor(
                                         df_busc_exib,
