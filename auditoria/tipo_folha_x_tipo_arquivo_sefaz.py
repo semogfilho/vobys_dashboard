@@ -5,7 +5,7 @@ def executar_auditoria(conn, ano, mes, apenas_inconsistentes=False):
     cursor = conn.cursor()
     cursor.execute("SELECT owner FROM all_tables WHERE table_name = 'FOLHA' AND owner LIKE 'SW_%'")
     schemas_geral = [row[0] for row in cursor.fetchall()]
-    
+
     cursor.execute("SELECT owner FROM all_tables WHERE table_name = 'ESTAG_FOLHA' AND owner LIKE 'SW_%'")
     schemas_estag = {row[0] for row in cursor.fetchall()}
     cursor.close()
@@ -13,7 +13,7 @@ def executar_auditoria(conn, ano, mes, apenas_inconsistentes=False):
     query_parts = []
     for schema in schemas_geral:
         orgao_nome = schema.replace('SW_', '')
-        
+
         # --- 1. QUERY DA FOLHA TRADICIONAL ---
         where_clause_f1 = f"f1.ANO = {ano} AND f1.MES = {int(mes)}"
         if apenas_inconsistentes:
@@ -21,29 +21,29 @@ def executar_auditoria(conn, ano, mes, apenas_inconsistentes=False):
                 AND (
                      (
                           (f1.TIPO_ARQUIVO > '001' AND f1.TIPO_ARQUIVO < '020')
-                          OR 
+                          OR
                           (f1.TIPO_ARQUIVO > '020')
                      )
                      AND NOT EXISTS (
-                         SELECT 1
-                         FROM {schema}.FOLHA f2
-                         JOIN {schema}.FOLHA_CODIGO_SEFAZ fs2 ON fs2.ID_CODIGO_SEFAZ = f2.ID_CODIGO_SEFAZ
-                         JOIN {schema}.FOLHA_UNID_ORCAMENTARIA u2 ON u2.ID_UNID_ORCAMENTARIA = f2.ID_UNID_ORCAMENTARIA
-                         WHERE f2.ANO = f1.ANO
-                           AND f2.MES = f1.MES
-                           AND f2.TIPO_FOLHA_SEFAZ = f1.TIPO_FOLHA_SEFAZ
-                           AND fs2.CODIGO_SEFAZ = fs.CODIGO_SEFAZ
-                           AND u2.COD_UNID_ORCAMENTARIA = u.COD_UNID_ORCAMENTARIA
-                           AND f2.TIPO_ARQUIVO = 
-                               CASE 
-                                   WHEN f1.TIPO_ARQUIVO < '020' THEN '001'
-                                   ELSE '020'
-                               END
+                          SELECT 1
+                          FROM {schema}.FOLHA f2
+                          JOIN {schema}.FOLHA_CODIGO_SEFAZ fs2 ON fs2.ID_CODIGO_SEFAZ = f2.ID_CODIGO_SEFAZ
+                          JOIN {schema}.FOLHA_UNID_ORCAMENTARIA u2 ON u2.ID_UNID_ORCAMENTARIA = f2.ID_UNID_ORCAMENTARIA
+                          WHERE f2.ANO = f1.ANO
+                            AND f2.MES = f1.MES
+                            AND f2.TIPO_FOLHA_SEFAZ = f1.TIPO_FOLHA_SEFAZ
+                            AND fs2.CODIGO_SEFAZ = fs.CODIGO_SEFAZ
+                            AND u2.COD_UNID_ORCAMENTARIA = u.COD_UNID_ORCAMENTARIA
+                            AND f2.TIPO_ARQUIVO =
+                                CASE
+                                    WHEN f1.TIPO_ARQUIVO < '020' THEN '001'
+                                    ELSE '020'
+                                END
                      )
                      OR
                      (
                           f1.TIPO_ARQUIVO IN ('001', '020')
-                          AND (
+                          And (
                               SELECT COUNT(*)
                               FROM {schema}.FOLHA f_dup
                               JOIN {schema}.FOLHA_CODIGO_SEFAZ fs_dup ON fs_dup.ID_CODIGO_SEFAZ = f_dup.ID_CODIGO_SEFAZ
@@ -60,7 +60,7 @@ def executar_auditoria(conn, ano, mes, apenas_inconsistentes=False):
             """
 
         coluna_situacao_f1 = f"""
-            CASE 
+            CASE
                 WHEN f1.TIPO_ARQUIVO IN ('001', '020') THEN 'Estrutural SEFAZ duplicado'
                 WHEN f1.TIPO_ARQUIVO > '001' AND f1.TIPO_ARQUIVO < '020' THEN 'Codigo de Arquivo Fora da Sequencia (001)'
                 ELSE 'Codigo de Arquivo Fora da Sequencia (020)'
@@ -80,7 +80,8 @@ def executar_auditoria(conn, ano, mes, apenas_inconsistentes=False):
                 f1.DESCRICAO,
                 f1.DATA_FECHAMENTO,
                 f1.DATA_CADASTRO,
-                'NORMAL' as TIPO_REGISTRO
+                'NORMAL' as TIPO_REGISTRO,
+                (SELECT COUNT(*) FROM {schema}.FOLHA_FUNC ff WHERE ff.id_folha = f1.id_folha AND ff.IND_REMUNERACAO = 'S') as QTDE_PAGAMENTOS
             FROM {schema}.FOLHA f1
             JOIN SW_PUBLICO.FOLHA_TAB_TIPO t ON f1.ID_TIPO_FOLHA = t.ID_TIPO_FOLHA
             JOIN {schema}.FOLHA_CODIGO_SEFAZ fs ON fs.ID_CODIGO_SEFAZ = f1.ID_CODIGO_SEFAZ
@@ -97,21 +98,21 @@ def executar_auditoria(conn, ano, mes, apenas_inconsistentes=False):
                     AND (
                          (
                               (LPAD(TO_CHAR(ef.seq_arquivo), 3, '0') > '001' AND LPAD(TO_CHAR(ef.seq_arquivo), 3, '0') < '020')
-                              OR 
+                              OR
                               (LPAD(TO_CHAR(ef.seq_arquivo), 3, '0') > '020')
                          )
                          AND NOT EXISTS (
-                             SELECT 1
-                             FROM {schema}.ESTAG_FOLHA ef2
-                             JOIN {schema}.FOLHA_CODIGO_SEFAZ fs2 ON fs2.ID_CODIGO_SEFAZ = ef2.ID_CODIGO_SEFAZ
-                             WHERE ef2.ANO = ef.ANO
-                               AND ef2.MES = ef.MES
-                               AND fs2.CODIGO_SEFAZ = fs.CODIGO_SEFAZ
-                               AND LPAD(TO_CHAR(ef2.seq_arquivo), 3, '0') = 
-                                   CASE 
-                                       WHEN LPAD(TO_CHAR(ef.seq_arquivo), 3, '0') < '020' THEN '001'
-                                       ELSE '020'
-                                   END
+                              SELECT 1
+                              FROM {schema}.ESTAG_FOLHA ef2
+                              JOIN {schema}.FOLHA_CODIGO_SEFAZ fs2 ON fs2.ID_CODIGO_SEFAZ = ef2.ID_CODIGO_SEFAZ
+                              WHERE ef2.ANO = ef.ANO
+                                AND ef2.MES = ef.MES
+                                AND fs2.CODIGO_SEFAZ = fs.CODIGO_SEFAZ
+                                AND LPAD(TO_CHAR(ef2.seq_arquivo), 3, '0') =
+                                    CASE
+                                        WHEN LPAD(TO_CHAR(ef.seq_arquivo), 3, '0') < '020' THEN '001'
+                                        ELSE '020'
+                                    END
                          )
                          OR
                          (
@@ -130,7 +131,7 @@ def executar_auditoria(conn, ano, mes, apenas_inconsistentes=False):
                 """
 
             coluna_situacao_ef = f"""
-                CASE 
+                CASE
                     WHEN LPAD(TO_CHAR(ef.seq_arquivo), 3, '0') IN ('001', '020') THEN 'Estrutural SEFAZ duplicado'
                     WHEN LPAD(TO_CHAR(ef.seq_arquivo), 3, '0') > '001' AND LPAD(TO_CHAR(ef.seq_arquivo), 3, '0') < '020' THEN 'Codigo de Arquivo Fora da Sequencia (001)'
                     ELSE 'Codigo de Arquivo Fora da Sequencia (020)'
@@ -150,7 +151,8 @@ def executar_auditoria(conn, ano, mes, apenas_inconsistentes=False):
                     ef.DESCRICAO,
                     ef.DATA_FECHAMENTO,
                     ef.DATA_CADASTRO,
-                    'ESTAGIARIO' as TIPO_REGISTRO
+                    'ESTAGIARIO' as TIPO_REGISTRO,
+                    (SELECT COUNT(*) FROM {schema}.Estagiario_Pagamento ep WHERE ep.id_folha = ef.id_folha) as QTDE_PAGAMENTOS
                 FROM {schema}.ESTAG_FOLHA ef
                 JOIN SW_PUBLICO.FOLHA_TAB_TIPO t ON ef.ID_TIPO_FOLHA = t.ID_TIPO_FOLHA
                 JOIN {schema}.FOLHA_CODIGO_SEFAZ fs ON fs.ID_CODIGO_SEFAZ = ef.ID_CODIGO_SEFAZ
@@ -163,6 +165,11 @@ def executar_auditoria(conn, ano, mes, apenas_inconsistentes=False):
 
     query_final = " UNION ALL ".join(query_parts) + " ORDER BY CODIGO_SEFAZ, TIPO_ARQUIVO, TIPO_FOLHA_SEFAZ, CODIGO_RELATORIO, ORGAO"
     df = pd.read_sql(query_final, conn)
+    
+    # Padroniza o nome da coluna para maiúsculo com espaço para bater com o Streamlit
+    if "QTDE_PAGAMENTOS" in df.columns:
+        df = df.rename(columns={"QTDE_PAGAMENTOS": "QTDE PAGAMENTOS"})
+        
     return df
 
 

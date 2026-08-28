@@ -62,13 +62,25 @@ def render(conn, ano, mes, sub_opcao):
                     ),
                     "SITUACAO": st.column_config.TextColumn(
                         "Situação", help="Status da consistência estrutural do arquivo"
+                    ),
+                    "QTDE PAGAMENTOS": st.column_config.NumberColumn(
+                        "Qtde Pagamentos", format="%d"
                     )
                 }
             )
 
-            # --- TOTAL DE REGISTROS LISTADOS ---
+            # --- RODAPÉ: TOTAL DE REGISTROS E QTDE PAGAMENTOS ---
+            st.markdown("---")
+            col_metrica1, col_metrica2 = st.columns(2)
+
             total_linhas = len(df_consistencia)
-            st.metric(label="📌 Total de Registros Listados", value=f"{total_linhas:,.0f}".replace(",", "."))
+            total_pagamentos = df_consistencia["QTDE PAGAMENTOS"].sum() if "QTDE PAGAMENTOS" in df_consistencia.columns else 0
+
+            with col_metrica1:
+                st.metric(label="📌 Total de Registros Listados", value=f"{total_linhas:,.0f}".replace(",", "."))
+
+            with col_metrica2:
+                st.metric(label="qtde_pagamentos", value=f"{total_pagamentos:,.0f}".replace(",", "."))
 
         else:
             st.warning("Nenhum registro encontrado para o filtro selecionado.")
