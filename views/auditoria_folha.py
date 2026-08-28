@@ -25,7 +25,7 @@ def render(conn, ano, mes, sub_opcao):
             st.subheader(f"📊 Consistência da Folha ({mes_exibicao}/{ano})")
         with col_chk:
             # Checkbox para alternar o modo de visão
-            filtrar_inconsistencias = st.checkbox("🔍 Apenas Inconsistências", value=False)
+            filtrar_inconsistencias = st.checkbox("🔍 Apenas Inconsistências", value=True)
 
         # Passa o estado do checkbox para a função
         df_consistencia = tipo_folha_x_tipo_arquivo_sefaz.executar_auditoria(conn, ano, mes, apenas_inconsistentes=filtrar_inconsistencias)
@@ -37,8 +37,10 @@ def render(conn, ano, mes, sub_opcao):
 
             # Função para aplicar estilo de destaque em vermelho na coluna SITUACAO
             def colorir_situacao(val):
-                if val in ['Estrutural SEFAZ duplicado', 'Codigo de Arquivo Fora da Sequencia (001)', 'Codigo de Arquivo Fora da sequencia (020)']:
-                    return 'color: #ff4b4b; font-weight: bold;'
+                if val is not None:
+                    val_str = str(val).lower()
+                    if 'duplicado' in val_str or 'fora da sequencia' in val_str:
+                        return 'color: #ff4b4b; font-weight: bold;'
                 return ''
 
             # Aplica o estilo se a coluna SITUACAO existir no DataFrame
