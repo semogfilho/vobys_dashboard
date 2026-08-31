@@ -211,3 +211,4 @@ def processar_troca_senha(login, nova_senha):
     with open(caminho, "w") as f:
         toml.dump(config, f)
     return True
+

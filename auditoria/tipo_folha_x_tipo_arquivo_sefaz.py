@@ -15,7 +15,21 @@ def executar_auditoria(conn, ano, mes, apenas_inconsistentes=False):
         orgao_nome = schema.replace('SW_', '')
 
         # --- 1. QUERY DA FOLHA TRADICIONAL ---
-        where_clause_f1 = f"f1.ANO = {ano} AND f1.MES = {int(mes)}"
+        condicao_qtd_f1 = f"""
+            AND (
+                SELECT COUNT(*)
+                FROM {schema}.FOLHA_FUNC ff
+                WHERE ff.id_folha = f1.id_folha
+                  AND ff.IND_REMUNERACAO = 'S'
+            ) > 0
+        """ if apenas_inconsistentes else ""
+
+        where_clause_f1 = f"""
+            f1.ANO = {ano}
+            AND f1.MES = {int(mes)}
+            {condicao_qtd_f1}
+        """
+
         if apenas_inconsistentes:
             where_clause_f1 += f"""
                 AND (
@@ -92,7 +106,20 @@ def executar_auditoria(conn, ano, mes, apenas_inconsistentes=False):
 
         # --- 2. QUERY DA FOLHA DE ESTAGIÁRIOS ---
         if schema in schemas_estag:
-            where_clause_ef = f"ef.ANO = {ano} AND ef.MES = {int(mes)}"
+            condicao_qtd_ef = f"""
+                AND (
+                    SELECT COUNT(*)
+                    FROM {schema}.Estagiario_Pagamento ep
+                    WHERE ep.id_folha = ef.id_folha
+                ) > 0
+            """ if apenas_inconsistentes else ""
+
+            where_clause_ef = f"""
+                ef.ANO = {ano}
+                AND ef.MES = {int(mes)}
+                {condicao_qtd_ef}
+            """
+
             if apenas_inconsistentes:
                 where_clause_ef += f"""
                     AND (
@@ -165,11 +192,10 @@ def executar_auditoria(conn, ano, mes, apenas_inconsistentes=False):
 
     query_final = " UNION ALL ".join(query_parts) + " ORDER BY CODIGO_SEFAZ, TIPO_ARQUIVO, TIPO_FOLHA_SEFAZ, CODIGO_RELATORIO, ORGAO"
     df = pd.read_sql(query_final, conn)
-    
-    # Padroniza o nome da coluna para maiúsculo com espaço para bater com o Streamlit
+
     if "QTDE_PAGAMENTOS" in df.columns:
         df = df.rename(columns={"QTDE_PAGAMENTOS": "QTDE PAGAMENTOS"})
-        
+
     return df
 
 

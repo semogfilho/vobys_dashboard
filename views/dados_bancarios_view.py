@@ -403,7 +403,7 @@ def renderizar_dados_bancarios(conn, ano, mes, auth_ui, novos_dados_bancario):
                     key="editor_dados_bancarios",
                     column_config={
                         "ENVIAR": st.column_config.CheckboxColumn("Selecionar", default=False),
-                        "DATA_ENVIO": st.column_config.TextColumn("Data de Envio", disabled=True),
+                        "DATA_ENVIO": st.column_config.TextColumn("Data de Envio/Checagem", disabled=True),
                         "SEFAZ": st.column_config.TextColumn("Status SEFAZ", disabled=True),
                         "_INDEX_REAL": None
                     },
