@@ -194,11 +194,14 @@ FROM sw_publico.SIAFE_ORGAO
 WHERE IND_ATIVO = 'S'
 ORDER BY COD_ORGAO
 """
-
 GET_SIGLAS_EMPRESA = """
-    SELECT ORGAO_SIAFI AS Cod_Sefaz, SIGLA AS Sigla 
-    FROM sw_publico.empresa
+    SELECT 
+        NVL(e.ORGAO_SIAFI, t.codigo) AS Cod_Sefaz, 
+        COALESCE(e.SIGLA, t.nome) AS Sigla
+    FROM sw_publico.empresa e
+    FULL OUTER JOIN josegomes.tb_use_sefaz t ON e.ORGAO_SIAFI = t.codigo
 """
+
 # -*- coding: utf-8 -*-
 
 def get_query_json_patronal_emgerpi(ano, mes):
