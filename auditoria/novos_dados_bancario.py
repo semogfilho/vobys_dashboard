@@ -126,7 +126,8 @@ def buscar_por_cpf(conn, cpf_limpo, ano, mes):
         sql = f"""
             SELECT * FROM (
                 SELECT '{nome_orgao}' AS ORGAO,
-                        ff.cod_institucional, phn.nome AS NOME_ATUAL, doc.cpf_pessoa AS CPF, 'NÃO' AS ENVIADO, f.chave_folha
+                        ff.cod_institucional, phn.nome AS NOME_ATUAL, doc.cpf_pessoa AS CPF, 'NÃO' AS ENVIADO, f.chave_folha,
+                        ff.data_cadastro AS DT_DIGITACAO_FOLHA
                 FROM {schema}.folha_func ff
                 INNER JOIN {schema}.folha f ON f.id_folha = ff.id_folha
                 INNER JOIN sw_publico.pessoa p ON p.id_pessoa = ff.id_pessoa_funcionario
@@ -138,7 +139,8 @@ def buscar_por_cpf(conn, cpf_limpo, ano, mes):
                 UNION ALL
 
                 SELECT '{nome_orgao}' AS ORGAO,
-                        pv.cod_institucional, phn.nome AS NOME_ATUAL, doc.cpf_pessoa AS CPF, 'NÃO' AS ENVIADO, ef.mascara chave_folha
+                        pv.cod_institucional, phn.nome AS NOME_ATUAL, doc.cpf_pessoa AS CPF, 'NÃO' AS ENVIADO, ef.mascara chave_folha,
+                        ef.data_cadastro  AS DT_DIGITACAO_FOLHA
                 FROM {schema}.Estagiario_Pagamento ep
                 INNER JOIN {schema}.Estag_Folha ef ON ef.id_folha = ep.id_folha
                 INNER JOIN {schema}.estagiario e ON e.id_estagiario = ep.id_estagiario
@@ -425,23 +427,14 @@ def listar_novatos_bancario_com_status(conn, ano, mes):
     # GARANTIA: Sempre retorna um DataFrame, nunca None
     if df_novatos is None or df_novatos.empty:
         #return pd.DataFrame(columns=['ORGAO', 'COD_INSTITUCIONAL', 'NOME_ATUAL', 'CPF', 'ENVIADO'])
-        return pd.DataFrame(columns=['ORGAO', 'COD_INSTITUCIONAL', 'NOME_ATUAL', 'CPF', 'CHAVE_FOLHA', 'ENVIADO', 'DATA_ENVIO'])
+        return pd.DataFrame(columns=['ORGAO', 'COD_INSTITUCIONAL', 'NOME_ATUAL', 'CPF', 'CHAVE_FOLHA', 'ENVIADO', 'DATA_ENVIO', 'DT_DIGITACAO_FOLHA'])
 
-    # Garante a existência da coluna DATA_ENVIO caso a query SQL não traga por algum motivo
+    # Garante a existência das colunas caso a query SQL não traga por algum motivo
     if 'DATA_ENVIO' not in df_novatos.columns:
         df_novatos['DATA_ENVIO'] = None
-
-    # 2. Busca os enviados
-    #try:
-    #    df_enviados = pd.read_sql("SELECT CPF FROM AUDITORIA_ENVIOS_SEFAZ", conn)
-    #except Exception:
-    #    df_enviados = pd.DataFrame(columns=['CPF'])
-
-    # 3. Faz o merge (garantindo que CPF exista)
-    #if 'CPF' in df_novatos.columns:
-    #    df_novatos['ENVIADO'] = df_novatos['CPF'].isin(df_enviados['CPF']).map({True: 'SIM', False: 'NÃO'})
-    #else:
-    #    df_novatos['ENVIADO'] = 'NÃO'
+        
+    if 'DT_DIGITACAO_FOLHA' not in df_novatos.columns:
+        df_novatos['DT_DIGITACAO_FOLHA'] = None
 
     return df_novatos
 
@@ -558,6 +551,7 @@ def listar_novatos_bancario(conn, ano, mes):
         END AS ENVIADO
         ,TO_CHAR(hist.DATA_ENVIO, 'DD/MM/YYYY HH24:MI:SS') AS DATA_ENVIO
         ,hist.STATUS_SEFAZ AS SEFAZ  -- <--- ADICIONADO AQUI PARA TRAZER O STATUS PERSISTIDO
+        ,ff.data_cadastro AS DT_DIGITACAO_FOLHA  -- <--- ADICIONADO AQUI PARA TRAZER A DATA DE CADASTRO DA FOLHA_FUNC
         FROM {schema}.folha_func ff
         INNER JOIN {schema}.folha f_tab ON f_tab.id_folha = ff.id_folha
         INNER JOIN sw_publico.pessoa p ON p.id_pessoa = FF.ID_PESSOA_FUNCIONARIO
@@ -593,6 +587,7 @@ def listar_novatos_bancario(conn, ano, mes):
                END AS ENVIADO
         ,TO_CHAR(hist.DATA_ENVIO, 'DD/MM/YYYY HH24:MI:SS') AS DATA_ENVIO
         ,hist.STATUS_SEFAZ AS SEFAZ  -- <--- ADICIONADO AQUI PARA TRAZER O STATUS PERSISTIDO
+        ,f_tab.data_cadastro AS DT_DIGITACAO_FOLHA  -- <--- ADICIONADO NULO PARA ESTAGIÁRIOS PARA MANTER A MESMA ESTRUTURA DE COLUNAS DO UNION
         FROM {schema}.Estagiario_Pagamento ff
         INNER JOIN {schema}.Estag_Folha f_tab ON f_tab.id_folha = ff.id_folha
         INNER JOIN {schema}.estagiario e ON e.id_estagiario = ff.id_estagiario
