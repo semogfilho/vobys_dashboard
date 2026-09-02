@@ -1,4 +1,7 @@
+import io
 import unicodedata
+import xml.etree.ElementTree as ET
+import zipfile
 import pandas as pd
 import streamlit as st
 
@@ -33,6 +36,134 @@ def limpar_id(val):
   return val_str
 
 
+def gerar_xlsx_nativo(df):
+  """Gera um arquivo .xlsx real usando apenas bibliotecas padrão do Python (zipfile),
+
+  forçando a coluna CODIGOBANCO a ser texto puro com zeros à esquerda.
+  """
+  output = io.BytesIO()
+
+  # Prepara dados convertendo tudo para string segura
+  headers = list(df.columns)
+  rows = df.values.tolist()
+
+  # Identifica o índice da coluna CODIGOBANCO
+  col_banco_idx = -1
+  for i, h in enumerate(headers):
+    if h == "CODIGOBANCO":
+      col_banco_idx = i
+      break
+
+  # XMLs estruturados do padrão OpenXML do Excel
+  content_types_xml = """<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+    <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+        <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+        <Default Extension="xml" ContentType="application/xml"/>
+        <Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>
+        <Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>
+        <Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>
+    </Types>"""
+
+  rels_xml = """<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+    <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+        <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/>
+    </Relationships>"""
+
+  workbook_rels_xml = """<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+    <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+        <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/>
+    </Relationships>"""
+
+  workbook_xml = """<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+    <workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+        <sheets>
+            <sheet name="Dados Bancarios" sheetId="1" r:id="rId1"/>
+        </sheets>
+    </workbook>"""
+
+  styles_xml = """<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+    <styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
+        <fonts count="1">
+            <font><sz val="11"/><name val="Calibri"/></font>
+        </fonts>
+        <fills count="2">
+            <fill><patternFill patternType="none"/></fill>
+            <fill><patternFill patternType="gray125"/></fill>
+        </fills>
+        <borders count="1">
+            <border><left/><right/><top/><bottom/><diagonal/></border>
+        </borders>
+        <cellStyleXfs count="1">
+            <xf numFmtId="0" fontId="0" fillId="0" borderId="0"/>
+        </cellStyleXfs>
+        <cellXfs count="1">
+            <xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>
+        </cellXfs>
+        <cellStyles count="1">
+            <cellStyle name="Normal" xfId="0" builtinId="0"/>
+        </cellStyles>
+    </styleSheet>"""
+
+  # Constrói o XML da planilha (worksheet) com escape XML adequado para evitar quebra de caracteres
+  def escape_xml(val):
+    if val is None:
+      return ""
+    return (
+        str(val)
+        .replace("&", "&amp;")
+        .replace("<", "&lt;")
+        .replace(">", "&gt;")
+        .replace('"', "&quot;")
+        .replace("'", "&apos;")
+    )
+
+  sheet_data = []
+  sheet_data.append('<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">')
+  sheet_data.append("<sheetData>")
+
+  # Linha de Cabeçalho (Linha 1)
+  sheet_data.append('<row r="1">')
+  for col_idx, h in enumerate(headers, start=1):
+    col_letter = chr(64 + col_idx) if col_idx <= 26 else "I"
+    sheet_data.append(
+        f'<c r="{col_letter}1" t="inlineStr"><is><t>{escape_xml(h)}</t></is></c>'
+    )
+  sheet_data.append("</row>")
+
+  # Linhas de Dados
+  for row_idx, row_values in enumerate(rows, start=2):
+    sheet_data.append(f'<row r="{row_idx}">')
+    for col_idx, val in enumerate(row_values, start=1):
+      col_letter = chr(64 + col_idx) if col_idx <= 26 else "I"
+      val_str = "" if pd.isna(val) else str(val).strip()
+
+      # Se for a coluna de banco, garante rigorosamente 3 dígitos e tipo string (t="str" ou inlineStr)
+      if col_idx - 1 == col_banco_idx and val_str != "":
+        val_str = val_str.zfill(3)
+
+      # Usa inlineStr para forçar o Excel a tratar estritamente como texto puro, preservando os zeros à esquerda
+      sheet_data.append(
+          f'<c r="{col_letter}{row_idx}"'
+          f' t="inlineStr"><is><t>{escape_xml(val_str)}</t></is></c>'
+      )
+    sheet_data.append("</row>")
+
+  sheet_data.append("</sheetData>")
+  sheet_data.append("</worksheet>")
+  worksheet_xml = "".join(sheet_data)
+
+  # Escreve o pacote zip como .xlsx válido
+  with zipfile.ZipFile(output, "w", zipfile.ZIP_DEFLATED) as zf:
+    zf.writestr("[Content_Types].xml", content_types_xml)
+    zf.writestr("_rels/.rels", rels_xml)
+    zf.writestr("xl/_rels/workbook.xml.rels", workbook_rels_xml)
+    zf.writestr("xl/workbook.xml", workbook_xml)
+    zf.writestr("xl/styles.xml", styles_xml)
+    zf.writestr("xl/worksheets/sheet1.xml", worksheet_xml)
+
+  return output.getvalue()
+
+
 def render(conn):
   st.title("⚡ Módulo Extra: Atualização de Dados Bancários (Modo Pandas)")
   st.markdown(
@@ -40,7 +171,6 @@ def render(conn):
       " Oracle, tratar pontuações e gerar o arquivo final atualizado."
   )
 
-  # 1. Área para carregar o arquivo de entrada
   uploaded_file = st.file_uploader(
       "Envie a planilha de entrada (.xlsx, .xls ou .csv)",
       type=["xlsx", "xls", "csv"],
@@ -48,7 +178,6 @@ def render(conn):
 
   if uploaded_file is not None:
     try:
-      # Lendo a planilha de entrada forçando dtype string para preservar zeros à esquerda
       if uploaded_file.name.endswith(".csv"):
         try:
           df_entrada = pd.read_csv(
@@ -70,7 +199,6 @@ def render(conn):
       else:
         df_entrada = pd.read_excel(uploaded_file, dtype=str)
 
-      # Normalização robusta das colunas da planilha de entrada
       df_entrada.columns = [
           remover_acentos(str(col))
           .replace("\ufeff", "")
@@ -82,14 +210,12 @@ def render(conn):
 
       st.success("Planilha carregada com sucesso!")
 
-      # 2. Botão para processar
       if st.button("Processar e Gerar Arquivo Final"):
         with st.spinner(
             "Lendo dados, consultando Oracle e realizando cruzamento em"
             " memória..."
         ):
 
-          # Identifica as colunas de forma flexível
           col_mun = next(
               (c for c in df_entrada.columns if "municip" in c),
               df_entrada.columns[0],
@@ -107,13 +233,12 @@ def render(conn):
               df_entrada.columns[3],
           )
 
-          # Tratamento e limpeza dos dados de entrada (com tratamento para NAN/None no município)
           df_entrada["MUNICIPIO"] = (
               df_entrada[col_mun]
               .astype(str)
               .str.strip()
               .str.upper()
-              .replace(["NAN", "NONE", "NAT", ""], None)
+              .replace(["NAN", "NONE", "NAT", ""], "")
           )
           df_entrada["NOME"] = (
               df_entrada[col_nom].astype(str).str.strip().str.upper()
@@ -122,7 +247,6 @@ def render(conn):
               df_entrada[col_ban].astype(str).str.strip()
           )
 
-          # Limpeza rigorosa do CPF da entrada garantindo 11 dígitos numéricos (zfill)
           df_entrada["CPF_LIMPO"] = (
               df_entrada[col_cpf]
               .astype(str)
@@ -131,7 +255,6 @@ def render(conn):
               .str.zfill(11)
           )
 
-          # Carregando as tabelas do Oracle
           df_doc = pd.read_sql(
               "SELECT id_pessoa, cpf_pessoa FROM SW_PUBLICO.pessoa_doc_cpf",
               con=conn,
@@ -139,7 +262,6 @@ def render(conn):
           df_doc.columns = [str(c).lower().strip() for c in df_doc.columns]
           df_doc = df_doc.drop_duplicates(subset=["cpf_pessoa"])
 
-          # Padroniza id_pessoa e cpf_pessoa do doc
           df_doc["id_pessoa"] = df_doc["id_pessoa"].apply(limpar_id)
           df_doc["CPF_LIMPO"] = (
               df_doc["cpf_pessoa"]
@@ -188,16 +310,24 @@ def render(conn):
           ]
           df_bancos_ref["id_banco"] = df_bancos_ref["id_banco"].apply(limpar_id)
 
-          # Formata o código do banco com zeros à esquerda (ex: 001) eliminando decimais .0
-          df_bancos_ref["cod_banco"] = (
-              df_bancos_ref["cod_banco"]
-              .astype(str)
-              .str.replace(r"\.0$", "", regex=True)
-              .str.strip()
-              .str.zfill(3)
+          def formatar_banco(val):
+            if pd.isna(val) or val is None:
+              return ""
+            val_str = (
+                str(val)
+                .replace(".0", "")
+                .strip()
+                .replace("nan", "")
+                .replace("None", "")
+            )
+            if val_str == "":
+              return ""
+            return val_str.zfill(3)
+
+          df_bancos_ref["cod_banco"] = df_bancos_ref["cod_banco"].apply(
+              formatar_banco
           )
 
-          # Montando a árvore de dados bancários via merge em memória com tipos idênticos
           df_banco_completo = df_banco.merge(
               df_agencia, on="id_agencia", how="left"
           )
@@ -205,19 +335,15 @@ def render(conn):
               df_bancos_ref, on="id_banco", how="left"
           )
 
-          # Realizando os cruzamentos replicando fielmente o seu antigo_select
-          # 1. Tabela doc (trazendo o id_pessoa através do CPF limpo)
           df_resultado = df_entrada.merge(
               df_doc[["id_pessoa", "CPF_LIMPO"]], on="CPF_LIMPO", how="left"
           )
           df_resultado["id_pessoa"] = df_resultado["id_pessoa"].apply(limpar_id)
 
-          # 2. Tabela de vínculo institucional agrupada
           df_resultado = df_resultado.merge(
               df_vinculo_agg, on="id_pessoa", how="left"
           )
 
-          # 3. Tabelas bancárias unidas por id_pessoa
           df_resultado = df_resultado.merge(
               df_banco_completo[
                   ["id_pessoa", "cod_banco", "cod_agencia", "conta_corrente"]
@@ -226,12 +352,10 @@ def render(conn):
               how="left",
           )
 
-          # Aplica a máscara formatada no CPF final (XXX.XXX.XXX-XX)
           df_resultado["CPF_FORMATADO"] = df_resultado["CPF_LIMPO"].apply(
               formatar_cpf
           )
 
-          # Renomeando colunas finais para manter o padrão exato esperado
           df_resultado = df_resultado.rename(
               columns={
                   "id_pessoa": "ID_PESSOA",
@@ -242,7 +366,10 @@ def render(conn):
           }
           )
 
-          # Selecionando apenas as colunas finais desejadas na ordem correta
+          df_resultado["CODIGOBANCO"] = df_resultado["CODIGOBANCO"].apply(
+              formatar_banco
+          )
+
           colunas_finais = [
               "MUNICIPIO",
               "NOME",
@@ -255,41 +382,44 @@ def render(conn):
               "COD_INSTITUCIONAL",
           ]
 
-          # Garante que todas as colunas existam no dataframe final
           for col in colunas_finais:
             if col not in df_resultado.columns:
-              df_resultado[col] = None
+              df_resultado[col] = ""
+            else:
+              df_resultado[col] = (
+                  df_resultado[col]
+                  .fillna("")
+                  .replace(["nan", "None", "NAT"], "")
+                  .astype(str)
+              )
 
           df_saida = df_resultado[colunas_finais]
 
-          # Estatística de cruzamento para feedback
           total_encontrados = (
-              df_saida["ID_PESSOA"].notnull()
-              & (df_saida["ID_PESSOA"] != "None")
-              & (df_saida["ID_PESSOA"] != "")
+              (df_saida["ID_PESSOA"] != "")
+              & (df_saida["ID_PESSOA"].notnull())
           ).sum()
           st.info(
               f"Cruzamento concluído! {total_encontrados} de"
               f" {len(df_saida)} registros encontrados no Oracle."
           )
 
-          # Convertendo o resultado para CSV em memória
-          processed_data = df_saida.to_csv(
-              index=False, sep=";", encoding="utf-8-sig"
-          ).encode("utf-8-sig")
+          # Gera o arquivo Excel nativo (.xlsx) sem depender de bibliotecas externas
+          processed_data = gerar_xlsx_nativo(df_saida)
 
         st.success("Processamento e cruzamento em memória concluídos com êxito!")
         st.write("### Prévia do Resultado Gerado (Todos os registros):")
 
-        # Exibe a tabela inteira com o ID_PESSOA visível
         st.dataframe(df_saida, use_container_width=True)
 
-        # Botão de download do arquivo CSV final
+        # Botão de download do arquivo Excel (.xlsx) final
         st.download_button(
-            label="📥 Baixar Planilha Final (CSV)",
+            label="📥 Baixar Planilha Final (Excel)",
             data=processed_data,
-            file_name="Dados_bancario_faltantes_trabalhada.csv",
-            mime="text/csv",
+            file_name="Dados_bancario_faltantes_trabalhada.xlsx",
+            mime=(
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            ),
         )
 
     except Exception as e:
