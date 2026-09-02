@@ -169,7 +169,6 @@ def render(conn):
 
   if uploaded_file is not None:
     try:
-      # Lendo o arquivo de entrada
       if uploaded_file.name.endswith(".csv"):
         try:
           df_entrada = pd.read_csv(
@@ -215,10 +214,14 @@ def render(conn):
       st.success("Planilha carregada com sucesso!")
 
       if st.button("Processar e Gerar Arquivo Final"):
-        with st.spinner(
-            "Lendo dados, consultando Oracle e realizando cruzamento em"
-            " memória..."
-        ):
+        # Criando a barra de progresso e o elemento de texto de status
+        progress_bar = st.progress(0)
+        status_text = st.empty()
+
+        try:
+          # Passo 1: Preparação e limpeza dos dados de entrada
+          status_text.text("Lendo e preparando dados da planilha de entrada...")
+          progress_bar.progress(15)
 
           col_mun = next(
               (c for c in df_entrada.columns if "municip" in c),
@@ -258,6 +261,10 @@ def render(conn):
               .str.strip()
               .str.zfill(11)
           )
+
+          # Passo 2: Consultando as tabelas do Oracle
+          status_text.text("Consultando tabelas no banco Oracle...")
+          progress_bar.progress(40)
 
           df_doc = pd.read_sql(
               "SELECT id_pessoa, cpf_pessoa FROM SW_PUBLICO.pessoa_doc_cpf",
@@ -304,7 +311,7 @@ def render(conn):
           )
           df_agencia.columns = [str(c).lower().strip() for c in df_agencia.columns]
           df_agencia["id_agencia"] = df_agencia["id_agencia"].apply(limpar_id)
-          df_agencia["id_banco"] = df_banco["id_banco"].apply(limpar_id)
+          df_agencia["id_banco"] = df_agencia["id_banco"].apply(limpar_id)
 
           df_bancos_ref = pd.read_sql(
               "SELECT id_banco, cod_banco FROM SW_PUBLICO.RHB_BANCO", con=conn
@@ -338,6 +345,10 @@ def render(conn):
           df_banco_completo = df_banco_completo.merge(
               df_bancos_ref, on="id_banco", how="left"
           )
+
+          # Passo 3: Cruzamento dos dados em memória
+          status_text.text("Realizando cruzamento de dados em memória...")
+          progress_bar.progress(70)
 
           df_resultado = df_entrada.merge(
               df_doc[["id_pessoa", "CPF_LIMPO"]], on="CPF_LIMPO", how="left"
@@ -403,12 +414,26 @@ def render(conn):
               (df_saida["ID_PESSOA"] != "")
               & (df_saida["ID_PESSOA"].notnull())
           ).sum()
+
+          # Passo 4: Gerando o arquivo Excel final
+          status_text.text("Gerando arquivo Excel final estruturado...")
+          progress_bar.progress(90)
+
+          processed_data = gerar_xlsx_nativo(df_saida)
+
+          # Concluído com 100%
+          progress_bar.progress(100)
+          status_text.text("Processamento concluído com êxito!")
+
           st.info(
               f"Cruzamento concluído! {total_encontrados} de"
               f" {len(df_saida)} registros encontrados no Oracle."
           )
 
-          processed_data = gerar_xlsx_nativo(df_saida)
+        except Exception as proc_err:
+          progress_bar.empty()
+          status_text.empty()
+          raise proc_err
 
         st.success("Processamento e cruzamento em memória concluídos com êxito!")
         st.write("### Prévia do Resultado Gerado (Todos os registros):")
