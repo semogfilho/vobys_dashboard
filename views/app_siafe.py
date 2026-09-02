@@ -31,8 +31,6 @@ def formatar_moeda_br(valor):
 
 @st.cache_data(show_spinner="Sincronizando com a API...")
 def buscar_dados_siafe(ano, perfil_usuario):
-    # Prioriza o que está na sessão (digitado pelo usuário)
-    # Se não houver, cai no secrets (fallback)
     usuario = st.session_state.get("sefaz_cpf", st.secrets["sefaz"]["SIAFE_CPF"])
     senha = st.session_state.get("sefaz_pass", st.secrets["sefaz"]["SIAFE_SENHA"])
     BASE_URL = st.secrets["sefaz"]["BASE_URL"]
@@ -65,20 +63,53 @@ def buscar_dados_siafe(ano, perfil_usuario):
 
     except Exception as e:
         eh_admin = perfil_usuario in ['a', 'g']
-
         if eh_admin:
             st.error(f"⚠️ Erro na API SIAFE: {e}")
         else:
             st.warning("⚠️ O serviço de integração SIAFE está temporariamente indisponível. Por favor, contate o suporte técnico.")
-
         return pd.DataFrame()
 
 def main(conn, ano_selecionado, mes_chave, meses_lista, perfil_usuario):
+    # CSS Customizado para estilização corporativa moderna
     st.markdown("""
         <style>
-            [data-testid="column"] { display: flex; flex-direction: column; align-items: flex-start !important; }
-            div[data-testid="stHorizontalBlock"] { align-items: flex-start !important; }
-            div[data-testid="stDataFrame"] { margin-top: 0px !important; }
+            .stApp {
+                background-color: #f8fafc;
+            }
+            [data-testid="column"] { 
+                display: flex; 
+                flex-direction: column; 
+                align-items: flex-start !important; 
+            }
+            div[data-testid="stHorizontalBlock"] { 
+                align-items: flex-start !important; 
+            }
+            div[data-testid="stDataFrame"] { 
+                margin-top: 0px !important;
+                border-radius: 8px;
+                box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+            }
+            .metric-card {
+                background-color: #ffffff;
+                border: 1px solid #e2e8f0;
+                padding: 16px 20px;
+                border-radius: 10px;
+                box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+                margin-bottom: 1rem;
+            }
+            .metric-title {
+                font-size: 0.85rem;
+                color: #64748b;
+                font-weight: 600;
+                text-transform: uppercase;
+                letter-spacing: 0.05em;
+            }
+            .metric-value {
+                font-size: 1.5rem;
+                color: #0f172a;
+                font-weight: 700;
+                margin-top: 4px;
+            }
         </style>
     """, unsafe_allow_html=True)
 
@@ -86,6 +117,7 @@ def main(conn, ano_selecionado, mes_chave, meses_lista, perfil_usuario):
     competencia_busca = f"{mes_num_str}/{ano_selecionado}"
 
     st.title(f"📊 Painel de Pagamentos Pendentes ({competencia_busca})")
+    st.markdown("---")
 
     df_total = buscar_dados_siafe(ano_selecionado, perfil_usuario)
     if df_total.empty:
@@ -93,7 +125,11 @@ def main(conn, ano_selecionado, mes_chave, meses_lista, perfil_usuario):
         return
 
     df_total['categoria'] = df_total['Cod_Sefaz'].apply(lambda x: "FOLHA" if str(x).isdigit() and int(x) <= 999 else "PPF")
+    
+    # Seletor com visual mais integrado
     cat_selecionada = st.radio("Selecione a Categoria:", ["FOLHA", "PPF"], horizontal=True)
+    st.markdown("<div style='margin-bottom: 15px;'></div>", unsafe_allow_html=True)
+
     df_mes = df_total[(df_total['competencia'].astype(str) == competencia_busca) & (df_total['categoria'] == cat_selecionada)].copy()
 
     col_esq, col_dir = st.columns([1, 4])
@@ -149,16 +185,37 @@ def main(conn, ano_selecionado, mes_chave, meses_lista, perfil_usuario):
         detalhes = df_mes[df_mes.apply(lambda x: (str(x['Cod_Sefaz']), str(x['codigoUg']))
                                     in zip(listas_sefaz, listas_ug), axis=1)].copy() if modo_filtro == "UNIDADE" else df_mes.copy()
 
-        # Inserção das siglas e códigos também nos detalhes
         detalhes['Cod_Sefaz'] = detalhes['Cod_Sefaz'].astype(str)
         df_siglas['Cod_Sefaz'] = df_siglas['Cod_Sefaz'].astype(str)
         detalhes = detalhes.merge(df_siglas, on='Cod_Sefaz', how='left')
         detalhes['Sigla'] = detalhes['Sigla'].fillna("N/D")
 
-        c1, c2, c3 = st.columns(3)
-        c1.metric("Registros", len(detalhes))
-        c2.metric("Total Bruto", formatar_moeda_br(detalhes['item_valorBruto'].sum()))
-        c3.metric("Total Líquido", formatar_moeda_br(detalhes['item_valorLiquido'].sum()))
+        # Cartões de Métricas Estilizados (Substituindo o .metric() simples por HTML customizado)
+        m1, m2, m3 = st.columns(3)
+        
+        with m1:
+            st.markdown(f"""
+                <div class="metric-card">
+                    <div class="metric-title">Registros</div>
+                    <div class="metric-value">{len(detalhes):,}</div>
+                </div>
+            """, unsafe_allow_html=True)
+            
+        with m2:
+            st.markdown(f"""
+                <div class="metric-card">
+                    <div class="metric-title">Total Bruto</div>
+                    <div class="metric-value">{formatar_moeda_br(detalhes['item_valorBruto'].sum())}</div>
+                </div>
+            """, unsafe_allow_html=True)
+            
+        with m3:
+            st.markdown(f"""
+                <div class="metric-card">
+                    <div class="metric-title">Total Líquido</div>
+                    <div class="metric-value">{formatar_moeda_br(detalhes['item_valorLiquido'].sum())}</div>
+                </div>
+            """, unsafe_allow_html=True)
 
         df_exibicao = detalhes.copy()
         

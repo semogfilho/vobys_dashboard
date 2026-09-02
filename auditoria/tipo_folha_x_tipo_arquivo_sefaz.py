@@ -76,8 +76,8 @@ def executar_auditoria(conn, ano, mes, apenas_inconsistentes=False):
         coluna_situacao_f1 = f"""
             CASE
                 WHEN f1.TIPO_ARQUIVO IN ('001', '020') THEN 'Estrutural SEFAZ duplicado'
-                WHEN f1.TIPO_ARQUIVO > '001' AND f1.TIPO_ARQUIVO < '020' THEN 'Codigo de Arquivo Fora da Sequencia (001)'
-                ELSE 'Codigo de Arquivo Fora da Sequencia (020)'
+                WHEN f1.TIPO_ARQUIVO > '001' AND f1.TIPO_ARQUIVO < '020' THEN 'Tipo de Arquivo Fora da Sequencia (001)'
+                ELSE 'Tipo de Arquivo Fora da Sequencia (020)'
             END as SITUACAO,
         """ if apenas_inconsistentes else ""
 

@@ -58,8 +58,8 @@ requer_reset = "sim"
 nome = "Valdiano Cadê o Baiano"
 email = "evandromsantana@hotmail.com"
 tipo = "c"
-senha_hash = "ec07ef880833ec63b1f40f1c426946df682cd6fede9277183f2797092b2372cb"
-requer_reset = "sim"
+senha_hash = "52e8e47b38e854580afce4aade15dbd5ce0c0464da711afe71da123687d5a4cd"
+requer_reset = "nao"
 
 [usuario.gerente2]
 nome = "GERENTE 2"
