@@ -43,18 +43,15 @@ def gerar_xlsx_nativo(df):
   """
   output = io.BytesIO()
 
-  # Prepara dados convertendo tudo para string segura
   headers = list(df.columns)
   rows = df.values.tolist()
 
-  # Identifica o índice da coluna CODIGOBANCO
   col_banco_idx = -1
   for i, h in enumerate(headers):
     if h == "CODIGOBANCO":
       col_banco_idx = i
       break
 
-  # XMLs estruturados do padrão OpenXML do Excel
   content_types_xml = """<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
     <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
         <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
@@ -104,7 +101,6 @@ def gerar_xlsx_nativo(df):
         </cellStyles>
     </styleSheet>"""
 
-  # Constrói o XML da planilha (worksheet) com escape XML adequado para evitar quebra de caracteres
   def escape_xml(val):
     if val is None:
       return ""
@@ -121,7 +117,6 @@ def gerar_xlsx_nativo(df):
   sheet_data.append('<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">')
   sheet_data.append("<sheetData>")
 
-  # Linha de Cabeçalho (Linha 1)
   sheet_data.append('<row r="1">')
   for col_idx, h in enumerate(headers, start=1):
     col_letter = chr(64 + col_idx) if col_idx <= 26 else "I"
@@ -130,18 +125,15 @@ def gerar_xlsx_nativo(df):
     )
   sheet_data.append("</row>")
 
-  # Linhas de Dados
   for row_idx, row_values in enumerate(rows, start=2):
     sheet_data.append(f'<row r="{row_idx}">')
     for col_idx, val in enumerate(row_values, start=1):
       col_letter = chr(64 + col_idx) if col_idx <= 26 else "I"
       val_str = "" if pd.isna(val) else str(val).strip()
 
-      # Se for a coluna de banco, garante rigorosamente 3 dígitos e tipo string (t="str" ou inlineStr)
       if col_idx - 1 == col_banco_idx and val_str != "":
         val_str = val_str.zfill(3)
 
-      # Usa inlineStr para forçar o Excel a tratar estritamente como texto puro, preservando os zeros à esquerda
       sheet_data.append(
           f'<c r="{col_letter}{row_idx}"'
           f' t="inlineStr"><is><t>{escape_xml(val_str)}</t></is></c>'
@@ -152,7 +144,6 @@ def gerar_xlsx_nativo(df):
   sheet_data.append("</worksheet>")
   worksheet_xml = "".join(sheet_data)
 
-  # Escreve o pacote zip como .xlsx válido
   with zipfile.ZipFile(output, "w", zipfile.ZIP_DEFLATED) as zf:
     zf.writestr("[Content_Types].xml", content_types_xml)
     zf.writestr("_rels/.rels", rels_xml)
@@ -165,19 +156,20 @@ def gerar_xlsx_nativo(df):
 
 
 def render(conn):
-  st.title("⚡ Módulo Extra: Atualização de Dados Bancários (Modo Pandas)")
+  st.title("⚡ Módulo Extra: Atualização de Dados Bancários")
   st.markdown(
-      "Carregue a planilha Excel/CSV para cruzar os dados em memória com o"
-      " Oracle, tratar pontuações e gerar o arquivo final atualizado."
+      "Carregue a planilha de entrada (preferencialmente no formato **CSV**)"
+      " para cruzar os dados em memória com o Oracle e gerar o arquivo"
+      " atualizado."
   )
 
   uploaded_file = st.file_uploader(
-      "Envie a planilha de entrada (.xlsx, .xls ou .csv)",
-      type=["xlsx", "xls", "csv"],
+      "Envie a planilha de entrada (.csv)", type=["csv", "xlsx", "xls"]
   )
 
   if uploaded_file is not None:
     try:
+      # Lendo o arquivo de entrada
       if uploaded_file.name.endswith(".csv"):
         try:
           df_entrada = pd.read_csv(
@@ -197,7 +189,19 @@ def render(conn):
               dtype=str,
           )
       else:
-        df_entrada = pd.read_excel(uploaded_file, dtype=str)
+        try:
+          df_entrada = pd.read_excel(uploaded_file, dtype=str)
+        except Exception as excel_err:
+          if "openpyxl" in str(excel_err):
+            st.error(
+                "⚠️ Não foi possível ler arquivos do Excel (.xlsx/.xls) por"
+                " falta de uma dependência opcional no ambiente. Por favor,"
+                " **salve e envie sua planilha no formato CSV** para prosseguir"
+                " sem problemas!"
+            )
+            return
+          else:
+            raise excel_err
 
       df_entrada.columns = [
           remover_acentos(str(col))
@@ -300,7 +304,7 @@ def render(conn):
           )
           df_agencia.columns = [str(c).lower().strip() for c in df_agencia.columns]
           df_agencia["id_agencia"] = df_agencia["id_agencia"].apply(limpar_id)
-          df_agencia["id_banco"] = df_agencia["id_banco"].apply(limpar_id)
+          df_agencia["id_banco"] = df_banco["id_banco"].apply(limpar_id)
 
           df_bancos_ref = pd.read_sql(
               "SELECT id_banco, cod_banco FROM SW_PUBLICO.RHB_BANCO", con=conn
@@ -404,7 +408,6 @@ def render(conn):
               f" {len(df_saida)} registros encontrados no Oracle."
           )
 
-          # Gera o arquivo Excel nativo (.xlsx) sem depender de bibliotecas externas
           processed_data = gerar_xlsx_nativo(df_saida)
 
         st.success("Processamento e cruzamento em memória concluídos com êxito!")
@@ -412,7 +415,6 @@ def render(conn):
 
         st.dataframe(df_saida, use_container_width=True)
 
-        # Botão de download do arquivo Excel (.xlsx) final
         st.download_button(
             label="📥 Baixar Planilha Final (Excel)",
             data=processed_data,
@@ -423,7 +425,14 @@ def render(conn):
         )
 
     except Exception as e:
-      st.error(
-          f"Ocorreu um erro ao processar o arquivo e cruzar os dados: {e}"
-      )
+      if "openpyxl" in str(e):
+        st.error(
+            "⚠️ Não foi possível ler arquivos do Excel (.xlsx/.xls) por falta de"
+            " uma dependência opcional no ambiente. Por favor, **salve e envie"
+            " sua planilha no formato CSV** para prosseguir sem problemas!"
+        )
+      else:
+        st.error(
+            f"Ocorreu um erro ao processar o arquivo e cruzar os dados: {e}"
+        )
 
