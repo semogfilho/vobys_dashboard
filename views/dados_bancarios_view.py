@@ -137,7 +137,24 @@ def renderizar_dados_bancarios(
 ):
   try:
     mes_exibicao = "13º" if int(mes) == 13 else f"{int(mes):02d}"
-    st.subheader(f"🏦 Dados Bancários (Novatos) ({mes_exibicao}/{ano})")
+
+    @st.cache_data(ttl=600, show_spinner=False)
+    def carregar_dados_bancarios(ano, mes):
+      return novos_dados_bancario_mod.listar_novatos_bancario_com_status(
+          conn, ano, mes
+      )
+
+    # Layout do cabeçalho com o título e o botão de atualização lado a lado
+    col_tit, col_atualizar = st.columns([4, 1], vertical_alignment="bottom")
+    with col_tit:
+      st.subheader(f"🏦 Dados Bancários (Novatos) ({mes_exibicao}/{ano})")
+    with col_atualizar:
+      if st.button("🔄 Atualizar Grid", use_container_width=True, key="btn_atualizar_grid_topo"):
+        carregar_dados_bancarios.clear()
+        st.session_state.pop("df_bancario", None)
+        st.session_state.pop("last_params", None)
+        st.session_state.pop("processamento_pendente", None)
+        st.rerun()
 
     # =========================================================
     # CSS PARA COMPACTAR ESPAÇAMENTOS AO MÍNIMO POSSÍVEL
@@ -161,21 +178,12 @@ def renderizar_dados_bancarios(
         unsafe_allow_html=True,
     )
 
-    @st.cache_data(ttl=600, show_spinner=False)
-    def carregar_dados_bancarios(ano, mes):
-      return novos_dados_bancario_mod.listar_novatos_bancario_com_status(
-          conn, ano, mes
-      )
-
     if (
         "df_bancario" not in st.session_state
         or st.session_state.get("last_params") != (ano, mes)
     ):
       with st.spinner("Buscando dados no banco..."):
         df_temp = carregar_dados_bancarios(ano, mes)
-
-        #st.write("DEBUG - Colunas retornadas:", df_temp.columns.tolist())
-        #df_temp = df_temp.reset_index(drop=True)
 
         if "CPF" in df_temp.columns and "ORGAO" in df_temp.columns:
           cpfs_excecao = [
@@ -197,31 +205,25 @@ def renderizar_dados_bancarios(
           mask_orgao_filtro = df_temp["ORGAO"].astype(str).str.upper() == "SETRANS"
           df_temp = df_temp.drop(columns=["CPF_LIMPO"], errors="ignore")
 
-        # --- APLICAÇÃO DO FILTRO ---
-        # Mantém apenas registros de ORGACOS FILTRADOS OU os CPFs presentes na lista de exceção
-        # df_temp = df_temp[mask_orgao_filtro | mask_cpfs]
-
         if "SEFAZ" not in df_temp.columns:
           df_temp["SEFAZ"] = "⏳ PENDENTE"
 
         if not df_temp.empty:
           df_temp = atualizar_status_auditoria(conn, df_temp)
-          # Reordena e posiciona a coluna DT_DIGITACAO_FOLHA logo após NOME_ATUAL
           colunas_desejadas = [
               "ORGAO",
               "COD_INSTITUCIONAL",
               "NOME_ATUAL",
-              "DT_DIGITACAO_FOLHA",
+              "DIGITACAO_FOLHA",
               "CPF",
               "CHAVE_FOLHA",
               "ENVIADO",
-              "DATA_ENVIO",  # <-- Alterado para o nome real da coluna no DataFrame
+              "DATA_ENVIO",
               "SEFAZ"
           ]
           cols_presentes = [c for c in colunas_desejadas if c in df_temp.columns]
           cols_extras = [c for c in df_temp.columns if c not in colunas_desejadas]
           df_temp = df_temp[cols_presentes + cols_extras]
-
 
         st.session_state.df_bancario = df_temp.reset_index(drop=True)
         st.session_state.last_params = (ano, mes)
@@ -454,9 +456,6 @@ def renderizar_dados_bancarios(
       # TELA 2: PAINEL PRINCIPAL
       # -------------------------------------------------------------
       else:
-        # =========================================================
-        # POPOVER DE RESUMO DA CHECAGEM SEFAZ (SE HOUVER DADOS)
-        # =========================================================
         if "resumo_checar_sefaz" in st.session_state:
           resumo_dados = st.session_state.resumo_checar_sefaz.get(
               "resultados", []
@@ -488,18 +487,23 @@ def renderizar_dados_bancarios(
         df_exibicao = df_exibicao.reset_index(drop=True)
         df_exibicao["_INDEX_REAL"] = df_exibicao.index
 
+        # Renomeia apenas a coluna para exibição no Grid, mantendo a original intacta se precisar
+        if "DATA_ENVIO" in df_exibicao.columns:
+          df_exibicao["Envio/Checagem"] = df_exibicao["DATA_ENVIO"]
+          df_exibicao = df_exibicao.drop(columns=["DATA_ENVIO"])
+
         df_exibicao["CPF"] = df_exibicao["CPF"].apply(formatar_cpf)
 
-        # Formatação da Data de Cadastro que vem do Oracle
         if "DATA_CADASTRO" in df_exibicao.columns:
           df_exibicao["DATA_CADASTRO"] = pd.to_datetime(
               df_exibicao["DATA_CADASTRO"], errors="coerce"
           ).dt.strftime("%d/%m/%Y %H:%M:%S").fillna("")
 
-        if "DATA_ENVIO" in df_exibicao.columns:
-          df_exibicao["DATA_ENVIO"] = pd.to_datetime(
-              df_exibicao["DATA_ENVIO"], errors="coerce"
-          ).dt.strftime("%d/%m/%Y %H:%M:%S").fillna("")
+
+        if "Envio/Checagem" in df_exibicao.columns:
+          df_exibicao["Envio/Checagem"] = df_exibicao["Envio/Checagem"].fillna("").astype(str)
+          df_exibicao["Envio/Checagem"] = df_exibicao["Envio/Checagem"].replace(["None", "nan", "NaT"], "")
+
 
         df_exibicao["ENVIADO"] = df_exibicao["ENVIADO"].map(
             {"SIM": "✅ SIM", "ERRO": "❌ ERRO", "NÃO": "⏳ NÃO"}
@@ -509,54 +513,79 @@ def renderizar_dados_bancarios(
           df_exibicao = df_exibicao.drop(columns=["SOMENTE_VISUALIZAR"])
 
         # =========================================================
+        # DEFINA AQUI A SUA SEQUÊNCIA DE COLUNAS DESEJADA:
+        # =========================================================
+        sequencia_desejada = [
+            "ORGAO",
+            "COD_INSTITUCIONAL",
+            "CPF",
+            "NOME_ATUAL",
+            "CHAVE_FOLHA",
+            "DIGITACAO_FOLHA",
+            "ENVIADO",
+            "Envio/Checagem",
+            "SEFAZ",
+            "ENVIAR",            # Checkbox de seleção na frente (ou mude a ordem se preferir)
+            "_INDEX_REAL"
+        ]
+        
+        # Garante que apenas as colunas existentes sejam reordenadas
+        cols_presentes = [c for c in sequencia_desejada if c in df_exibicao.columns]
+        cols_extras = [c for c in df_exibicao.columns if c not in cols_presentes]
+        df_exibicao = df_exibicao[cols_presentes + cols_extras]
+
+
+        # =========================================================
         # 1. EDITOR DE DADOS (Tabela exibida primeiro)
         # =========================================================
         df_editado = st.data_editor(
             df_exibicao,
             key="editor_dados_bancarios",
             column_config={
-                "ENVIAR": st.column_config.CheckboxColumn(
-                    "Selecionar", default=False
-                ),
-                "DATA_CADASTRO": st.column_config.TextColumn(
-                    "Data de Cadastro", disabled=True
-                ),
-                "DATA_ENVIO": st.column_config.TextColumn(
-                    "Data de Envio/Checagem", disabled=True
-                ),
-                "SEFAZ": st.column_config.TextColumn(
-                    "Status SEFAZ", disabled=True
-                ),
-                "_INDEX_REAL": None,
-            },
-            disabled=[
-                "ENVIADO",
-                "SEFAZ",
-                "ORGAO",
-                "COD_INSTITUCIONAL",
-                "NOME_ATUAL",
-                "CPF",
-                "CHAVE_FOLHA",
-                "DATA_CADASTRO",
-                "DATA_ENVIO",
-            ],
+                  "ENVIAR": st.column_config.CheckboxColumn(
+                      "Selecionar", default=False
+                  ),
+                  "DATA_CADASTRO": st.column_config.TextColumn(
+                      "Data de Cadastro", disabled=True
+                  ),
+                  "Envio/Checagem": st.column_config.TextColumn(
+                      "Envio/Checagem", disabled=True
+                  ),
+                  "SEFAZ": st.column_config.TextColumn(
+                      "Status SEFAZ", disabled=True
+                  ),
+                  "_INDEX_REAL": None,
+              },
+              disabled=[
+                  "ENVIADO",
+                  "SEFAZ",
+                  "ORGAO",
+                  "COD_INSTITUCIONAL",
+                  "NOME_ATUAL",
+                  "CPF",
+                  "CHAVE_FOLHA",
+                  "DATA_CADASTRO",
+                  "Envio/Checagem",
+              ],
             use_container_width=True,
             hide_index=True,
         )
 
-        # SINCRONIZAÇÃO IMEDIATA E ROBUSTA COM O SESSION STATE
-        if "ENVIAR" in df_editado.columns and "_INDEX_REAL" in df_editado.columns:
-          for _, row_tela in df_editado.iterrows():
-            idx_real = row_tela.get("_INDEX_REAL")
-            val_tela = row_tela.get("ENVIAR", False)
-            if (
-                idx_real is not None
-                and idx_real in st.session_state.df_bancario.index
-            ):
-              st.session_state.df_bancario.loc[idx_real, "ENVIAR"] = bool(val_tela)
+        # SINCRONIZAÇÃO SEGURA COM O SESSION STATE
+        if df_editado is not None and not df_editado.empty:
+          if "ENVIAR" in df_editado.columns and "_INDEX_REAL" in df_editado.columns:
+            for _, row_tela in df_editado.iterrows():
+              idx_real = row_tela.get("_INDEX_REAL")
+              val_tela = row_tela.get("ENVIAR", False)
+              if (
+                  idx_real is not None
+                  and not pd.isna(idx_real)
+                  and int(idx_real) in st.session_state.df_bancario.index
+              ):
+                st.session_state.df_bancario.loc[int(idx_real), "ENVIAR"] = bool(val_tela)
 
         # =========================================================
-        # 2. BARRA DE AÇÕES ENQUADRADA ABAIXO DA TABELA
+        # 2. BARRA DE AÇÕES ABAIXO DA TABELA
         # =========================================================
         with st.container(border=True):
           col_a, col_b, col_c = st.columns(
@@ -569,8 +598,13 @@ def renderizar_dados_bancarios(
                 use_container_width=True,
                 key="btn_marcar_todos_geral",
             ):
-              st.session_state.df_bancario["ENVIAR"] = True
+              contem_ativa = st.session_state.df_bancario.astype(str).apply(
+                  lambda col: col.str.contains("ATIVA", case=False, na=False)
+              ).any(axis=1)
+        
+              st.session_state.df_bancario.loc[~contem_ativa, "ENVIAR"] = True
               st.rerun()
+
           with col_b:
             if st.button(
                 "☐ Desmarcar Todos",
@@ -637,17 +671,6 @@ def renderizar_dados_bancarios(
         # TRATAMENTO DOS BOTÕES DO FORMULÁRIO
         # =========================================================
         if submit_button:
-          if "ENVIAR" in df_editado.columns and "_INDEX_REAL" in df_editado.columns:
-            for _, row_tela in df_editado.iterrows():
-              idx_real = row_tela.get("_INDEX_REAL")
-              if (
-                  idx_real is not None
-                  and idx_real in st.session_state.df_bancario.index
-              ):
-                st.session_state.df_bancario.loc[idx_real, "ENVIAR"] = (
-                    row_tela.get("ENVIAR", False)
-                )
-
           selecionados = st.session_state.df_bancario[
               st.session_state.df_bancario["ENVIAR"] == True
           ].copy()
@@ -666,27 +689,12 @@ def renderizar_dados_bancarios(
             st.rerun()
 
         elif checar_sefaz_button:
-          if "ENVIAR" in df_editado.columns and "_INDEX_REAL" in df_editado.columns:
-            for _, row_tela in df_editado.iterrows():
-              idx_real = row_tela.get("_INDEX_REAL")
-              if (
-                  idx_real is not None
-                  and idx_real in st.session_state.df_bancario.index
-              ):
-                st.session_state.df_bancario.loc[idx_real, "ENVIAR"] = (
-                    row_tela.get("ENVIAR", False)
-                )
-
-          df_editado["ENVIAR"] = df_editado["ENVIAR"].fillna(False)
-          selecionados_checar = df_editado[df_editado["ENVIAR"] == True]
+          selecionados_checar = st.session_state.df_bancario[
+              st.session_state.df_bancario["ENVIAR"] == True
+          ]
 
           if not selecionados_checar.empty:
-            indices_pendentes = (
-                selecionados_checar["_INDEX_REAL"]
-                .dropna()
-                .astype(int)
-                .tolist()
-            )
+            indices_pendentes = selecionados_checar.index.tolist()
           else:
             indices_pendentes = st.session_state.df_bancario[
                 (st.session_state.df_bancario["SEFAZ"] != "✅ MATRÍCULA ATIVA")
@@ -784,17 +792,6 @@ def renderizar_dados_bancarios(
             st.warning("Não há registros pendentes para processar.")
 
         elif finalizar_button:
-          if "ENVIAR" in df_editado.columns and "_INDEX_REAL" in df_editado.columns:
-            for _, row_tela in df_editado.iterrows():
-              idx_real = row_tela.get("_INDEX_REAL")
-              if (
-                  idx_real is not None
-                  and idx_real in st.session_state.df_bancario.index
-              ):
-                st.session_state.df_bancario.loc[idx_real, "ENVIAR"] = (
-                    row_tela.get("ENVIAR", False)
-                )
-
           try:
             cursor = conn.cursor()
             user_sistema = st.session_state.get("login_atual", "SISTEMA")
@@ -961,9 +958,9 @@ def renderizar_dados_bancarios(
                   st.data_editor(
                       df_busc_exib,
                       column_config={
-                          "ENVIAR": st.column_config.CheckboxColumn(
-                              "Selecionar", default=False
-                          )
+                        "ENVIAR": st.column_config.CheckboxColumn(
+                            "Selecionar", default=False
+                        )
                       },
                       use_container_width=True,
                       hide_index=True,

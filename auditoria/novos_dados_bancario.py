@@ -127,7 +127,7 @@ def buscar_por_cpf(conn, cpf_limpo, ano, mes):
             SELECT * FROM (
                 SELECT '{nome_orgao}' AS ORGAO,
                         ff.cod_institucional, phn.nome AS NOME_ATUAL, doc.cpf_pessoa AS CPF, 'NÃO' AS ENVIADO, f.chave_folha,
-                        ff.data_cadastro AS DT_DIGITACAO_FOLHA
+                        ff.data_cadastro AS DIGITACAO_FOLHA
                 FROM {schema}.folha_func ff
                 INNER JOIN {schema}.folha f ON f.id_folha = ff.id_folha
                 INNER JOIN sw_publico.pessoa p ON p.id_pessoa = ff.id_pessoa_funcionario
@@ -140,7 +140,7 @@ def buscar_por_cpf(conn, cpf_limpo, ano, mes):
 
                 SELECT '{nome_orgao}' AS ORGAO,
                         pv.cod_institucional, phn.nome AS NOME_ATUAL, doc.cpf_pessoa AS CPF, 'NÃO' AS ENVIADO, ef.mascara chave_folha,
-                        ef.data_cadastro  AS DT_DIGITACAO_FOLHA
+                        ef.data_cadastro  AS DIGITACAO_FOLHA
                 FROM {schema}.Estagiario_Pagamento ep
                 INNER JOIN {schema}.Estag_Folha ef ON ef.id_folha = ep.id_folha
                 INNER JOIN {schema}.estagiario e ON e.id_estagiario = ep.id_estagiario
@@ -419,22 +419,41 @@ def obter_schemas_dinamicos(conn):
         if cursor:
             cursor.close()
 
-
 def listar_novatos_bancario_com_status(conn, ano, mes):
+    # 1. Busca os novos colaboradores
+    df_novatos = listar_novatos_bancario(conn, ano, mes)
+
+    # --- DEBUG 1: A data veio do SQL para dentro do Python? ---
+    print("--- DEBUG DENTRO DE _COM_STATUS ---")
+    if not df_novatos.empty and '025.144.063' in df_novatos['CPF'].values:
+        print(df_novatos[df_novatos['CPF'].str.contains('025.144.063')][['CPF', 'DATA_ENVIO', 'SEFAZ']])
+    else:
+        print("Lucilene não encontrada neste DataFrame ou DF vazio.")
+    #----------------------------------------------------------
+
+    if df_novatos is None or df_novatos.empty:
+        return pd.DataFrame(columns=['ORGAO', 'COD_INSTITUCIONAL', 'NOME_ATUAL', 'CPF', 'CHAVE_FOLHA', 'ENVIADO', 'DATA_ENVIO', 'DIGITACAO_FOLHA', 'SEFAZ'])
+
+    # Se por acaso a função de atualizar status rodar logo em seguida, garanta que ela não limpe a data:
+    # (Se houver uma chamada do tipo df_novatos = atualizar_status_auditoria(df_novatos), verifique o que ela faz!)
+
+    return df_novatos
+
+def listar_novatos_bancario_com_status_xxxx(conn, ano, mes):
     # 1. Busca os novos colaboradores
     df_novatos = listar_novatos_bancario(conn, ano, mes)
     
     # GARANTIA: Sempre retorna um DataFrame, nunca None
     if df_novatos is None or df_novatos.empty:
         #return pd.DataFrame(columns=['ORGAO', 'COD_INSTITUCIONAL', 'NOME_ATUAL', 'CPF', 'ENVIADO'])
-        return pd.DataFrame(columns=['ORGAO', 'COD_INSTITUCIONAL', 'NOME_ATUAL', 'CPF', 'CHAVE_FOLHA', 'ENVIADO', 'DATA_ENVIO', 'DT_DIGITACAO_FOLHA'])
+        return pd.DataFrame(columns=['ORGAO', 'COD_INSTITUCIONAL', 'NOME_ATUAL', 'CPF', 'CHAVE_FOLHA', 'ENVIADO', 'DATA_ENVIO', 'DIGITACAO_FOLHA'])
 
     # Garante a existência das colunas caso a query SQL não traga por algum motivo
     if 'DATA_ENVIO' not in df_novatos.columns:
         df_novatos['DATA_ENVIO'] = None
         
-    if 'DT_DIGITACAO_FOLHA' not in df_novatos.columns:
-        df_novatos['DT_DIGITACAO_FOLHA'] = None
+    if 'DIGITACAO_FOLHA' not in df_novatos.columns:
+        df_novatos['DIGITACAO_FOLHA'] = None
 
     return df_novatos
 
@@ -551,7 +570,7 @@ def listar_novatos_bancario(conn, ano, mes):
         END AS ENVIADO
         ,TO_CHAR(hist.DATA_ENVIO, 'DD/MM/YYYY HH24:MI:SS') AS DATA_ENVIO
         ,hist.STATUS_SEFAZ AS SEFAZ  -- <--- ADICIONADO AQUI PARA TRAZER O STATUS PERSISTIDO
-        ,ff.data_cadastro AS DT_DIGITACAO_FOLHA  -- <--- ADICIONADO AQUI PARA TRAZER A DATA DE CADASTRO DA FOLHA_FUNC
+        ,ff.data_cadastro AS DIGITACAO_FOLHA  -- <--- ADICIONADO AQUI PARA TRAZER A DATA DE CADASTRO DA FOLHA_FUNC
         FROM {schema}.folha_func ff
         INNER JOIN {schema}.folha f_tab ON f_tab.id_folha = ff.id_folha
         INNER JOIN sw_publico.pessoa p ON p.id_pessoa = FF.ID_PESSOA_FUNCIONARIO
@@ -559,7 +578,7 @@ def listar_novatos_bancario(conn, ano, mes):
         LEFT JOIN sw_publico.pessoa_doc_cpf doc ON doc.id_pessoa = p.id_pessoa
         LEFT JOIN AUDITORIA_ENVIOS_SEFAZ hist 
             -- ON REGEXP_REPLACE(hist.cpf, '[^0-9]', '') = REGEXP_REPLACE(doc.cpf_pessoa, '[^0-9]', '')
-            ON hist.cpf = doc.cpf_pessoa  -- JOIN direto, extremamente rápido
+            ON hist.cpf = doc.cpf_pessoa AND hist.matricula = ff.cod_institucional  -- JOIN direto, extremamente rápido
         WHERE f_tab.mes = {mes_int} AND f_tab.ano = {ano_int}
           -- Filtro 1: Garantia de ser NOVATO (Não existe em competências anteriores)
           AND NOT EXISTS (
@@ -587,7 +606,7 @@ def listar_novatos_bancario(conn, ano, mes):
                END AS ENVIADO
         ,TO_CHAR(hist.DATA_ENVIO, 'DD/MM/YYYY HH24:MI:SS') AS DATA_ENVIO
         ,hist.STATUS_SEFAZ AS SEFAZ  -- <--- ADICIONADO AQUI PARA TRAZER O STATUS PERSISTIDO
-        ,f_tab.data_cadastro AS DT_DIGITACAO_FOLHA  -- <--- ADICIONADO NULO PARA ESTAGIÁRIOS PARA MANTER A MESMA ESTRUTURA DE COLUNAS DO UNION
+        ,f_tab.data_cadastro AS DIGITACAO_FOLHA  -- <--- ADICIONADO NULO PARA ESTAGIÁRIOS PARA MANTER A MESMA ESTRUTURA DE COLUNAS DO UNION
         FROM {schema}.Estagiario_Pagamento ff
         INNER JOIN {schema}.Estag_Folha f_tab ON f_tab.id_folha = ff.id_folha
         INNER JOIN {schema}.estagiario e ON e.id_estagiario = ff.id_estagiario
@@ -595,7 +614,7 @@ def listar_novatos_bancario(conn, ano, mes):
         INNER JOIN sw_publico.pessoa p ON p.id_pessoa = pv.ID_PESSOA
         INNER JOIN sw_publico.pessoa_historico_nomes phn ON phn.id_pessoa = p.id_pessoa and phn.data_fim is null
         LEFT JOIN sw_publico.pessoa_doc_cpf doc ON doc.id_pessoa = p.id_pessoa
-        LEFT JOIN AUDITORIA_ENVIOS_SEFAZ hist ON hist.cpf = doc.cpf_pessoa
+        LEFT JOIN AUDITORIA_ENVIOS_SEFAZ hist ON hist.cpf = doc.cpf_pessoa AND hist.matricula = pv.cod_institucional
         WHERE f_tab.mes = {mes_int} AND f_tab.ano = {ano_int}
             AND NOT EXISTS (
               SELECT 1 FROM {schema}.Estagiario_Pagamento ff_ant
