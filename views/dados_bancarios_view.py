@@ -136,48 +136,15 @@ def renderizar_dados_bancarios(
     conn, ano, mes, auth_ui, novos_dados_bancario_mod
 ):
   try:
-    mes_exibicao = "13º" if int(mes) == 13 else f"{int(mes):02d}"
-
     @st.cache_data(ttl=600, show_spinner=False)
     def carregar_dados_bancarios(ano, mes):
       return novos_dados_bancario_mod.listar_novatos_bancario_com_status(
           conn, ano, mes
       )
 
-    # Layout do cabeçalho com o título e o botão de atualização lado a lado
-    col_tit, col_atualizar = st.columns([4, 1], vertical_alignment="bottom")
-    with col_tit:
-      st.subheader(f"🏦 Dados Bancários (Novatos) ({mes_exibicao}/{ano})")
-    with col_atualizar:
-      if st.button("🔄 Atualizar Grid", use_container_width=True, key="btn_atualizar_grid_topo"):
-        carregar_dados_bancarios.clear()
-        st.session_state.pop("df_bancario", None)
-        st.session_state.pop("last_params", None)
-        st.session_state.pop("processamento_pendente", None)
-        st.rerun()
-
     # =========================================================
-    # CSS PARA COMPACTAR ESPAÇAMENTOS AO MÍNIMO POSSÍVEL
+    # 1. CARREGAR OS DADOS PRIMEIRO (Para extrair os Órgãos para o Filtro)
     # =========================================================
-    st.markdown(
-        """
-        <style>
-        div[data-testid="stVerticalBlock"] {
-            gap: 0.3rem !important;
-        }
-        hr {
-            margin-top: 0.6rem !important;
-            margin-bottom: 0.6rem !important;
-        }
-        div[data-testid="stContainer"] {
-            padding-top: 4px !important;
-            padding-bottom: 4px !important;
-        }
-        </style>
-    """,
-        unsafe_allow_html=True,
-    )
-
     if (
         "df_bancario" not in st.session_state
         or st.session_state.get("last_params") != (ano, mes)
@@ -210,9 +177,19 @@ def renderizar_dados_bancarios(
 
         if not df_temp.empty:
           df_temp = atualizar_status_auditoria(conn, df_temp)
+
+          # Fallback de garantia: gera LINK_SIAPE se o ID_PESSOA e CPF existirem no df_temp
+          if "LINK_SIAPE" not in df_temp.columns and "ID_PESSOA" in df_temp.columns and "CPF" in df_temp.columns:
+            df_temp["LINK_SIAPE"] = (
+                "https://siape.sead.pi.gov.br/adm/sead/pessoas-sead/pessoa-sead/"
+                + df_temp["ID_PESSOA"].astype(str)
+                + "/dados-cadastrais/vinculos/vinculos"
+            )
+
           colunas_desejadas = [
               "ORGAO",
               "COD_INSTITUCIONAL",
+              "LINK_SIAPE",
               "NOME_ATUAL",
               "DIGITACAO_FOLHA",
               "CPF",
@@ -227,6 +204,71 @@ def renderizar_dados_bancarios(
 
         st.session_state.df_bancario = df_temp.reset_index(drop=True)
         st.session_state.last_params = (ano, mes)
+        
+        # Reseta o filtro de órgão no session_state ANTES de qualquer widget
+        st.session_state.filtro_orgao_selecionado = "Todos"
+
+    # =========================================================
+    # 2. GARANTE O VALOR INICIAL DO FILTRO ANTES DO SELECTBOX
+    # =========================================================
+    if "filtro_orgao_selecionado" not in st.session_state:
+        st.session_state.filtro_orgao_selecionado = "Todos"
+
+    lista_orgaos = ["Todos"]
+    if "df_bancario" in st.session_state and not st.session_state.df_bancario.empty:
+        orgaos_encontrados = sorted(st.session_state.df_bancario["ORGAO"].dropna().unique().tolist())
+        lista_orgaos.extend(orgaos_encontrados)
+        
+        if st.session_state.filtro_orgao_selecionado not in lista_orgaos:
+            st.session_state.filtro_orgao_selecionado = "Todos"
+
+    mes_exibicao = "13º" if int(mes) == 13 else f"{int(mes):02d}"
+
+    col_tit, col_filtro, col_atualizar = st.columns([4, 2, 1], vertical_alignment="bottom")
+    with col_tit:
+      st.subheader(f"🏦 Dados Bancários (Novatos) ({mes_exibicao}/{ano})")
+    
+    with col_filtro:
+      st.selectbox(
+          "Órgão", 
+          lista_orgaos, 
+          key="filtro_orgao_selecionado",
+          label_visibility="collapsed"
+      )
+      
+    with col_atualizar:
+      if st.button("🔄 Atualizar Grid", use_container_width=True, key="btn_atualizar_grid_topo"):
+        carregar_dados_bancarios.clear()
+        st.session_state.pop("df_bancario", None)
+        st.session_state.pop("last_params", None)
+        st.session_state.pop("processamento_pendente", None)
+        
+        # Remove a chave do selectbox para evitar o conflito de estado antes de recriá-lo
+        st.session_state.pop("filtro_orgao_selecionado", None)
+        
+        st.rerun()
+
+    # =========================================================
+    # CSS PARA COMPACTAR ESPAÇAMENTOS AO MÍNIMO POSSÍVEL
+    # =========================================================
+    st.markdown(
+        """
+        <style>
+        div[data-testid="stVerticalBlock"] {
+            gap: 0.3rem !important;
+        }
+        hr {
+            margin-top: 0.6rem !important;
+            margin-bottom: 0.6rem !important;
+        }
+        div[data-testid="stContainer"] {
+            padding-top: 4px !important;
+            padding-bottom: 4px !important;
+        }
+        </style>
+    """,
+        unsafe_allow_html=True,
+    )
 
     if not st.session_state.df_bancario.empty:
       if "ENVIAR" not in st.session_state.df_bancario.columns:
@@ -484,26 +526,46 @@ def renderizar_dados_bancarios(
                 st.rerun()
 
         df_exibicao = st.session_state.df_bancario.copy()
-        df_exibicao = df_exibicao.reset_index(drop=True)
+        
+        # 1. GUARDA O INDEX REAL ANTES DE QUALQUER FILTRO! 
         df_exibicao["_INDEX_REAL"] = df_exibicao.index
+        
+        # 2. APLICA O FILTRO DO ÓRGÃO
+        filtro_atual = st.session_state.get("filtro_orgao_selecionado", "Todos")
+        if filtro_atual != "Todos":
+            df_exibicao = df_exibicao[df_exibicao["ORGAO"] == filtro_atual]
 
-        # Renomeia apenas a coluna para exibição no Grid, mantendo a original intacta se precisar
+        # 3. RESETA O INDEX PARA A EXIBIÇÃO NO GRID FICAR LIMPA
+        df_exibicao = df_exibicao.reset_index(drop=True)
+
         if "DATA_ENVIO" in df_exibicao.columns:
           df_exibicao["Envio/Checagem"] = df_exibicao["DATA_ENVIO"]
           df_exibicao = df_exibicao.drop(columns=["DATA_ENVIO"])
 
-        df_exibicao["CPF"] = df_exibicao["CPF"].apply(formatar_cpf)
+        # Garantia do LINK_SIAPE na exibição
+        if "LINK_SIAPE" not in df_exibicao.columns and "ID_PESSOA" in df_exibicao.columns and "CPF" in df_exibicao.columns:
+          df_exibicao["LINK_SIAPE"] = (
+              "https://siape.sead.pi.gov.br/adm/sead/pessoas-sead/pessoa-sead/"
+              + df_exibicao["ID_PESSOA"].astype(str)
+              + "/dados-cadastrais/vinculos/vinculos"
+          )
+
+        # -------------------------------------------------------------
+        # FORMATAÇÃO DAS DATAS PARA EXIBIÇÃO
+        # -------------------------------------------------------------
+        if "DIGITACAO_FOLHA" in df_exibicao.columns:
+          df_exibicao["DIGITACAO_FOLHA"] = pd.to_datetime(
+              df_exibicao["DIGITACAO_FOLHA"], errors="coerce"
+          ).dt.strftime("%d/%m/%Y %H:%M:%S").fillna("")
 
         if "DATA_CADASTRO" in df_exibicao.columns:
           df_exibicao["DATA_CADASTRO"] = pd.to_datetime(
               df_exibicao["DATA_CADASTRO"], errors="coerce"
           ).dt.strftime("%d/%m/%Y %H:%M:%S").fillna("")
 
-
         if "Envio/Checagem" in df_exibicao.columns:
           df_exibicao["Envio/Checagem"] = df_exibicao["Envio/Checagem"].fillna("").astype(str)
           df_exibicao["Envio/Checagem"] = df_exibicao["Envio/Checagem"].replace(["None", "nan", "NaT"], "")
-
 
         df_exibicao["ENVIADO"] = df_exibicao["ENVIADO"].map(
             {"SIM": "✅ SIM", "ERRO": "❌ ERRO", "NÃO": "⏳ NÃO"}
@@ -513,27 +575,25 @@ def renderizar_dados_bancarios(
           df_exibicao = df_exibicao.drop(columns=["SOMENTE_VISUALIZAR"])
 
         # =========================================================
-        # DEFINA AQUI A SUA SEQUÊNCIA DE COLUNAS DESEJADA:
+        # SEQUÊNCIA DE COLUNAS DESEJADA (EXIBE LINK_SIAPE COMO CPF)
         # =========================================================
         sequencia_desejada = [
             "ORGAO",
             "COD_INSTITUCIONAL",
-            "CPF",
+            "LINK_SIAPE",
             "NOME_ATUAL",
             "CHAVE_FOLHA",
             "DIGITACAO_FOLHA",
             "ENVIADO",
             "Envio/Checagem",
             "SEFAZ",
-            "ENVIAR",            # Checkbox de seleção na frente (ou mude a ordem se preferir)
+            "ENVIAR",
             "_INDEX_REAL"
         ]
         
-        # Garante que apenas as colunas existentes sejam reordenadas
         cols_presentes = [c for c in sequencia_desejada if c in df_exibicao.columns]
         cols_extras = [c for c in df_exibicao.columns if c not in cols_presentes]
         df_exibicao = df_exibicao[cols_presentes + cols_extras]
-
 
         # =========================================================
         # 1. EDITOR DE DADOS (Tabela exibida primeiro)
@@ -542,6 +602,13 @@ def renderizar_dados_bancarios(
             df_exibicao,
             key="editor_dados_bancarios",
             column_config={
+                  "LINK_SIAPE": st.column_config.LinkColumn(
+                      "CPF",
+                      help="Clique no CPF para abrir o cadastro no SIAPE",
+                      display_text=r"#(.+)$",
+                  ),
+                  "CPF": None,
+                  "ID_PESSOA": None,
                   "ENVIAR": st.column_config.CheckboxColumn(
                       "Selecionar", default=False
                   ),
@@ -563,6 +630,7 @@ def renderizar_dados_bancarios(
                   "COD_INSTITUCIONAL",
                   "NOME_ATUAL",
                   "CPF",
+                  "LINK_SIAPE",
                   "CHAVE_FOLHA",
                   "DATA_CADASTRO",
                   "Envio/Checagem",
@@ -598,11 +666,15 @@ def renderizar_dados_bancarios(
                 use_container_width=True,
                 key="btn_marcar_todos_geral",
             ):
-              contem_ativa = st.session_state.df_bancario.astype(str).apply(
+              # Marca apenas os itens filtrados na tela atual
+              indices_visiveis = df_exibicao["_INDEX_REAL"].tolist()
+              contem_ativa = st.session_state.df_bancario.loc[indices_visiveis].astype(str).apply(
                   lambda col: col.str.contains("ATIVA", case=False, na=False)
               ).any(axis=1)
         
-              st.session_state.df_bancario.loc[~contem_ativa, "ENVIAR"] = True
+              for idx_real in indices_visiveis:
+                if not contem_ativa.loc[idx_real]:
+                  st.session_state.df_bancario.loc[idx_real, "ENVIAR"] = True
               st.rerun()
 
           with col_b:
@@ -611,16 +683,21 @@ def renderizar_dados_bancarios(
                 use_container_width=True,
                 key="btn_desmarcar_todos_geral",
             ):
-              st.session_state.df_bancario["ENVIAR"] = False
+              # Desmarca apenas os itens filtrados na tela atual
+              indices_visiveis = df_exibicao["_INDEX_REAL"].tolist()
+              st.session_state.df_bancario.loc[indices_visiveis, "ENVIAR"] = False
               st.rerun()
 
           with col_c:
+            # CORREÇÃO: Conta os marcados considerando o filtro atual e usa o total de df_exibicao
+            indices_visiveis = df_exibicao["_INDEX_REAL"].tolist()
             total_marcados = (
-                int(st.session_state.df_bancario["ENVIAR"].sum())
-                if "ENVIAR" in st.session_state.df_bancario.columns
+                int(st.session_state.df_bancario.loc[indices_visiveis, "ENVIAR"].sum())
+                if "ENVIAR" in st.session_state.df_bancario.columns and indices_visiveis
                 else 0
             )
-            total_geral = len(st.session_state.df_bancario)
+            total_geral = len(df_exibicao)
+            
             st.markdown(
                 "<div style='text-align: right; font-weight: 600; color: #555;"
                 " padding-right: 5px;'>📊 Selecionados: <span style='color:"
@@ -919,9 +996,16 @@ def renderizar_dados_bancarios(
                 st.data_editor(
                     df_loc_exib,
                     column_config={
+                        "LINK_SIAPE": st.column_config.LinkColumn(
+                            "CPF",
+                            help="Clique no CPF para abrir o cadastro no SIAPE",
+                            display_text=r"#(.+)$",
+                        ),
+                        "CPF": None,
+                        "ID_PESSOA": None,
                         "ENVIAR": st.column_config.CheckboxColumn(
                             "Selecionar", default=False
-                        )
+                        ),
                     },
                     hide_index=True,
                     use_container_width=True,
@@ -955,9 +1039,23 @@ def renderizar_dados_bancarios(
                         columns=["SOMENTE_VISUALIZAR"]
                     )
 
+                  if "LINK_SIAPE" not in df_busc_exib.columns and "ID_PESSOA" in df_busc_exib.columns:
+                    df_busc_exib["LINK_SIAPE"] = (
+                        "https://siape.sead.pi.gov.br/adm/sead/pessoas-sead/pessoa-sead/"
+                        + df_busc_exib["ID_PESSOA"].astype(str)
+                        + "/dados-cadastrais/vinculos/vinculos"
+                    )
+
                   st.data_editor(
                       df_busc_exib,
                       column_config={
+                        "LINK_SIAPE": st.column_config.LinkColumn(
+                            "CPF",
+                            help="Clique no CPF para abrir o cadastro no SIAPE",
+                            display_text=r"#(.+)$",
+                        ),
+                        "CPF": None,
+                        "ID_PESSOA": None,
                         "ENVIAR": st.column_config.CheckboxColumn(
                             "Selecionar", default=False
                         )

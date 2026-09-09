@@ -30,13 +30,13 @@ def atualizar_status_sefaz(conn, id_envio, novo_status):
 def atualizar_status_auditoria(conn, df):
     """
     Atualiza de forma rápida apenas os campos [ENVIADO, DATA_ENVIO e SEFAZ]
-    consultando diretamente a tabela AUDITORIA_ENVIOS_SEFAZ.
+    consultando diretamente a tabela AUDITORIA_ENVIOS_SEFAZ usando chave composta (CPF + Matrícula).
     """
-    if df is None or df.empty or 'CPF' not in df.columns:
+    if df is None or df.empty or 'CPF' not in df.columns or 'COD_INSTITUCIONAL' not in df.columns:
         return df
 
     try:
-        # Busca o status mais recente de auditoria para todos os CPFs do DataFrame
+        # Busca o status de auditoria para todos os CPFs do DataFrame
         cpfs = [str(cpf) for cpf in df['CPF'].dropna().unique()]
         if not cpfs:
             return df
@@ -44,9 +44,9 @@ def atualizar_status_auditoria(conn, df):
         placeholders = ','.join([f":cpf{i}" for i in range(len(cpfs))])
         params = {f"cpf{i}": cpf for i, cpf in enumerate(cpfs)}
 
-        # Adicionado STATUS_SEFAZ na consulta
+        # Incluindo a coluna MATRICULA na consulta para garantir o mapeamento correto
         sql = f"""
-            SELECT CPF, RETORNO_API, DATA_ENVIO, STATUS_SEFAZ
+            SELECT CPF, MATRICULA, RETORNO_API, DATA_ENVIO, STATUS_SEFAZ
             FROM AUDITORIA_ENVIOS_SEFAZ
             WHERE CPF IN ({placeholders})
         """
@@ -69,32 +69,32 @@ def atualizar_status_auditoria(conn, df):
 
             df_audit['ENVIADO'] = df_audit['RETORNO_API'].apply(calcula_enviado)
 
-            # Mapeia de volta para o DataFrame principal usando o CPF como chave
-            map_enviado = df_audit.set_index('CPF')['ENVIADO'].to_dict()
-            map_data = df_audit.set_index('CPF')['DATA_ENVIO_STR'].to_dict()
-            map_sefaz = df_audit.set_index('CPF')['STATUS_SEFAZ'].to_dict() # Mapeamento do status SEFAZ
+            # Cria uma chave composta (CPF + Matrícula) tanto no DataFrame de auditoria quanto no principal
+            df_audit['CHAVE_COMPOSITA'] = df_audit['CPF'].astype(str).str.strip() + '_' + df_audit['MATRICULA'].astype(str).str.strip()
+            df['CHAVE_COMPOSITA'] = df['CPF'].astype(str).str.strip() + '_' + df['COD_INSTITUCIONAL'].astype(str).str.strip()
 
-            df['ENVIADO'] = df['CPF'].map(map_enviado).fillna('NÃO')
-            df['DATA_ENVIO'] = df['CPF'].map(map_data)
+            # Mapeia de volta usando a chave composta para evitar conflitos entre matrículas do mesmo CPF
+            map_enviado = df_audit.set_index('CHAVE_COMPOSITA')['ENVIADO'].to_dict()
+            map_data = df_audit.set_index('CHAVE_COMPOSITA')['DATA_ENVIO_STR'].to_dict()
+            map_sefaz = df_audit.set_index('CHAVE_COMPOSITA')['STATUS_SEFAZ'].to_dict() # Mapeamento do status SEFAZ
+
+            df['ENVIADO'] = df['CHAVE_COMPOSITA'].map(map_enviado).fillna(df['ENVIADO'] if 'ENVIADO' in df.columns else 'NÃO')
+            df['DATA_ENVIO'] = df['CHAVE_COMPOSITA'].map(map_data)
             
             # Atualiza a coluna SEFAZ na tela apenas se houver valor gravado no banco
             if 'SEFAZ' in df.columns:
-                df['SEFAZ'] = df['CPF'].map(map_sefaz).fillna(df['SEFAZ'])
+                df['SEFAZ'] = df['CHAVE_COMPOSITA'].map(map_sefaz).fillna(df['SEFAZ'])
             else:
-                df['SEFAZ'] = df['CPF'].map(map_sefaz)
+                df['SEFAZ'] = df['CHAVE_COMPOSITA'].map(map_sefaz)
+
+            # Remove a coluna temporária auxiliar
+            df = df.drop(columns=['CHAVE_COMPOSITA'])
 
     except Exception as e:
         print(f"DEBUG: Erro ao atualizar status leve: {e}")
 
     return df
 
-
-import streamlit as st
-import pandas as pd
-import re
-
-import pandas as pd
-import streamlit as st
 
 def buscar_por_cpf(conn, cpf_limpo, ano, mes):
     mes_int = int(mes)
@@ -272,7 +272,6 @@ def buscar_dados_completos(conn, schema, cod_institucional):
         LEFT JOIN SW_PUBLICO.Pessoa_Banco pb ON pb.id_pessoa = p.id_pessoa AND pb.data_fim IS NULL
         LEFT JOIN SW_PUBLICO.RHB_BANCO_AGENCIA pba ON pba.id_agencia = pb.id_agencia
         LEFT JOIN SW_PUBLICO.RHB_BANCO pbb ON pbb.id_banco = pba.id_banco
-        LEFT JOIN AUDITORIA_ENVIOS_SEFAZ hist ON hist.cpf = doc.cpf_pessoa
         WHERE pv.cod_institucional = :cod
 
     """
@@ -424,11 +423,12 @@ def listar_novatos_bancario_com_status(conn, ano, mes):
     df_novatos = listar_novatos_bancario(conn, ano, mes)
 
     # --- DEBUG 1: A data veio do SQL para dentro do Python? ---
-    print("--- DEBUG DENTRO DE _COM_STATUS ---")
-    if not df_novatos.empty and '025.144.063' in df_novatos['CPF'].values:
-        print(df_novatos[df_novatos['CPF'].str.contains('025.144.063')][['CPF', 'DATA_ENVIO', 'SEFAZ']])
-    else:
-        print("Lucilene não encontrada neste DataFrame ou DF vazio.")
+    #print("--- DEBUG DENTRO DE _COM_STATUS ---", flush=True)
+
+    #if not df_novatos.empty and '025.144.063' in df_novatos['CPF'].values:
+    #    print(df_novatos[df_novatos['CPF'].str.contains('025.144.063')][['CPF', 'DATA_ENVIO', 'SEFAZ']])
+    #else:
+    #    print("Lucilene não encontrada neste DataFrame ou DF vazio.")
     #----------------------------------------------------------
 
     if df_novatos is None or df_novatos.empty:
@@ -571,6 +571,7 @@ def listar_novatos_bancario(conn, ano, mes):
         ,TO_CHAR(hist.DATA_ENVIO, 'DD/MM/YYYY HH24:MI:SS') AS DATA_ENVIO
         ,hist.STATUS_SEFAZ AS SEFAZ  -- <--- ADICIONADO AQUI PARA TRAZER O STATUS PERSISTIDO
         ,ff.data_cadastro AS DIGITACAO_FOLHA  -- <--- ADICIONADO AQUI PARA TRAZER A DATA DE CADASTRO DA FOLHA_FUNC
+        ,doc.id_pessoa
         FROM {schema}.folha_func ff
         INNER JOIN {schema}.folha f_tab ON f_tab.id_folha = ff.id_folha
         INNER JOIN sw_publico.pessoa p ON p.id_pessoa = FF.ID_PESSOA_FUNCIONARIO
@@ -607,6 +608,7 @@ def listar_novatos_bancario(conn, ano, mes):
         ,TO_CHAR(hist.DATA_ENVIO, 'DD/MM/YYYY HH24:MI:SS') AS DATA_ENVIO
         ,hist.STATUS_SEFAZ AS SEFAZ  -- <--- ADICIONADO AQUI PARA TRAZER O STATUS PERSISTIDO
         ,f_tab.data_cadastro AS DIGITACAO_FOLHA  -- <--- ADICIONADO NULO PARA ESTAGIÁRIOS PARA MANTER A MESMA ESTRUTURA DE COLUNAS DO UNION
+        ,doc.id_pessoa
         FROM {schema}.Estagiario_Pagamento ff
         INNER JOIN {schema}.Estag_Folha f_tab ON f_tab.id_folha = ff.id_folha
         INNER JOIN {schema}.estagiario e ON e.id_estagiario = ff.id_estagiario
@@ -633,9 +635,24 @@ def listar_novatos_bancario(conn, ano, mes):
             print(f"Erro ao processar schema {schema}: {e}")
 
     # 3. Consolidação final
-    if dfs:
-        df_final = pd.concat(dfs, ignore_index=True)
-        return df_final.drop_duplicates(subset=['CPF', 'COD_INSTITUCIONAL', 'CHAVE_FOLHA'])
+    #if dfs:
+    #    df_final = pd.concat(dfs, ignore_index=True)
+    #    return df_final.drop_duplicates(subset=['CPF', 'COD_INSTITUCIONAL', 'CHAVE_FOLHA'])
 
-    return pd.DataFrame()
+    #return pd.DataFrame()
+    # 3. Une todos os schemas processados
+    if dfs:
+        df_novatos = pd.concat(dfs, ignore_index=True)
+    
+    # Garante a criação da coluna de link para o SIAPE
+        if not df_novatos.empty and 'ID_PESSOA' in df_novatos.columns:
+            df_novatos['LINK_SIAPE'] = (
+                "https://siape.sead.pi.gov.br/adm/sead/pessoas-sead/pessoa-sead/"
+                + df_novatos['ID_PESSOA'].astype(str)
+                + "/dados-cadastrais/vinculos/vinculos#"
+                + df_novatos['CPF'].fillna('').astype(str)
+            )
+        return df_novatos
+    else:
+        return pd.DataFrame()
 

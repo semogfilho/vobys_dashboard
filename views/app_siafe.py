@@ -70,45 +70,51 @@ def buscar_dados_siafe(ano, perfil_usuario):
         return pd.DataFrame()
 
 def main(conn, ano_selecionado, mes_chave, meses_lista, perfil_usuario):
-    # CSS Customizado para estilização corporativa moderna
+    # CSS Customizado Otimizado para Compactação de Tela
     st.markdown("""
         <style>
             .stApp {
                 background-color: #f8fafc;
             }
-            [data-testid="column"] { 
-                display: flex; 
-                flex-direction: column; 
-                align-items: flex-start !important; 
+            /* Reduz padding geral de blocos e containers */
+            .block-container {
+                padding-top: 1.5rem;
+                padding-bottom: 1rem;
             }
-            div[data-testid="stHorizontalBlock"] { 
-                align-items: flex-start !important; 
+            [data-testid="column"] {
+                display: flex;
+                flex-direction: column;
+                align-items: flex-start !important;
             }
-            div[data-testid="stDataFrame"] { 
+            div[data-testid="stHorizontalBlock"] {
+                align-items: flex-start !important;
+            }
+            div[data-testid="stDataFrame"] {
                 margin-top: 0px !important;
                 border-radius: 8px;
                 box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
             }
+            /* Cartões de métricas mais compactos */
             .metric-card {
                 background-color: #ffffff;
                 border: 1px solid #e2e8f0;
-                padding: 16px 20px;
-                border-radius: 10px;
+                padding: 10px 14px;
+                border-radius: 8px;
                 box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-                margin-bottom: 1rem;
+                margin-bottom: 0.5rem;
             }
             .metric-title {
-                font-size: 0.85rem;
+                font-size: 0.75rem;
                 color: #64748b;
                 font-weight: 600;
                 text-transform: uppercase;
                 letter-spacing: 0.05em;
             }
             .metric-value {
-                font-size: 1.5rem;
+                font-size: 1.25rem;
                 color: #0f172a;
                 font-weight: 700;
-                margin-top: 4px;
+                margin-top: 2px;
             }
         </style>
     """, unsafe_allow_html=True)
@@ -125,10 +131,10 @@ def main(conn, ano_selecionado, mes_chave, meses_lista, perfil_usuario):
         return
 
     df_total['categoria'] = df_total['Cod_Sefaz'].apply(lambda x: "FOLHA" if str(x).isdigit() and int(x) <= 999 else "PPF")
-    
-    # Seletor com visual mais integrado
+
+    # Seletor integrado com margem reduzida
     cat_selecionada = st.radio("Selecione a Categoria:", ["FOLHA", "PPF"], horizontal=True)
-    st.markdown("<div style='margin-bottom: 15px;'></div>", unsafe_allow_html=True)
+    st.markdown("<div style='margin-bottom: 8px;'></div>", unsafe_allow_html=True)
 
     df_mes = df_total[(df_total['competencia'].astype(str) == competencia_busca) & (df_total['categoria'] == cat_selecionada)].copy()
 
@@ -190,9 +196,9 @@ def main(conn, ano_selecionado, mes_chave, meses_lista, perfil_usuario):
         detalhes = detalhes.merge(df_siglas, on='Cod_Sefaz', how='left')
         detalhes['Sigla'] = detalhes['Sigla'].fillna("N/D")
 
-        # Cartões de Métricas Estilizados (Substituindo o .metric() simples por HTML customizado)
+        # Cartões de Métricas Compactos (em uma única linha)
         m1, m2, m3 = st.columns(3)
-        
+
         with m1:
             st.markdown(f"""
                 <div class="metric-card">
@@ -200,7 +206,7 @@ def main(conn, ano_selecionado, mes_chave, meses_lista, perfil_usuario):
                     <div class="metric-value">{len(detalhes):,}</div>
                 </div>
             """, unsafe_allow_html=True)
-            
+
         with m2:
             st.markdown(f"""
                 <div class="metric-card">
@@ -208,7 +214,7 @@ def main(conn, ano_selecionado, mes_chave, meses_lista, perfil_usuario):
                     <div class="metric-value">{formatar_moeda_br(detalhes['item_valorBruto'].sum())}</div>
                 </div>
             """, unsafe_allow_html=True)
-            
+
         with m3:
             st.markdown(f"""
                 <div class="metric-card">
@@ -218,7 +224,7 @@ def main(conn, ano_selecionado, mes_chave, meses_lista, perfil_usuario):
             """, unsafe_allow_html=True)
 
         df_exibicao = detalhes.copy()
-        
+
         cols = ['codigo', 'codigoExterno', 'Cod_Sefaz', 'Sigla', 'tipoProcessamento', 'item_nome', 'item_matricula',
                 'item_dataPagamento', 'item_descricaoStatusPgto', 'item_valorBruto', 'item_valorLiquido']
 
