@@ -178,12 +178,13 @@ def renderizar_dados_bancarios(
         if not df_temp.empty:
           df_temp = atualizar_status_auditoria(conn, df_temp)
 
-          # Fallback de garantia: gera LINK_SIAPE se o ID_PESSOA e CPF existirem no df_temp
+          # Fallback de garantia: gera LINK_SIAPE com a âncora do CPF para o LinkColumn extrair
           if "LINK_SIAPE" not in df_temp.columns and "ID_PESSOA" in df_temp.columns and "CPF" in df_temp.columns:
             df_temp["LINK_SIAPE"] = (
                 "https://siape.sead.pi.gov.br/adm/sead/pessoas-sead/pessoa-sead/"
                 + df_temp["ID_PESSOA"].astype(str)
-                + "/dados-cadastrais/vinculos/vinculos"
+                + "/dados-cadastrais/vinculos/vinculos#"
+                + df_temp["CPF"].astype(str).apply(formatar_cpf)
             )
 
           colunas_desejadas = [
@@ -542,12 +543,13 @@ def renderizar_dados_bancarios(
           df_exibicao["Envio/Checagem"] = df_exibicao["DATA_ENVIO"]
           df_exibicao = df_exibicao.drop(columns=["DATA_ENVIO"])
 
-        # Garantia do LINK_SIAPE na exibição
+        # Garantia do LINK_SIAPE na exibição com a âncora #CPF
         if "LINK_SIAPE" not in df_exibicao.columns and "ID_PESSOA" in df_exibicao.columns and "CPF" in df_exibicao.columns:
           df_exibicao["LINK_SIAPE"] = (
               "https://siape.sead.pi.gov.br/adm/sead/pessoas-sead/pessoa-sead/"
               + df_exibicao["ID_PESSOA"].astype(str)
-              + "/dados-cadastrais/vinculos/vinculos"
+              + "/dados-cadastrais/vinculos/vinculos#"
+              + df_exibicao["CPF"].astype(str).apply(formatar_cpf)
           )
 
         # -------------------------------------------------------------
@@ -584,6 +586,7 @@ def renderizar_dados_bancarios(
             "NOME_ATUAL",
             "CHAVE_FOLHA",
             "DIGITACAO_FOLHA",
+            "CONTA_CORRENTE",
             "ENVIADO",
             "Envio/Checagem",
             "SEFAZ",
@@ -1039,11 +1042,12 @@ def renderizar_dados_bancarios(
                         columns=["SOMENTE_VISUALIZAR"]
                     )
 
-                  if "LINK_SIAPE" not in df_busc_exib.columns and "ID_PESSOA" in df_busc_exib.columns:
+                  if "LINK_SIAPE" not in df_busc_exib.columns and "ID_PESSOA" in df_busc_exib.columns and "CPF" in df_busc_exib.columns:
                     df_busc_exib["LINK_SIAPE"] = (
                         "https://siape.sead.pi.gov.br/adm/sead/pessoas-sead/pessoa-sead/"
                         + df_busc_exib["ID_PESSOA"].astype(str)
-                        + "/dados-cadastrais/vinculos/vinculos"
+                        + "/dados-cadastrais/vinculos/vinculos#"
+                        + df_busc_exib["CPF"].astype(str).apply(formatar_cpf)
                     )
 
                   st.data_editor(
@@ -1099,3 +1103,4 @@ def renderizar_dados_bancarios(
         "❌ Ocorreu um erro crítico ao renderizar a tela de Dados Bancários:"
     )
     st.exception(e)
+

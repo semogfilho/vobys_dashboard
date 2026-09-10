@@ -1,8 +1,8 @@
 # auditoria/novos_dados_bancario.py
 import streamlit as st
-import unicodedata  # <--- ADICIONE ESTA LINHA NO TOPO
+import unicodedata
 import pandas as pd
-import re  # ADICIONE ESTA LINHA AQUI
+import re
 import requests
 import json
 
@@ -36,7 +36,6 @@ def atualizar_status_auditoria(conn, df):
         return df
 
     try:
-        # Busca o status de auditoria para todos os CPFs do DataFrame
         cpfs = [str(cpf) for cpf in df['CPF'].dropna().unique()]
         if not cpfs:
             return df
@@ -44,7 +43,6 @@ def atualizar_status_auditoria(conn, df):
         placeholders = ','.join([f":cpf{i}" for i in range(len(cpfs))])
         params = {f"cpf{i}": cpf for i, cpf in enumerate(cpfs)}
 
-        # Incluindo a coluna MATRICULA na consulta para garantir o mapeamento correto
         sql = f"""
             SELECT CPF, MATRICULA, RETORNO_API, DATA_ENVIO, STATUS_SEFAZ
             FROM AUDITORIA_ENVIOS_SEFAZ
@@ -54,14 +52,11 @@ def atualizar_status_auditoria(conn, df):
         df_audit = pd.read_sql(sql, conn, params=params)
 
         if not df_audit.empty:
-            # Padroniza o formato da data para string igual fizemos no SELECT principal
             df_audit['DATA_ENVIO_STR'] = pd.to_datetime(df_audit['DATA_ENVIO']).dt.strftime('%d/%m/%Y %H:%M:%S')
 
-            # Define o status ENVIADO com base no retorno_api
             def calcula_enviado(retorno):
                 if pd.isnull(retorno):
                     return 'NÃO'
-                # Trata CLOB ou string para verificar sucesso
                 ret_str = str(retorno)
                 if 'sucesso' in ret_str.lower():
                     return 'SIM'
@@ -69,25 +64,21 @@ def atualizar_status_auditoria(conn, df):
 
             df_audit['ENVIADO'] = df_audit['RETORNO_API'].apply(calcula_enviado)
 
-            # Cria uma chave composta (CPF + Matrícula) tanto no DataFrame de auditoria quanto no principal
             df_audit['CHAVE_COMPOSITA'] = df_audit['CPF'].astype(str).str.strip() + '_' + df_audit['MATRICULA'].astype(str).str.strip()
             df['CHAVE_COMPOSITA'] = df['CPF'].astype(str).str.strip() + '_' + df['COD_INSTITUCIONAL'].astype(str).str.strip()
 
-            # Mapeia de volta usando a chave composta para evitar conflitos entre matrículas do mesmo CPF
             map_enviado = df_audit.set_index('CHAVE_COMPOSITA')['ENVIADO'].to_dict()
             map_data = df_audit.set_index('CHAVE_COMPOSITA')['DATA_ENVIO_STR'].to_dict()
-            map_sefaz = df_audit.set_index('CHAVE_COMPOSITA')['STATUS_SEFAZ'].to_dict() # Mapeamento do status SEFAZ
+            map_sefaz = df_audit.set_index('CHAVE_COMPOSITA')['STATUS_SEFAZ'].to_dict()
 
             df['ENVIADO'] = df['CHAVE_COMPOSITA'].map(map_enviado).fillna(df['ENVIADO'] if 'ENVIADO' in df.columns else 'NÃO')
             df['DATA_ENVIO'] = df['CHAVE_COMPOSITA'].map(map_data)
             
-            # Atualiza a coluna SEFAZ na tela apenas se houver valor gravado no banco
             if 'SEFAZ' in df.columns:
                 df['SEFAZ'] = df['CHAVE_COMPOSITA'].map(map_sefaz).fillna(df['SEFAZ'])
             else:
                 df['SEFAZ'] = df['CHAVE_COMPOSITA'].map(map_sefaz)
 
-            # Remove a coluna temporária auxiliar
             df = df.drop(columns=['CHAVE_COMPOSITA'])
 
     except Exception as e:
@@ -106,16 +97,14 @@ def buscar_por_cpf(conn, cpf_limpo, ano, mes):
     schemas = [row[0] for row in cursor.fetchall()]
     cursor.close()
 
-    lista_resultados = [] # Inicializa uma lista para acumular os DFs
+    lista_resultados = []
     total_schemas = len(schemas)
 
-    # Cria a barra de progresso no Streamlit
     barra_progresso = st.progress(0, text="Iniciando varredura nos órgãos...")
 
     for i, schema in enumerate(schemas):
         nome_orgao = schema.replace('SW_', '')
         
-        # Atualiza o progresso visual a cada schema percorrido
         if total_schemas > 0:
             percentual = (i + 1) / total_schemas
             barra_progresso.progress(
@@ -127,12 +116,19 @@ def buscar_por_cpf(conn, cpf_limpo, ano, mes):
             SELECT * FROM (
                 SELECT '{nome_orgao}' AS ORGAO,
                         ff.cod_institucional, phn.nome AS NOME_ATUAL, doc.cpf_pessoa AS CPF, 'NÃO' AS ENVIADO, f.chave_folha,
-                        ff.data_cadastro AS DIGITACAO_FOLHA
+                        ff.data_cadastro AS DIGITACAO_FOLHA,
+                        CASE 
+                            WHEN pbb.cod_banco IS NULL OR pb.conta_corrente IS NULL THEN 'SEM CONTA CADASTRADA'
+                            ELSE pbb.cod_banco || ' / Ag: ' || NVL(pba.cod_agencia, '-') || ' / CC: ' || pb.conta_corrente
+                        END AS CONTA_CORRENTE
                 FROM {schema}.folha_func ff
                 INNER JOIN {schema}.folha f ON f.id_folha = ff.id_folha
                 INNER JOIN sw_publico.pessoa p ON p.id_pessoa = ff.id_pessoa_funcionario
                 INNER JOIN sw_publico.pessoa_historico_nomes phn ON phn.id_pessoa = p.id_pessoa AND phn.data_fim IS NULL
                 INNER JOIN sw_publico.pessoa_doc_cpf doc ON doc.id_pessoa = p.id_pessoa
+                LEFT JOIN SW_PUBLICO.Pessoa_Banco pb ON pb.id_pessoa = p.id_pessoa AND pb.data_fim IS NULL
+                LEFT JOIN SW_PUBLICO.RHB_BANCO_AGENCIA pba ON pba.id_agencia = pb.id_agencia
+                LEFT JOIN SW_PUBLICO.RHB_BANCO pbb ON pbb.id_banco = pba.id_banco
                 WHERE REGEXP_REPLACE(doc.cpf_pessoa, '[^0-9]', '') = :cpf
                 AND f.ano = :ano AND f.mes = :mes
 
@@ -140,7 +136,11 @@ def buscar_por_cpf(conn, cpf_limpo, ano, mes):
 
                 SELECT '{nome_orgao}' AS ORGAO,
                         pv.cod_institucional, phn.nome AS NOME_ATUAL, doc.cpf_pessoa AS CPF, 'NÃO' AS ENVIADO, ef.mascara chave_folha,
-                        ef.data_cadastro  AS DIGITACAO_FOLHA
+                        ef.data_cadastro AS DIGITACAO_FOLHA,
+                        CASE 
+                            WHEN pbb.cod_banco IS NULL OR pb.conta_corrente IS NULL THEN 'SEM CONTA CADASTRADA'
+                            ELSE pbb.cod_banco || ' / Ag: ' || NVL(pba.cod_agencia, '-') || ' / CC: ' || pb.conta_corrente
+                        END AS CONTA_CORRENTE
                 FROM {schema}.Estagiario_Pagamento ep
                 INNER JOIN {schema}.Estag_Folha ef ON ef.id_folha = ep.id_folha
                 INNER JOIN {schema}.estagiario e ON e.id_estagiario = ep.id_estagiario
@@ -148,6 +148,9 @@ def buscar_por_cpf(conn, cpf_limpo, ano, mes):
                 INNER JOIN sw_publico.pessoa p ON p.id_pessoa = pv.ID_PESSOA
                 INNER JOIN sw_publico.pessoa_historico_nomes phn ON phn.id_pessoa = p.id_pessoa AND phn.data_fim IS NULL
                 INNER JOIN sw_publico.pessoa_doc_cpf doc ON doc.id_pessoa = p.id_pessoa
+                LEFT JOIN SW_PUBLICO.Pessoa_Banco pb ON pb.id_pessoa = p.id_pessoa AND pb.data_fim IS NULL
+                LEFT JOIN SW_PUBLICO.RHB_BANCO_AGENCIA pba ON pba.id_agencia = pb.id_agencia
+                LEFT JOIN SW_PUBLICO.RHB_BANCO pbb ON pbb.id_banco = pba.id_banco
                 WHERE REGEXP_REPLACE(doc.cpf_pessoa, '[^0-9]', '') = :cpf
                 AND ef.ano = :ano AND ef.mes = :mes
             )
@@ -155,20 +158,18 @@ def buscar_por_cpf(conn, cpf_limpo, ano, mes):
         try:
             df = pd.read_sql(sql, conn, params={'cpf': cpf_limpo, 'ano': int(ano), 'mes': mes_int})
             if not df.empty:
-                print(f"DEBUG: CPF {cpf_limpo} encontrado em {schema}")
                 lista_resultados.append(df)
         except Exception as e:
             print(f"DEBUG: Erro no schema {schema}: {e}")
             continue
 
-    # Finaliza a barra de progresso 100%
     barra_progresso.progress(1.0, text="Varredura de CPFs concluída!")
 
-    # Consolida todos os resultados encontrados em um único DataFrame
     if lista_resultados:
         return pd.concat(lista_resultados, ignore_index=True)
     
     return pd.DataFrame()
+
 
 def buscar_dados_completos(conn, schema, cod_institucional):
     sql = f"""
@@ -204,8 +205,7 @@ def buscar_dados_completos(conn, schema, cod_institucional):
         LEFT JOIN SW_PUBLICO.pessoa_historico_nomes phn ON phn.id_pessoa = p.id_pessoa AND phn.data_fim IS NULL
         LEFT JOIN SW_PUBLICO.pessoa_doc_cpf doc ON doc.id_pessoa = p.id_pessoa
         LEFT JOIN SW_PUBLICO.pessoa_endereco pe ON pe.id_pessoa = p.id_pessoa AND pe.data_fim IS NULL
-        left join SW_PUBLICO.ESB_TIPOS_DE_LOGRADOURO tl on tl.id_esb_tipos_de_logradouro=pe.id_esb_tipos_de_logradouro 
-        -- LEFT JOIN sw_publico.PESSOA_DOC_PISPASEP pis on  pis.id_pessoa=p.id_pessoa AND pis.data_baixa IS NULL
+        LEFT JOIN SW_PUBLICO.ESB_TIPOS_DE_LOGRADOURO tl on tl.id_esb_tipos_de_logradouro=pe.id_esb_tipos_de_logradouro 
         LEFT JOIN (
             SELECT * FROM (
                 SELECT 
@@ -256,8 +256,7 @@ def buscar_dados_completos(conn, schema, cod_institucional):
         INNER JOIN sw_publico.pessoa_historico_nomes phn ON phn.id_pessoa = p.id_pessoa and phn.data_fim is null
         LEFT JOIN sw_publico.pessoa_doc_cpf doc ON doc.id_pessoa = p.id_pessoa
         LEFT JOIN SW_PUBLICO.pessoa_endereco pe ON pe.id_pessoa = p.id_pessoa AND pe.data_fim IS NULL
-        left join SW_PUBLICO.ESB_TIPOS_DE_LOGRADOURO tl on tl.id_esb_tipos_de_logradouro=pe.id_esb_tipos_de_logradouro 
-        --LEFT JOIN sw_publico.PESSOA_DOC_PISPASEP pis on  pis.id_pessoa=p.id_pessoa AND pis.data_baixa IS NULL
+        LEFT JOIN SW_PUBLICO.ESB_TIPOS_DE_LOGRADOURO tl on tl.id_esb_tipos_de_logradouro=pe.id_esb_tipos_de_logradouro 
         LEFT JOIN (
             SELECT * FROM (
                 SELECT 
@@ -273,61 +272,49 @@ def buscar_dados_completos(conn, schema, cod_institucional):
         LEFT JOIN SW_PUBLICO.RHB_BANCO_AGENCIA pba ON pba.id_agencia = pb.id_agencia
         LEFT JOIN SW_PUBLICO.RHB_BANCO pbb ON pbb.id_banco = pba.id_banco
         WHERE pv.cod_institucional = :cod
-
     """
     try:
         df = pd.read_sql(sql, conn, params={'cod': cod_institucional})
         if not df.empty:
-            # Força o retorno de um dicionário limpo
             return df.iloc[0].to_dict()
         return None
     except Exception as e:
-        print(f"Erro crítico no SQL: {e}") # Isso aparecerá no terminal do servidor
+        print(f"Erro crítico no SQL: {e}")
         return None
 
+
 def remover_acentos(texto):
-    """
-    Remove acentos de uma string, mantendo a letra base.
-    Ex: 'FÁTIMA' -> 'FATIMA'
-    """
-    if pd.isnull(texto): # Garante compatibilidade com Pandas/NULLs
+    if pd.isnull(texto):
         return None
-    
-    # Converte para string explicitamente e remove espaços extras
     texto_str = str(texto).strip()
-    
-    # Normaliza para decompor caracteres (ex: Á -> A + ´)
-    # A forma 'NFKD' é a mais recomendada para essa decomposição.
     texto_normalizado = unicodedata.normalize('NFKD', texto_str)
-    
-    # Filtra mantendo apenas caracteres que NÃO são marcas de acentuação (non-spacing marks)
     texto_sem_acentos = "".join(
         [c for c in texto_normalizado if not unicodedata.combining(c)]
     )
-    
     return texto_sem_acentos
+
 
 def limpar_numeros(valor):
     if valor:
         return re.sub(r'\D', '', str(valor))
     return None
 
+
 def montar_json_sefaz(row):
     return {
-        "cpf": limpar_numeros(row['CPF']), # Alterado de dados para row
+        "cpf": limpar_numeros(row['CPF']),
         "nome": remover_acentos(row['NOME']).upper() if pd.notnull(row['NOME']) else None,
         "dataNascimento": row['DATANASCIMENTO'].strftime('%Y-%m-%d') if pd.notnull(row['DATANASCIMENTO']) else None,
         "numeroPisPasepNit": row['NUMEROPISPASEPNIT'],
         "uf": row['UF'],
         "codigoMunicipio": row['CODIGOMUNICIPIO'],
-        #"codigoMunicipio": str(row['CODIGOMUNICIPIO']).strip() if pd.notnull(row['CODIGOMUNICIPIO']) and str(row['CODIGOMUNICIPIO']).strip() != '' else "2211001",
         "cep": limpar_numeros(row['CEP']) or "64018900",
         "endereco": str(row['ENDERECO']).upper().strip() if pd.notnull(row['ENDERECO']) else None,
         "bairro": str(row['BAIRRO']).upper().strip() if pd.notnull(row['BAIRRO']) else None,
-        "telefone": limpar_numeros(row['TELEFONE']), # Alterado de dados para row
-        "telefone2": limpar_numeros(row['TELEFONE2']), # Alterado de dados para row
-        "celular": limpar_numeros(row['CELULAR']), # Alterado de dados para row
-        "fax": limpar_numeros(row['FAX']), # Alterado de dados para row
+        "telefone": limpar_numeros(row['TELEFONE']),
+        "telefone2": limpar_numeros(row['TELEFONE2']),
+        "celular": limpar_numeros(row['CELULAR']),
+        "fax": limpar_numeros(row['FAX']),
         "email": remover_acentos(row['EMAIL']).lower() if pd.notnull(row['EMAIL']) else None,
         "dadosBancarios": [{
             "codigoBanco": row['CODIGOBANCO'],
@@ -345,13 +332,11 @@ def enviar_para_sefaz(payload):
     senha = st.session_state.get("sefaz_pass", st.secrets["sefaz"]["SIAFE_SENHA"])
     BASE_URL = st.secrets["sefaz"]["BASE_URL"]
     URL_FINAL = f"{BASE_URL}/apoio-geral/pessoa-fisica/2026"
-    # Se não houver, cai no secrets (fallback)
  
     try:
         session = requests.Session()
         session.verify = False
 
-       # Ajuste aqui: chamando as credenciais corretamente do dicionário config
         payload_auth = {"usuario": usuario, "senha": senha}
         r_auth = session.post(f"{BASE_URL}/auth", json=payload_auth, timeout=10)
         r_auth.raise_for_status()
@@ -359,13 +344,10 @@ def enviar_para_sefaz(payload):
         token = r_auth.json().get("token")
         session.headers.update({"Authorization": f"Bearer {token}"})
 
-        # 2. DEBUG (agora a sessão e os headers existem!)
         print("DEBUG: Headers enviados:", session.headers)
         print("DEBUG: Payload enviado:", payload)
 
-        # 3. Envio dos dados
         response = session.post(URL_FINAL, json=payload, timeout=10)
-        # Retorna sucesso se o código for 200 ou 201 (criado)
         sucesso = response.status_code in [200, 201]
         
         return sucesso, json.dumps(payload), response.text
@@ -375,7 +357,6 @@ def enviar_para_sefaz(payload):
 
 
 def obter_schemas_dinamicos(conn):
-    # 1. Debug de verificação de conexão (Loga no journal/terminal)
     if conn is None:
         print("DEBUG: Conexão (conn) é None!")
         return []
@@ -383,8 +364,6 @@ def obter_schemas_dinamicos(conn):
     cursor = None
     try:
         cursor = conn.cursor()
-        
-        # Query otimizada com GROUP BY/HAVING (mais rápida e performática)
         sql = """
         SELECT owner
         FROM all_tables
@@ -394,79 +373,40 @@ def obter_schemas_dinamicos(conn):
         GROUP BY owner
         HAVING COUNT(DISTINCT table_name) = 3
         """
-        
         cursor.execute(sql)
         schemas = [row[0] for row in cursor.fetchall()]
-        
-        # Debug de sucesso (Opcional: print no terminal para confirmar quantidade)
         print(f"DEBUG: Schemas encontrados com sucesso: {len(schemas)}")
-        
         return schemas
 
     except Exception as e:
-        # 2. Captura e exibe o erro na tela (evita a página branca)
-        # O st.exception renderiza o erro completo (stack trace) no seu dashboard
         st.error("Erro ao processar busca de schemas. Verifique o log abaixo:")
         st.exception(e)
-        
-        # Log para o journal/terminal para diagnóstico posterior
         print(f"DEBUG: Ocorreu um erro crítico na query: {str(e)}")
-        
-        return [] # Retorno seguro para a aplicação continuar rodando
+        return []
 
     finally:
         if cursor:
             cursor.close()
 
+
 def listar_novatos_bancario_com_status(conn, ano, mes):
-    # 1. Busca os novos colaboradores
     df_novatos = listar_novatos_bancario(conn, ano, mes)
 
-    # --- DEBUG 1: A data veio do SQL para dentro do Python? ---
-    #print("--- DEBUG DENTRO DE _COM_STATUS ---", flush=True)
-
-    #if not df_novatos.empty and '025.144.063' in df_novatos['CPF'].values:
-    #    print(df_novatos[df_novatos['CPF'].str.contains('025.144.063')][['CPF', 'DATA_ENVIO', 'SEFAZ']])
-    #else:
-    #    print("Lucilene não encontrada neste DataFrame ou DF vazio.")
-    #----------------------------------------------------------
-
     if df_novatos is None or df_novatos.empty:
-        return pd.DataFrame(columns=['ORGAO', 'COD_INSTITUCIONAL', 'NOME_ATUAL', 'CPF', 'CHAVE_FOLHA', 'ENVIADO', 'DATA_ENVIO', 'DIGITACAO_FOLHA', 'SEFAZ'])
-
-    # Se por acaso a função de atualizar status rodar logo em seguida, garanta que ela não limpe a data:
-    # (Se houver uma chamada do tipo df_novatos = atualizar_status_auditoria(df_novatos), verifique o que ela faz!)
+        return pd.DataFrame(columns=['ORGAO', 'COD_INSTITUCIONAL', 'NOME_ATUAL', 'CPF', 'CHAVE_FOLHA', 'ENVIADO', 'DATA_ENVIO', 'DIGITACAO_FOLHA', 'SEFAZ', 'CONTA_CORRENTE'])
 
     return df_novatos
 
-def listar_novatos_bancario_com_status_xxxx(conn, ano, mes):
-    # 1. Busca os novos colaboradores
-    df_novatos = listar_novatos_bancario(conn, ano, mes)
-    
-    # GARANTIA: Sempre retorna um DataFrame, nunca None
-    if df_novatos is None or df_novatos.empty:
-        #return pd.DataFrame(columns=['ORGAO', 'COD_INSTITUCIONAL', 'NOME_ATUAL', 'CPF', 'ENVIADO'])
-        return pd.DataFrame(columns=['ORGAO', 'COD_INSTITUCIONAL', 'NOME_ATUAL', 'CPF', 'CHAVE_FOLHA', 'ENVIADO', 'DATA_ENVIO', 'DIGITACAO_FOLHA'])
-
-    # Garante a existência das colunas caso a query SQL não traga por algum motivo
-    if 'DATA_ENVIO' not in df_novatos.columns:
-        df_novatos['DATA_ENVIO'] = None
-        
-    if 'DIGITACAO_FOLHA' not in df_novatos.columns:
-        df_novatos['DIGITACAO_FOLHA'] = None
-
-    return df_novatos
 
 def registrar_envio(conn, lista, json_payload, retorno_status):
     user_sefaz = st.session_state.get("sefaz_cpf", "DESCONHECIDO")
     user_sistema = st.session_state.get("login_atual", "SISTEMA")
-    usuario_final = f"{user_sistema}_{user_sefaz}" # Exemplo de concatenação
+    usuario_final = f"{user_sistema}_{user_sefaz}"
 
     cursor = conn.cursor()
     try:
         print(f"DEBUG: Tentando recriar {len(lista)} registros no Oracle...")
 
-        # Bloco PL/SQL Anônimo: executa Delete + Insert na mesma viagem de rede
         sql_block = """
         BEGIN
             DELETE FROM AUDITORIA_ENVIOS_SEFAZ 
@@ -484,8 +424,8 @@ def registrar_envio(conn, lista, json_payload, retorno_status):
                 'nome': item['NOME_ATUAL'], 
                 'json': json_payload, 
                 'ret': retorno_status,
-                'usuario_envio': usuario_final, # Adicionado aqui
-                'status_sefaz': '✅ MATRÍCULA ATIVA' # Ou o status adequado para o envio bem-sucedido
+                'usuario_envio': usuario_final,
+                'status_sefaz': '✅ MATRÍCULA ATIVA'
             } 
             for item in lista
         ]
@@ -504,10 +444,10 @@ def registrar_envio(conn, lista, json_payload, retorno_status):
     finally:
         cursor.close()
 
+
 def buscar_detalhe_erro_no_banco(conn, cpf):
     try:
         cursor = conn.cursor()
-        # Busca o último log de erro para aquele CPF
         sql = """
         SELECT retorno_api 
         FROM AUDITORIA_ENVIOS_SEFAZ 
@@ -522,32 +462,28 @@ def buscar_detalhe_erro_no_banco(conn, cpf):
     except Exception as e:
         return f"Erro ao buscar log no banco: {str(e)}"
 
+
 def listar_novatos_bancario(conn, ano, mes):
     """
     Lista novatos bancários otimizada: busca schemas que possuem movimento 
     na competência antes de iterar, evitando processar schemas vazios.
     """
-    mes_int = int(mes) if str(mes).isdigit() else mes_map.get(mes, 1) # Assumindo mes_map definido
+    mes_int = int(mes) if str(mes).isdigit() else 1
     ano_int = int(ano)
 
-    # 1. Filtro dinâmico: busca apenas schemas que tiveram movimento real no mês/ano
-    # Isso reduz drasticamente as iterações de 90 para apenas os ativos (ex: 5 a 10)
     cursor = conn.cursor()
     cursor.execute("""
         SELECT owner 
         FROM all_tables 
         WHERE table_name = 'FOLHA_FUNC' 
         AND owner LIKE 'SW_%'
-        --AND owner LIKE 'SW_SEDUC'
         AND owner NOT IN ('SW_FUNPREV', 'SW_REENVIO')
     """)
     todos_schemas = [row[0] for row in cursor.fetchall()]
     
-    # Validação inteligente: filtra apenas os que têm dados na competência
     schemas_ativos = []
     for schema in todos_schemas:
         try:
-            # Verifica se o schema tem registros para o mes/ano antes de rodar o SELECT pesado
             check_sql = f"SELECT 1 FROM {schema}.folha f WHERE f.mes = {mes_int} AND f.ano = {int(ano)} AND ROWNUM = 1"
             cursor.execute(check_sql)
             if cursor.fetchone():
@@ -556,38 +492,39 @@ def listar_novatos_bancario(conn, ano, mes):
             continue
     cursor.close()
 
-    # 2. Executa a extração apenas nos schemas ativos
     dfs = []
     for schema in schemas_ativos:
-        # Consulta otimizada com JOINs diretos
         sql = f"""
         SELECT '{schema.replace('SW_', '')}' AS ORGAO, ff.cod_institucional, phn.nome AS NOME_ATUAL, doc.cpf_pessoa AS CPF, f_tab.chave_folha as CHAVE_FOLHA,
-       -- O Oracle usará o índice se a lógica for idêntica à do índice criado
         CASE 
            WHEN hist.retorno_api IS NULL THEN 'NÃO'
            WHEN (CASE WHEN INSTR((hist.retorno_api), 'sucesso') > 0 THEN 1 ELSE 0 END) = 1 THEN 'SIM'
            ELSE 'ERRO'
         END AS ENVIADO
         ,TO_CHAR(hist.DATA_ENVIO, 'DD/MM/YYYY HH24:MI:SS') AS DATA_ENVIO
-        ,hist.STATUS_SEFAZ AS SEFAZ  -- <--- ADICIONADO AQUI PARA TRAZER O STATUS PERSISTIDO
-        ,ff.data_cadastro AS DIGITACAO_FOLHA  -- <--- ADICIONADO AQUI PARA TRAZER A DATA DE CADASTRO DA FOLHA_FUNC
+        ,hist.STATUS_SEFAZ AS SEFAZ
+        ,ff.data_cadastro AS DIGITACAO_FOLHA
+        ,CASE 
+            WHEN pbb.cod_banco IS NULL OR pb.conta_corrente IS NULL THEN 'SEM CONTA CADASTRADA'
+            ELSE pbb.cod_banco || ' / Ag: ' || NVL(pba.cod_agencia, '-') || ' / CC: ' || pb.conta_corrente
+         END AS CONTA_CORRENTE
         ,doc.id_pessoa
         FROM {schema}.folha_func ff
         INNER JOIN {schema}.folha f_tab ON f_tab.id_folha = ff.id_folha
         INNER JOIN sw_publico.pessoa p ON p.id_pessoa = FF.ID_PESSOA_FUNCIONARIO
         INNER JOIN sw_publico.pessoa_historico_nomes phn ON phn.id_pessoa = p.id_pessoa and phn.data_fim is null
         LEFT JOIN sw_publico.pessoa_doc_cpf doc ON doc.id_pessoa = p.id_pessoa
+        LEFT JOIN SW_PUBLICO.Pessoa_Banco pb ON pb.id_pessoa = p.id_pessoa AND pb.data_fim IS NULL
+        LEFT JOIN SW_PUBLICO.RHB_BANCO_AGENCIA pba ON pba.id_agencia = pb.id_agencia
+        LEFT JOIN SW_PUBLICO.RHB_BANCO pbb ON pbb.id_banco = pba.id_banco
         LEFT JOIN AUDITORIA_ENVIOS_SEFAZ hist 
-            -- ON REGEXP_REPLACE(hist.cpf, '[^0-9]', '') = REGEXP_REPLACE(doc.cpf_pessoa, '[^0-9]', '')
-            ON hist.cpf = doc.cpf_pessoa AND hist.matricula = ff.cod_institucional  -- JOIN direto, extremamente rápido
+            ON hist.cpf = doc.cpf_pessoa AND hist.matricula = ff.cod_institucional
         WHERE f_tab.mes = {mes_int} AND f_tab.ano = {ano_int}
-          -- Filtro 1: Garantia de ser NOVATO (Não existe em competências anteriores)
           AND NOT EXISTS (
               SELECT 1 FROM {schema}.folha_func ff_ant
               WHERE ff_ant.id_pessoa_funcionario = ff.id_pessoa_funcionario 
                     and ff_ant.cod_institucional     = ff.cod_institucional
                     and ff_ant.id_folha              < ff.id_folha
-                    -- AND (f_ant.ano < {ano_int} OR (f_ant.ano = {ano_int} AND f_ant.mes < {mes_int}))
           )
           AND NOT EXISTS (
               SELECT 1 FROM sw_funprev.folha_func ff_ant
@@ -597,7 +534,6 @@ def listar_novatos_bancario(conn, ano, mes):
           )
         UNION ALL
 
-        -- Bloco 2: Estagiários (Adaptado ao Schema dinâmico)
         SELECT '{schema.replace('SW_', '')}' AS ORGAO, pv.cod_institucional, phn.nome AS NOME_ATUAL, 
                doc.cpf_pessoa AS CPF, f_tab.mascara AS CHAVE_FOLHA,
                CASE
@@ -606,8 +542,12 @@ def listar_novatos_bancario(conn, ano, mes):
                    ELSE 'ERRO'
                END AS ENVIADO
         ,TO_CHAR(hist.DATA_ENVIO, 'DD/MM/YYYY HH24:MI:SS') AS DATA_ENVIO
-        ,hist.STATUS_SEFAZ AS SEFAZ  -- <--- ADICIONADO AQUI PARA TRAZER O STATUS PERSISTIDO
-        ,f_tab.data_cadastro AS DIGITACAO_FOLHA  -- <--- ADICIONADO NULO PARA ESTAGIÁRIOS PARA MANTER A MESMA ESTRUTURA DE COLUNAS DO UNION
+        ,hist.STATUS_SEFAZ AS SEFAZ
+        ,f_tab.data_cadastro AS DIGITACAO_FOLHA
+        ,CASE 
+            WHEN pbb.cod_banco IS NULL OR pb.conta_corrente IS NULL THEN 'SEM CONTA CADASTRADA'
+            ELSE pbb.cod_banco || ' / Ag: ' || NVL(pba.cod_agencia, '-') || ' / CC: ' || pb.conta_corrente
+         END AS CONTA_CORRENTE
         ,doc.id_pessoa
         FROM {schema}.Estagiario_Pagamento ff
         INNER JOIN {schema}.Estag_Folha f_tab ON f_tab.id_folha = ff.id_folha
@@ -616,6 +556,9 @@ def listar_novatos_bancario(conn, ano, mes):
         INNER JOIN sw_publico.pessoa p ON p.id_pessoa = pv.ID_PESSOA
         INNER JOIN sw_publico.pessoa_historico_nomes phn ON phn.id_pessoa = p.id_pessoa and phn.data_fim is null
         LEFT JOIN sw_publico.pessoa_doc_cpf doc ON doc.id_pessoa = p.id_pessoa
+        LEFT JOIN SW_PUBLICO.Pessoa_Banco pb ON pb.id_pessoa = p.id_pessoa AND pb.data_fim IS NULL
+        LEFT JOIN SW_PUBLICO.RHB_BANCO_AGENCIA pba ON pba.id_agencia = pb.id_agencia
+        LEFT JOIN SW_PUBLICO.RHB_BANCO pbb ON pbb.id_banco = pba.id_banco
         LEFT JOIN AUDITORIA_ENVIOS_SEFAZ hist ON hist.cpf = doc.cpf_pessoa AND hist.matricula = pv.cod_institucional
         WHERE f_tab.mes = {mes_int} AND f_tab.ano = {ano_int}
             AND NOT EXISTS (
@@ -624,8 +567,6 @@ def listar_novatos_bancario(conn, ano, mes):
               WHERE e_ant.id_estagiario = e.id_estagiario
                     and ff_ant.id_folha              < ff.id_folha
           )
-
-
         """
         try:
             df = pd.read_sql(sql, conn)
@@ -634,17 +575,9 @@ def listar_novatos_bancario(conn, ano, mes):
         except Exception as e:
             print(f"Erro ao processar schema {schema}: {e}")
 
-    # 3. Consolidação final
-    #if dfs:
-    #    df_final = pd.concat(dfs, ignore_index=True)
-    #    return df_final.drop_duplicates(subset=['CPF', 'COD_INSTITUCIONAL', 'CHAVE_FOLHA'])
-
-    #return pd.DataFrame()
-    # 3. Une todos os schemas processados
     if dfs:
         df_novatos = pd.concat(dfs, ignore_index=True)
     
-    # Garante a criação da coluna de link para o SIAPE
         if not df_novatos.empty and 'ID_PESSOA' in df_novatos.columns:
             df_novatos['LINK_SIAPE'] = (
                 "https://siape.sead.pi.gov.br/adm/sead/pessoas-sead/pessoa-sead/"
