@@ -438,7 +438,7 @@ def render(conn):
         st.success("Processamento e cruzamento em memória concluídos com êxito!")
         st.write("### Prévia do Resultado Gerado (Todos os registros):")
 
-        st.dataframe(df_saida, use_container_width=True)
+        st.dataframe(df_saida, width='stretch')
 
         st.download_button(
             label="📥 Baixar Planilha Final (Excel)",

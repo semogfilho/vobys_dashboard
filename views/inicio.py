@@ -177,7 +177,7 @@ def render(conn, ano_selecionado, mes_chave, meses_disponiveis):
                                 'CODIGO_RELATORIO',
                                 'DATA_PROCESSAMENTO'
                             ]],
-                            use_container_width=True,
+                            width='stretch',
                             hide_index=True,
                             column_config={
                                 "LINK_LIMPO": st.column_config.LinkColumn(
@@ -216,7 +216,7 @@ def render(conn, ano_selecionado, mes_chave, meses_disponiveis):
             # Botão principal de geração com propriedade disabled baseada em total_geral
             btn_desabilitado = (total_geral == 0)
             
-            if st.button("🚀 Gerar PATRONAL EMGERPI", type="primary", use_container_width=False, disabled=btn_desabilitado):
+            if st.button("🚀 Gerar PATRONAL EMGERPI", type="primary",  width='content', disabled=btn_desabilitado):
                 with st.spinner("Gerando JSON consolidado PATRONAL EMGERPI..."):
                     try:
                         sql_json = get_query_json_patronal_emgerpi(ano_selecionado, mes_chave)

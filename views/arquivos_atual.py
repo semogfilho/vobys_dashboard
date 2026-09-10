@@ -89,11 +89,11 @@ def render(conn, ano_selecionado, mes_chave, meses_disponiveis):
             aba1, aba2, aba3 = st.tabs(["📊 Visão Geral", "📁 Arquivos Pendentes", "⚠️ Orfãos"])
 
             with aba1:
-                st.dataframe(df_batimento, use_container_width=True)
+                st.dataframe(df_batimento, width='stretch')
 
             with aba2:
                 if arquivos_faltantes_no_ftp:
-                    st.dataframe(pd.DataFrame(arquivos_faltantes_no_ftp), use_container_width=True)
+                    st.dataframe(pd.DataFrame(arquivos_faltantes_no_ftp), width='stretch')
                 else:
                     st.success("Tudo sincronizado!")
             

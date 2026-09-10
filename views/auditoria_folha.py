@@ -45,7 +45,8 @@ def render(conn, ano, mes, sub_opcao):
 
             # Aplica o estilo se a coluna SITUACAO existir no DataFrame
             if 'SITUACAO' in df_consistencia.columns:
-                df_exibicao = df_consistencia.style.applymap(colorir_situacao, subset=['SITUACAO'])
+                #df_exibicao = df_consistencia.style.applymap(colorir_situacao, subset=['SITUACAO'])
+                df_exibicao = df_consistencia.style.map(colorir_situacao, subset=['SITUACAO'])
             else:
                 df_exibicao = df_consistencia
 

@@ -168,7 +168,7 @@ def render(conn, ano_selecionado, mes_chave, meses_disponiveis):
             </style>
         """, unsafe_allow_html=True)
 
-        with st.popover("Ver Pendências", use_container_width=False):
+        with st.popover("Ver Pendências", width="content"):
                     st.markdown("### 📋 Folhas Abertas")
                     # Filtra apenas as linhas que possuem folhas abertas (N_AB > 0 ou E_AB > 0)
                     df_abertas = df[(df['N_AB'] > 0) | (df['E_AB'] > 0)]
@@ -184,7 +184,7 @@ def render(conn, ano_selecionado, mes_chave, meses_disponiveis):
                                 "CHAVES": "Composição"
                             },
                             hide_index=True,
-                            use_container_width=True
+                            width="stretch"
                         )
                     else:
                         st.success("Tudo processado! Nenhuma pendência encontrada.")
@@ -232,5 +232,5 @@ def render(conn, ano_selecionado, mes_chave, meses_disponiveis):
             
             st.markdown("---")
             df_resp_styled = df_resp[['ORGAO', 'STATUS', 'QTD FECHADAS', 'CHAVES']].rename(columns={'ORGAO': 'ÓRGÃO / SCHEMA', 'STATUS': 'STATUS ATUAL', 'CHAVES': 'COMPOSIÇÃO DAS FOLHAS ABERTAS'}).style.apply(colorir_status, axis=1)
-            st.dataframe(df_resp_styled, use_container_width=True, hide_index=True)
+            st.dataframe(df_resp_styled,  width='stretch', hide_index=True)
 

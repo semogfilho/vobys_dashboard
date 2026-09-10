@@ -299,7 +299,7 @@ def render(conn, ano_selecionado, mes_chave, meses_disponiveis):
 
                 st.dataframe(
                     df_estilizado,
-                    use_container_width=True,
+                    width='stretch',
                     hide_index=True,
                     column_config={
                         "CATEGORIA": st.column_config.TextColumn("LAYOUT ANALISADO"),
@@ -326,7 +326,7 @@ def render(conn, ano_selecionado, mes_chave, meses_disponiveis):
                     df_falta = pd.DataFrame(arquivos_faltantes_no_ftp)
                     st.dataframe(
                         df_falta,
-                        use_container_width=True,
+                        width='stretch',
                         hide_index=True,
                         column_config={
                             "CATEGORIA": st.column_config.TextColumn("LAYOUT ALVO"),
@@ -345,7 +345,7 @@ def render(conn, ano_selecionado, mes_chave, meses_disponiveis):
 
                     st.dataframe(
                         df_orfaos,
-                        use_container_width=True,
+                        width='stretch',
                         hide_index=True,
                         column_config={
                             "CATEGORIA": st.column_config.TextColumn("DIRETÓRIO DA PASTA"),
@@ -366,7 +366,7 @@ def render(conn, ano_selecionado, mes_chave, meses_disponiveis):
 
                     st.dataframe(
                         df_duplicados,
-                        use_container_width=True,
+                        width='stretch',
                         hide_index=True,
                         column_config={
                             "CATEGORIA": st.column_config.TextColumn("DIRETÓRIO DA PASTA"),

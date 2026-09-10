@@ -166,7 +166,7 @@ def main(conn, ano_selecionado, mes_chave, meses_lista, perfil_usuario):
         df_display = pd.concat([resumo, linha_total], ignore_index=True)
 
         evento = st.dataframe(
-            df_display, use_container_width=True, hide_index=True,
+            df_display, width='stretch', hide_index=True,
             selection_mode="multi-row", on_select="rerun",
             column_config={
                 "QTD": st.column_config.NumberColumn("QTD", format="%d"),
@@ -230,7 +230,7 @@ def main(conn, ano_selecionado, mes_chave, meses_lista, perfil_usuario):
 
         st.dataframe(
             df_exibicao[[c for c in cols if c in df_exibicao.columns]],
-            use_container_width=True,
+            width='stretch',
             hide_index=True,
             column_config={
                 "Cod_Sefaz": st.column_config.TextColumn("Cod SEFAZ"),

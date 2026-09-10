@@ -237,7 +237,7 @@ def renderizar_dados_bancarios(
       )
       
     with col_atualizar:
-      if st.button("🔄 Atualizar Grid", use_container_width=True, key="btn_atualizar_grid_topo"):
+      if st.button("🔄 Atualizar Grid",  width='stretch', key="btn_atualizar_grid_topo"):
         carregar_dados_bancarios.clear()
         st.session_state.pop("df_bancario", None)
         st.session_state.pop("last_params", None)
@@ -508,7 +508,7 @@ def renderizar_dados_bancarios(
               contagem_status[status] = contagem_status.get(status, 0) + 1
 
             with st.popover(
-                "📊 Ver Resumo da Checagem SEFAZ", use_container_width=True
+                "📊 Ver Resumo da Checagem SEFAZ",  width='stretch'
             ):
               st.markdown("### Resumo da Checagem Realizada")
               st.write(
@@ -635,7 +635,7 @@ def renderizar_dados_bancarios(
                   "DATA_CADASTRO",
                   "Envio/Checagem",
               ],
-            use_container_width=True,
+            width='stretch',
             hide_index=True,
         )
 
@@ -663,7 +663,7 @@ def renderizar_dados_bancarios(
           with col_a:
             if st.button(
                 "☑ Marcar Todos",
-                use_container_width=True,
+                width='stretch',
                 key="btn_marcar_todos_geral",
             ):
               # Marca apenas os itens filtrados na tela atual
@@ -680,7 +680,7 @@ def renderizar_dados_bancarios(
           with col_b:
             if st.button(
                 "☐ Desmarcar Todos",
-                use_container_width=True,
+                width='stretch',
                 key="btn_desmarcar_todos_geral",
             ):
               # Desmarca apenas os itens filtrados na tela atual
@@ -717,7 +717,7 @@ def renderizar_dados_bancarios(
           with st.container(border=True):
             submit_button = st.button(
                 "🚀 Confirmar Envio",
-                use_container_width=True,
+                width='stretch',
                 key="btn_conf_envio",
             )
             chk_visualizar = st.checkbox(
@@ -727,7 +727,7 @@ def renderizar_dados_bancarios(
         with col_bloco2:
           with st.container(border=True):
             checar_sefaz_button = st.button(
-                "🔍 CHECAR SEFAZ", use_container_width=True, key="btn_checar"
+                "🔍 CHECAR SEFAZ",  width='stretch', key="btn_checar"
             )
             chk_usar_passo_a_passo = st.checkbox(
                 "Modo Passo a Passo?", value=False, key="chk_passo"
@@ -737,7 +737,7 @@ def renderizar_dados_bancarios(
           with st.container(border=True):
             finalizar_button = st.button(
                 "💾 Finalizar Tela",
-                use_container_width=True,
+                width='stretch', 
                 key="btn_finalizar",
             )
             st.markdown(
@@ -947,7 +947,7 @@ def renderizar_dados_bancarios(
             btn_buscar = st.button(
                 "Buscar na Competência",
                 key="btn_buscar_cpf",
-                use_container_width=True,
+                width='stretch'
             )
 
         if not cpf_busca or not cpf_busca.strip():
@@ -1008,7 +1008,7 @@ def renderizar_dados_bancarios(
                         ),
                     },
                     hide_index=True,
-                    use_container_width=True,
+                    width='stretch',
                     key=f"editor_cpf_localizado_{cpf_limpo}",
                 )
               else:
@@ -1060,7 +1060,7 @@ def renderizar_dados_bancarios(
                             "Selecionar", default=False
                         )
                       },
-                      use_container_width=True,
+                      width='stretch',
                       hide_index=True,
                       num_rows="fixed",
                       key=f"editor_cpf_buscado_{cpf_limpo}",
@@ -1099,4 +1099,3 @@ def renderizar_dados_bancarios(
         "❌ Ocorreu um erro crítico ao renderizar a tela de Dados Bancários:"
     )
     st.exception(e)
-
