@@ -63,6 +63,24 @@ def validar_cpf_matematico(val_cpf):
   return True
 
 
+def validar_formato_conta(valor):
+  """Valida o padrão:
+
+  - Banco: 3 dígitos
+  - Agência: 4 dígitos + hífen + 1 dígito/X
+  - Conta: 1 a 12 dígitos + hífen + 1 dígito/X Exemplo válido: 001 / Ag: 0106-6
+  / CC: 48815-1
+  """
+  if not valor or pd.isna(valor):
+    return False
+  val_str = str(valor).strip()
+  if val_str.startswith("⚠️"):
+    val_str = val_str.replace("⚠️", "").strip()
+
+  padrao = r"^\d{3}\s*/\s*Ag:\s*\d{4}-[\dX]\s*/\s*CC:\s*\d{1,12}-[\dX]$"
+  return bool(re.match(padrao, val_str, re.IGNORECASE))
+
+
 def consultar_credor_sefaz_individual(ano, cpf_ou_credor, matricula_para_conferir):
   try:
     usuario = st.secrets["sefaz"]["SIAFE_CPF"]
@@ -136,6 +154,7 @@ def renderizar_dados_bancarios(
     conn, ano, mes, auth_ui, novos_dados_bancario_mod
 ):
   try:
+
     @st.cache_data(ttl=600, show_spinner=False)
     def carregar_dados_bancarios(ano, mes):
       return novos_dados_bancario_mod.listar_novatos_bancario_com_status(
@@ -143,7 +162,7 @@ def renderizar_dados_bancarios(
       )
 
     # =========================================================
-    # 1. CARREGAR OS DADOS PRIMEIRO (Para extrair os Órgãos para o Filtro)
+    # 1. CARREGAR OS DADOS PRIMEIRO
     # =========================================================
     if (
         "df_bancario" not in st.session_state
@@ -169,7 +188,9 @@ def renderizar_dados_bancarios(
               .str.zfill(11)
           )
           mask_cpfs = df_temp["CPF_LIMPO"].isin(cpfs_excecao)
-          mask_orgao_filtro = df_temp["ORGAO"].astype(str).str.upper() == "SETRANS"
+          mask_orgao_filtro = (
+              df_temp["ORGAO"].astype(str).str.upper() == "SETRANS"
+          )
           df_temp = df_temp.drop(columns=["CPF_LIMPO"], errors="ignore")
 
         if "SEFAZ" not in df_temp.columns:
@@ -178,8 +199,11 @@ def renderizar_dados_bancarios(
         if not df_temp.empty:
           df_temp = atualizar_status_auditoria(conn, df_temp)
 
-          # Fallback de garantia: gera LINK_SIAPE com a âncora do CPF para o LinkColumn extrair
-          if "LINK_SIAPE" not in df_temp.columns and "ID_PESSOA" in df_temp.columns and "CPF" in df_temp.columns:
+          if (
+              "LINK_SIAPE" not in df_temp.columns
+              and "ID_PESSOA" in df_temp.columns
+              and "CPF" in df_temp.columns
+          ):
             df_temp["LINK_SIAPE"] = (
                 "https://siape.sead.pi.gov.br/adm/sead/pessoas-sead/pessoa-sead/"
                 + df_temp["ID_PESSOA"].astype(str)
@@ -193,65 +217,71 @@ def renderizar_dados_bancarios(
               "LINK_SIAPE",
               "NOME_ATUAL",
               "DIGITACAO_FOLHA",
+              "CONTA_CORRENTE",
               "CPF",
               "CHAVE_FOLHA",
               "ENVIADO",
               "DATA_ENVIO",
-              "SEFAZ"
+              "SEFAZ",
           ]
-          cols_presentes = [c for c in colunas_desejadas if c in df_temp.columns]
-          cols_extras = [c for c in df_temp.columns if c not in colunas_desejadas]
+          cols_presentes = [
+              c for c in colunas_desejadas if c in df_temp.columns
+          ]
+          cols_extras = [
+              c for c in df_temp.columns if c not in colunas_desejadas
+          ]
           df_temp = df_temp[cols_presentes + cols_extras]
 
         st.session_state.df_bancario = df_temp.reset_index(drop=True)
         st.session_state.last_params = (ano, mes)
-        
-        # Reseta o filtro de órgão no session_state ANTES de qualquer widget
         st.session_state.filtro_orgao_selecionado = "Todos"
 
     # =========================================================
-    # 2. GARANTE O VALOR INICIAL DO FILTRO ANTES DO SELECTBOX
+    # 2. FILTRO DE ÓRGÃO
     # =========================================================
     if "filtro_orgao_selecionado" not in st.session_state:
-        st.session_state.filtro_orgao_selecionado = "Todos"
+      st.session_state.filtro_orgao_selecionado = "Todos"
 
     lista_orgaos = ["Todos"]
-    if "df_bancario" in st.session_state and not st.session_state.df_bancario.empty:
-        orgaos_encontrados = sorted(st.session_state.df_bancario["ORGAO"].dropna().unique().tolist())
-        lista_orgaos.extend(orgaos_encontrados)
-        
-        if st.session_state.filtro_orgao_selecionado not in lista_orgaos:
-            st.session_state.filtro_orgao_selecionado = "Todos"
+    if (
+        "df_bancario" in st.session_state
+        and not st.session_state.df_bancario.empty
+    ):
+      orgaos_encontrados = sorted(
+          st.session_state.df_bancario["ORGAO"].dropna().unique().tolist()
+      )
+      lista_orgaos.extend(orgaos_encontrados)
+
+      if st.session_state.filtro_orgao_selecionado not in lista_orgaos:
+        st.session_state.filtro_orgao_selecionado = "Todos"
 
     mes_exibicao = "13º" if int(mes) == 13 else f"{int(mes):02d}"
 
-    col_tit, col_filtro, col_atualizar = st.columns([4, 2, 1], vertical_alignment="bottom")
+    col_tit, col_filtro, col_atualizar = st.columns(
+        [4, 2, 1], vertical_alignment="bottom"
+    )
     with col_tit:
       st.subheader(f"🏦 Dados Bancários (Novatos) ({mes_exibicao}/{ano})")
-    
+
     with col_filtro:
       st.selectbox(
-          "Órgão", 
-          lista_orgaos, 
+          "Órgão",
+          lista_orgaos,
           key="filtro_orgao_selecionado",
-          label_visibility="collapsed"
+          label_visibility="collapsed",
       )
-      
+
     with col_atualizar:
-      if st.button("🔄 Atualizar Grid",  width='stretch', key="btn_atualizar_grid_topo"):
+      if st.button(
+          "🔄 Atualizar Grid", width="stretch", key="btn_atualizar_grid_topo"
+      ):
         carregar_dados_bancarios.clear()
         st.session_state.pop("df_bancario", None)
         st.session_state.pop("last_params", None)
         st.session_state.pop("processamento_pendente", None)
-        
-        # Remove a chave do selectbox para evitar o conflito de estado antes de recriá-lo
         st.session_state.pop("filtro_orgao_selecionado", None)
-        
         st.rerun()
 
-    # =========================================================
-    # CSS PARA COMPACTAR ESPAÇAMENTOS AO MÍNIMO POSSÍVEL
-    # =========================================================
     st.markdown(
         """
         <style>
@@ -282,7 +312,7 @@ def renderizar_dados_bancarios(
       ).reset_index(drop=True)
 
       # -------------------------------------------------------------
-      # MODO PASSO A PASSO (SEFAZ ITERATIVO)
+      # MODO PASSO A PASSO
       # -------------------------------------------------------------
       if st.session_state.get("modo_passo_a_passo_ativo", False):
         indices_pendentes = st.session_state.get("indices_passo_a_passo", [])
@@ -398,7 +428,7 @@ def renderizar_dados_bancarios(
         return
 
       # -------------------------------------------------------------
-      # TELA 1: PROCESSAMENTO EM LOTE (AUTOMÁTICO)
+      # TELA 1: PROCESSAMENTO EM LOTE
       # -------------------------------------------------------------
       if (
           "processamento_pendente" in st.session_state
@@ -411,7 +441,7 @@ def renderizar_dados_bancarios(
         )
         if existe_envio_real and not auth_ui.verificar_credenciais_sefaz():
           st.warning(
-              "⚠️ Credenciais da SEFAZ não validas. Por favor, autentique-se"
+              "⚠️ Credenciais da SEFAZ não válidas. Por favor, autentique-se"
               " antes de continuar."
           )
           st.stop()
@@ -508,9 +538,7 @@ def renderizar_dados_bancarios(
             for _, _, _, _, status in resumo_dados:
               contagem_status[status] = contagem_status.get(status, 0) + 1
 
-            with st.popover(
-                "📊 Ver Resumo da Checagem SEFAZ",  width='stretch'
-            ):
+            with st.popover("📊 Ver Resumo da Checagem SEFAZ", width="stretch"):
               st.markdown("### Resumo da Checagem Realizada")
               st.write(
                   "Total de registros processados neste lote:"
@@ -527,24 +555,25 @@ def renderizar_dados_bancarios(
                 st.rerun()
 
         df_exibicao = st.session_state.df_bancario.copy()
-        
-        # 1. GUARDA O INDEX REAL ANTES DE QUALQUER FILTRO! 
         df_exibicao["_INDEX_REAL"] = df_exibicao.index
-        
-        # 2. APLICA O FILTRO DO ÓRGÃO
+
+        # Aplicação do Filtro de Órgão
         filtro_atual = st.session_state.get("filtro_orgao_selecionado", "Todos")
         if filtro_atual != "Todos":
-            df_exibicao = df_exibicao[df_exibicao["ORGAO"] == filtro_atual]
+          df_exibicao = df_exibicao[df_exibicao["ORGAO"] == filtro_atual]
 
-        # 3. RESETA O INDEX PARA A EXIBIÇÃO NO GRID FICAR LIMPA
         df_exibicao = df_exibicao.reset_index(drop=True)
 
         if "DATA_ENVIO" in df_exibicao.columns:
           df_exibicao["Envio/Checagem"] = df_exibicao["DATA_ENVIO"]
           df_exibicao = df_exibicao.drop(columns=["DATA_ENVIO"])
 
-        # Garantia do LINK_SIAPE na exibição com a âncora #CPF
-        if "LINK_SIAPE" not in df_exibicao.columns and "ID_PESSOA" in df_exibicao.columns and "CPF" in df_exibicao.columns:
+        # Garantia da coluna LINK_SIAPE
+        if (
+            "LINK_SIAPE" not in df_exibicao.columns
+            and "ID_PESSOA" in df_exibicao.columns
+            and "CPF" in df_exibicao.columns
+        ):
           df_exibicao["LINK_SIAPE"] = (
               "https://siape.sead.pi.gov.br/adm/sead/pessoas-sead/pessoa-sead/"
               + df_exibicao["ID_PESSOA"].astype(str)
@@ -552,32 +581,56 @@ def renderizar_dados_bancarios(
               + df_exibicao["CPF"].astype(str).apply(formatar_cpf)
           )
 
-        # -------------------------------------------------------------
-        # FORMATAÇÃO DAS DATAS PARA EXIBIÇÃO
-        # -------------------------------------------------------------
+        # =========================================================
+        # VALIDAÇÃO REGEX E DECORAÇÃO DA CONTA CORRENTE (OPÇÃO 2)
+        # =========================================================
+        if "CONTA_CORRENTE" in df_exibicao.columns:
+          df_exibicao["CONTA_CORRENTE"] = df_exibicao["CONTA_CORRENTE"].apply(
+              lambda x: (
+                  str(x)
+                  if validar_formato_conta(x)
+                  else (
+                      f"⚠️ {str(x).replace('⚠️', '').strip()}"
+                      if pd.notna(x)
+                      else "⚠️ "
+                  )
+              )
+          )
+
+        # Formatação de Datas
         if "DIGITACAO_FOLHA" in df_exibicao.columns:
-          df_exibicao["DIGITACAO_FOLHA"] = pd.to_datetime(
-              df_exibicao["DIGITACAO_FOLHA"], errors="coerce"
-          ).dt.strftime("%d/%m/%Y %H:%M:%S").fillna("")
+          df_exibicao["DIGITACAO_FOLHA"] = (
+              pd.to_datetime(df_exibicao["DIGITACAO_FOLHA"], errors="coerce")
+              .dt.strftime("%d/%m/%Y %H:%M:%S")
+              .fillna("")
+          )
 
         if "DATA_CADASTRO" in df_exibicao.columns:
-          df_exibicao["DATA_CADASTRO"] = pd.to_datetime(
-              df_exibicao["DATA_CADASTRO"], errors="coerce"
-          ).dt.strftime("%d/%m/%Y %H:%M:%S").fillna("")
+          df_exibicao["DATA_CADASTRO"] = (
+              pd.to_datetime(df_exibicao["DATA_CADASTRO"], errors="coerce")
+              .dt.strftime("%d/%m/%Y %H:%M:%S")
+              .fillna("")
+          )
 
         if "Envio/Checagem" in df_exibicao.columns:
-          df_exibicao["Envio/Checagem"] = df_exibicao["Envio/Checagem"].fillna("").astype(str)
-          df_exibicao["Envio/Checagem"] = df_exibicao["Envio/Checagem"].replace(["None", "nan", "NaT"], "")
+          df_exibicao["Envio/Checagem"] = (
+              df_exibicao["Envio/Checagem"].fillna("").astype(str)
+          )
+          df_exibicao["Envio/Checagem"] = df_exibicao["Envio/Checagem"].replace(
+              ["None", "nan", "NaT"], ""
+          )
 
-        df_exibicao["ENVIADO"] = df_exibicao["ENVIADO"].map(
-            {"SIM": "✅ SIM", "ERRO": "❌ ERRO", "NÃO": "⏳ NÃO"}
-        ).fillna("⏳ NÃO")
+        df_exibicao["ENVIADO"] = (
+            df_exibicao["ENVIADO"]
+            .map({"SIM": "✅ SIM", "ERRO": "❌ ERRO", "NÃO": "⏳ NÃO"})
+            .fillna("⏳ NÃO")
+        )
 
         if "SOMENTE_VISUALIZAR" in df_exibicao.columns:
           df_exibicao = df_exibicao.drop(columns=["SOMENTE_VISUALIZAR"])
 
         # =========================================================
-        # SEQUÊNCIA DE COLUNAS DESEJADA (EXIBE LINK_SIAPE COMO CPF)
+        # SEQUÊNCIA DE COLUNAS DESEJADA
         # =========================================================
         sequencia_desejada = [
             "ORGAO",
@@ -591,60 +644,73 @@ def renderizar_dados_bancarios(
             "Envio/Checagem",
             "SEFAZ",
             "ENVIAR",
-            "_INDEX_REAL"
+            "_INDEX_REAL",
         ]
-        
-        cols_presentes = [c for c in sequencia_desejada if c in df_exibicao.columns]
-        cols_extras = [c for c in df_exibicao.columns if c not in cols_presentes]
+
+        cols_presentes = [
+            c for c in sequencia_desejada if c in df_exibicao.columns
+        ]
+        cols_extras = [
+            c for c in df_exibicao.columns if c not in cols_presentes
+        ]
         df_exibicao = df_exibicao[cols_presentes + cols_extras]
 
         # =========================================================
-        # 1. EDITOR DE DADOS (Tabela exibida primeiro)
+        # 1. EDITOR DE DADOS
         # =========================================================
         df_editado = st.data_editor(
             df_exibicao,
             key="editor_dados_bancarios",
             column_config={
-                  "LINK_SIAPE": st.column_config.LinkColumn(
-                      "CPF",
-                      help="Clique no CPF para abrir o cadastro no SIAPE",
-                      display_text=r"#(.+)$",
-                  ),
-                  "CPF": None,
-                  "ID_PESSOA": None,
-                  "ENVIAR": st.column_config.CheckboxColumn(
-                      "Selecionar", default=False
-                  ),
-                  "DATA_CADASTRO": st.column_config.TextColumn(
-                      "Data de Cadastro", disabled=True
-                  ),
-                  "Envio/Checagem": st.column_config.TextColumn(
-                      "Envio/Checagem", disabled=True
-                  ),
-                  "SEFAZ": st.column_config.TextColumn(
-                      "Status SEFAZ", disabled=True
-                  ),
-                  "_INDEX_REAL": None,
-              },
-              disabled=[
-                  "ENVIADO",
-                  "SEFAZ",
-                  "ORGAO",
-                  "COD_INSTITUCIONAL",
-                  "NOME_ATUAL",
-                  "CPF",
-                  "LINK_SIAPE",
-                  "CHAVE_FOLHA",
-                  "DATA_CADASTRO",
-                  "Envio/Checagem",
-              ],
-            width='stretch',
+                "LINK_SIAPE": st.column_config.LinkColumn(
+                    "CPF",
+                    help="Clique no CPF para abrir o cadastro no SIAPE",
+                    display_text=r"#(.+)$",
+                ),
+                "CONTA_CORRENTE": st.column_config.TextColumn(
+                    "CONTA_CORRENTE",
+                    help="Conta no formato Banco / Agência / Conta Corrente",
+                ),
+                "CPF": None,
+                "ID_PESSOA": None,
+                "ENVIAR": st.column_config.CheckboxColumn(
+                    "Selecionar", default=False
+                ),
+                "DATA_CADASTRO": st.column_config.TextColumn(
+                    "Data de Cadastro", disabled=True
+                ),
+                "Envio/Checagem": st.column_config.TextColumn(
+                    "Envio/Checagem", disabled=True
+                ),
+                "SEFAZ": st.column_config.TextColumn(
+                    "Status SEFAZ", disabled=True
+                ),
+                "_INDEX_REAL": None,
+            },
+            disabled=[
+                "ENVIADO",
+                "SEFAZ",
+                "ORGAO",
+                "COD_INSTITUCIONAL",
+                "NOME_ATUAL",
+                "CPF",
+                "LINK_SIAPE",
+                "CHAVE_FOLHA",
+                "DIGITACAO_FOLHA",
+                "CONTA_CORRENTE",
+                "DATA_CADASTRO",
+                "Envio/Checagem",
+            ],
+            width="stretch",
             hide_index=True,
         )
 
-        # SINCRONIZAÇÃO SEGURA COM O SESSION STATE
+        # Sincronização com o Session State
         if df_editado is not None and not df_editado.empty:
-          if "ENVIAR" in df_editado.columns and "_INDEX_REAL" in df_editado.columns:
+          if (
+              "ENVIAR" in df_editado.columns
+              and "_INDEX_REAL" in df_editado.columns
+          ):
             for _, row_tela in df_editado.iterrows():
               idx_real = row_tela.get("_INDEX_REAL")
               val_tela = row_tela.get("ENVIAR", False)
@@ -653,7 +719,9 @@ def renderizar_dados_bancarios(
                   and not pd.isna(idx_real)
                   and int(idx_real) in st.session_state.df_bancario.index
               ):
-                st.session_state.df_bancario.loc[int(idx_real), "ENVIAR"] = bool(val_tela)
+                st.session_state.df_bancario.loc[int(idx_real), "ENVIAR"] = bool(
+                    val_tela
+                )
 
         # =========================================================
         # 2. BARRA DE AÇÕES ABAIXO DA TABELA
@@ -666,15 +734,21 @@ def renderizar_dados_bancarios(
           with col_a:
             if st.button(
                 "☑ Marcar Todos",
-                width='stretch',
+                width="stretch",
                 key="btn_marcar_todos_geral",
             ):
-              # Marca apenas os itens filtrados na tela atual
               indices_visiveis = df_exibicao["_INDEX_REAL"].tolist()
-              contem_ativa = st.session_state.df_bancario.loc[indices_visiveis].astype(str).apply(
-                  lambda col: col.str.contains("ATIVA", case=False, na=False)
-              ).any(axis=1)
-        
+              contem_ativa = (
+                  st.session_state.df_bancario.loc[indices_visiveis]
+                  .astype(str)
+                  .apply(
+                      lambda col: col.str.contains(
+                          "ATIVA", case=False, na=False
+                      )
+                  )
+                  .any(axis=1)
+              )
+
               for idx_real in indices_visiveis:
                 if not contem_ativa.loc[idx_real]:
                   st.session_state.df_bancario.loc[idx_real, "ENVIAR"] = True
@@ -683,24 +757,29 @@ def renderizar_dados_bancarios(
           with col_b:
             if st.button(
                 "☐ Desmarcar Todos",
-                width='stretch',
+                width="stretch",
                 key="btn_desmarcar_todos_geral",
             ):
-              # Desmarca apenas os itens filtrados na tela atual
               indices_visiveis = df_exibicao["_INDEX_REAL"].tolist()
-              st.session_state.df_bancario.loc[indices_visiveis, "ENVIAR"] = False
+              st.session_state.df_bancario.loc[indices_visiveis, "ENVIAR"] = (
+                  False
+              )
               st.rerun()
 
           with col_c:
-            # CORREÇÃO: Conta os marcados considerando o filtro atual e usa o total de df_exibicao
             indices_visiveis = df_exibicao["_INDEX_REAL"].tolist()
             total_marcados = (
-                int(st.session_state.df_bancario.loc[indices_visiveis, "ENVIAR"].sum())
-                if "ENVIAR" in st.session_state.df_bancario.columns and indices_visiveis
+                int(
+                    st.session_state.df_bancario.loc[
+                        indices_visiveis, "ENVIAR"
+                    ].sum()
+                )
+                if "ENVIAR" in st.session_state.df_bancario.columns
+                and indices_visiveis
                 else 0
             )
             total_geral = len(df_exibicao)
-            
+
             st.markdown(
                 "<div style='text-align: right; font-weight: 600; color: #555;"
                 " padding-right: 5px;'>📊 Selecionados: <span style='color:"
@@ -720,7 +799,7 @@ def renderizar_dados_bancarios(
           with st.container(border=True):
             submit_button = st.button(
                 "🚀 Confirmar Envio",
-                width='stretch',
+                width="stretch",
                 key="btn_conf_envio",
             )
             chk_visualizar = st.checkbox(
@@ -730,7 +809,7 @@ def renderizar_dados_bancarios(
         with col_bloco2:
           with st.container(border=True):
             checar_sefaz_button = st.button(
-                "🔍 CHECAR SEFAZ",  width='stretch', key="btn_checar"
+                "🔍 CHECAR SEFAZ", width="stretch", key="btn_checar"
             )
             chk_usar_passo_a_passo = st.checkbox(
                 "Modo Passo a Passo?", value=False, key="chk_passo"
@@ -740,7 +819,7 @@ def renderizar_dados_bancarios(
           with st.container(border=True):
             finalizar_button = st.button(
                 "💾 Finalizar Tela",
-                width='stretch', 
+                width="stretch",
                 key="btn_finalizar",
             )
             st.markdown(
@@ -748,7 +827,7 @@ def renderizar_dados_bancarios(
             )
 
         # =========================================================
-        # TRATAMENTO DOS BOTÕES DO FORMULÁRIO
+        # TRATAMENTO DOS BOTÕES
         # =========================================================
         if submit_button:
           selecionados = st.session_state.df_bancario[
@@ -948,9 +1027,7 @@ def renderizar_dados_bancarios(
             )
           with col_btn:
             btn_buscar = st.button(
-                "Buscar na Competência",
-                key="btn_buscar_cpf",
-                width='stretch'
+                "Buscar na Competência", key="btn_buscar_cpf", width="stretch"
             )
 
         if not cpf_busca or not cpf_busca.strip():
@@ -992,8 +1069,17 @@ def renderizar_dados_bancarios(
 
                 df_loc_exib = st.session_state.df_bancario[mask_cpf].copy()
                 if "SOMENTE_VISUALIZAR" in df_loc_exib.columns:
-                  df_loc_exib = df_loc_exib.drop(
-                      columns=["SOMENTE_VISUALIZAR"]
+                  df_loc_exib = df_loc_exib.drop(columns=["SOMENTE_VISUALIZAR"])
+
+                if "CONTA_CORRENTE" in df_loc_exib.columns:
+                  df_loc_exib["CONTA_CORRENTE"] = df_loc_exib[
+                      "CONTA_CORRENTE"
+                  ].apply(
+                      lambda x: (
+                          str(x)
+                          if validar_formato_conta(x)
+                          else f"⚠️ {str(x).replace('⚠️', '').strip()}"
+                      )
                   )
 
                 st.data_editor(
@@ -1011,7 +1097,7 @@ def renderizar_dados_bancarios(
                         ),
                     },
                     hide_index=True,
-                    width='stretch',
+                    width="stretch",
                     key=f"editor_cpf_localizado_{cpf_limpo}",
                 )
               else:
@@ -1042,7 +1128,11 @@ def renderizar_dados_bancarios(
                         columns=["SOMENTE_VISUALIZAR"]
                     )
 
-                  if "LINK_SIAPE" not in df_busc_exib.columns and "ID_PESSOA" in df_busc_exib.columns and "CPF" in df_busc_exib.columns:
+                  if (
+                      "LINK_SIAPE" not in df_busc_exib.columns
+                      and "ID_PESSOA" in df_busc_exib.columns
+                      and "CPF" in df_busc_exib.columns
+                  ):
                     df_busc_exib["LINK_SIAPE"] = (
                         "https://siape.sead.pi.gov.br/adm/sead/pessoas-sead/pessoa-sead/"
                         + df_busc_exib["ID_PESSOA"].astype(str)
@@ -1050,21 +1140,35 @@ def renderizar_dados_bancarios(
                         + df_busc_exib["CPF"].astype(str).apply(formatar_cpf)
                     )
 
+                  if "CONTA_CORRENTE" in df_busc_exib.columns:
+                    df_busc_exib["CONTA_CORRENTE"] = df_busc_exib[
+                        "CONTA_CORRENTE"
+                    ].apply(
+                        lambda x: (
+                            str(x)
+                            if validar_formato_conta(x)
+                            else f"⚠️ {str(x).replace('⚠️', '').strip()}"
+                        )
+                    )
+
                   st.data_editor(
                       df_busc_exib,
                       column_config={
-                        "LINK_SIAPE": st.column_config.LinkColumn(
-                            "CPF",
-                            help="Clique no CPF para abrir o cadastro no SIAPE",
-                            display_text=r"#(.+)$",
-                        ),
-                        "CPF": None,
-                        "ID_PESSOA": None,
-                        "ENVIAR": st.column_config.CheckboxColumn(
-                            "Selecionar", default=False
-                        )
+                          "LINK_SIAPE": st.column_config.LinkColumn(
+                              "CPF",
+                              help=(
+                                  "Clique no CPF para abrir o cadastro no"
+                                  " SIAPE"
+                              ),
+                              display_text=r"#(.+)$",
+                          ),
+                          "CPF": None,
+                          "ID_PESSOA": None,
+                          "ENVIAR": st.column_config.CheckboxColumn(
+                              "Selecionar", default=False
+                          ),
                       },
-                      width='stretch',
+                      width="stretch",
                       hide_index=True,
                       num_rows="fixed",
                       key=f"editor_cpf_buscado_{cpf_limpo}",
@@ -1091,7 +1195,9 @@ def renderizar_dados_bancarios(
               df_erros["CPF"].unique(),
               key="sb_cpf_erro",
           )
-          if st.button("Carregar Log do Servidor", key=f"btn_log_erro_{cpf_err}"):
+          if st.button(
+              "Carregar Log do Servidor", key=f"btn_log_erro_{cpf_err}"
+          ):
             st.error(
                 "Log:"
                 f" {novos_dados_bancario_mod.buscar_detalhe_erro_no_banco(conn, cpf_err)}"
