@@ -132,11 +132,111 @@ if st.session_state.get("autenticado", False):
                     st.error("As senhas não conferem.")
         st.stop()
 
+# ==============================================================================
+# --- TELA DE LOGIN COM FUNDO NEUTRO E CARD COM COR SUAVE EM DESTAQUE ---
+# ==============================================================================
 if not st.session_state.get("autenticado", False):
-    with st.sidebar:
-        auth_ui.gerenciar_sessao_fluxo()
-    st.markdown("<h3 style='color: #666; font-weight: normal; margin-top: 5rem; text-align: center;'>🔒 Aguardando identificação...</h3>", unsafe_allow_html=True)
+    st.markdown("""
+        <style>
+            /* Oculta a barra lateral no login */
+            [data-testid="stSidebar"] { display: none !important; }
+            [data-testid="collapsedControl"] { display: none !important; }
+
+            /* Fundo da tela limpo e suave (cinza-azul claro) */
+            .stApp {
+                background-color: #f1f5f9 !important;
+            }
+
+            /* Container principal centralizado e compacto */
+            .main .block-container, 
+            [data-testid="stMainBlockContainer"],
+            [data-testid="stAppViewBlockContainer"] {
+                max-width: 380px !important;
+                margin: 0 auto !important;
+                padding-top: 4rem !important;
+                padding-bottom: 2rem !important;
+                padding-left: 1rem !important;
+                padding-right: 1rem !important;
+            }
+
+            /* Retângulo central com tom suave (azul gelo/pastel) */
+            div[data-testid="stVerticalBlockBorderWrapper"] {
+                background-color: #f0f4f8 !important;
+                border: 1px solid #cbd5e1 !important;
+                border-radius: 14px !important;
+                box-shadow: 0 10px 20px rgba(0, 0, 0, 0.05) !important;
+                padding: 1.2rem 1rem !important;
+            }
+
+            /* Cor e legibilidade dos textos internos do cartão */
+            div[data-testid="stVerticalBlockBorderWrapper"] p,
+            div[data-testid="stVerticalBlockBorderWrapper"] label,
+            div[data-testid="stVerticalBlockBorderWrapper"] span {
+                color: #334155 !important;
+            }
+
+            /* Título NTGD mantendo destaque */
+            div[data-testid="stVerticalBlockBorderWrapper"] h1,
+            div[data-testid="stVerticalBlockBorderWrapper"] h2,
+            div[data-testid="stVerticalBlockBorderWrapper"] h3 {
+                color: #d32f2f !important;
+            }
+
+            /* Espaçamentos verticais internos */
+            div[data-testid="stVerticalBlock"] {
+                gap: 0.5rem !important;
+            }
+
+            /* Inputs com fundo branco para contraste limpo com o cartão suave */
+            .stTextInput > div > div > input {
+                border-radius: 6px !important;
+                border: 1px solid #cbd5e1 !important;
+                padding: 8px 10px !important;
+                background-color: #ffffff !important;
+                color: #0f172a !important;
+                font-size: 0.88rem !important;
+            }
+
+            /* Estilo dos Botões */
+            div.stButton > button {
+                width: 100% !important;
+                border-radius: 6px !important;
+                font-size: 0.9rem !important;
+                padding: 0.45rem !important;
+            }
+
+            /* Botão Entrar */
+            div.stButton > button:first-of-type {
+                background-color: #d32f2f !important;
+                border: none !important;
+                box-shadow: 0 4px 10px rgba(211, 47, 47, 0.25) !important;
+            }
+            div.stButton > button:first-of-type * {
+                color: #ffffff !important;
+                font-weight: 600 !important;
+            }
+            div.stButton > button:first-of-type:hover {
+                background-color: #b71c1c !important;
+            }
+        </style>
+    """, unsafe_allow_html=True)
+
+    # Indicador superior
+    st.markdown(
+        "<div style='text-align: center; color: #64748b; font-size: 0.82rem; font-weight: 600; margin-bottom: 0.5rem; letter-spacing: 0.5px;'>"
+        "🔒 SISTEMA NTGD"
+        "</div>",
+        unsafe_allow_html=True
+    )
+
+    # Bloco em coluna única centralizada
+    _, col_center, _ = st.columns([0.01, 0.98, 0.01])
+    with col_center:
+        with st.container(border=True):
+            auth_ui.gerenciar_sessao_fluxo()
+
     st.stop()
+# ==============================================================================
 
 if "perfil_usuario" in st.session_state:
     os.environ["CURRENT_USER_PROFILE"] = st.session_state.perfil_usuario

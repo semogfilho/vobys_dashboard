@@ -69,32 +69,41 @@ def validar_formato_conta(valor):
         return False
     val_str = re.sub(r"^[⚠️🏛️🏦❌]\s*", "", str(valor)).strip()
 
-    padrao = r"^001\s*/\s*Ag:\s*\d{4}-[\dX]\s*/\s*CC:\s*\d{1,12}-[\dX]$"
+    #padrao = r"^001\s*/\s*Ag:\s*\d{4}-[\dX]\s*/\s*CC:\s*\d{1,12}-[\dX]$"
+    #padrao = r"^001\s*/\s*Op:\s*\d{1,4}\s*/\s*Ag:\s*\d{4}-[\dX]\s*/\s*CC:\s*\d{1,12}-[\dX]$"
+    padrao = r"^001\s*/\s*Op:\s*001\s*/\s*Ag:\s*\d{4}-[\dX]\s*/\s*CC:\s*\d{1,12}-[\dX]$"
     return bool(re.match(padrao, val_str, re.IGNORECASE))
 
-
 def formatar_exibicao_conta(valor):
-    """Aplica ícones diferenciados conforme o tipo de discrepância:
-    - Válido (001 / Ag / CC): Sem ícone
-    - Banco diferente de '001': Ícone de banco 🏛️
-    - Formato incorreto de Agência/Conta: Ícone de aviso ⚠️
     """
-    if not valor or pd.isna(valor):
-        return ""
+    Formata a exibição da conta corrente aplicando ícones específicos por tipo de divergência:
+    - Sem ícone : Banco 001 + Op: 001 + Ag/CC válidos
+    - 🏷️         : Problema APENAS na Operação (diferente de 001, ex: Op: 1, Op: 013, Op: -)
+    - 🏛️         : Banco diferente de 001
+    - ⚠️         : Erro estrutural em Agência ou Conta Corrente
+    """
+    if not valor or pd.isna(valor) or valor == "SEM CONTA CADASTRADA":
+        return valor
 
-    val_clean = re.sub(r"^[⚠️🏛️🏦❌]\s*", "", str(valor)).strip()
-    if not val_clean:
-        return ""
+    # Limpa ícones pré-existentes
+    val_limpo = re.sub(r"^[⚠️🏛️🏦❌⚙️🏷️🔢🚩]\s*", "", str(valor)).strip()
 
-    if validar_formato_conta(val_clean):
-        return val_clean
+    # 1. Padrão Perfeito (Banco 001 + Op 001 + Ag + CC)
+    padrao_perfeito = r"^001\s*/\s*Op:\s*001\s*/\s*Ag:\s*\d{4}-[\dX]\s*/\s*CC:\s*\d{1,12}-[\dX]$"
+    if re.match(padrao_perfeito, val_limpo, re.IGNORECASE):
+        return val_limpo
 
-    match_banco = re.match(r"^(\d{3})\b", val_clean)
-    if match_banco and match_banco.group(1) != "001":
-        return f"🏛️ {val_clean}"
+    # 2. Estrutura Válida, mas a Operação NÃO É '001'
+    padrao_estrutura_bb = r"^001\s*/\s*Op:\s*[^/]+\s*/\s*Ag:\s*\d{4}-[\dX]\s*/\s*CC:\s*\d{1,12}-[\dX]$"
+    if re.match(padrao_estrutura_bb, val_limpo, re.IGNORECASE):
+        return f"🏷️ {val_limpo}"
 
-    return f"⚠️ {val_clean}"
+    # 3. Outros Bancos
+    if not val_limpo.startswith("001"):
+        return f"🏛️ {val_limpo}"
 
+    # 4. Demais divergências de formato (Agência ou CC errados)
+    return f"⚠️ {val_limpo}"
 
 def consultar_credor_sefaz_individual(ano, cpf_ou_credor, matricula_para_conferir):
     try:
@@ -606,25 +615,18 @@ def renderizar_dados_bancarios(
 
                 # Formatação de Datas
                 if "DIGITACAO_FOLHA" in df_exibicao.columns:
-                    df_exibicao["DIGITACAO_FOLHA"] = (
-                        pd.to_datetime(df_exibicao["DIGITACAO_FOLHA"], errors="coerce")
-                        .dt.strftime("%d/%m/%Y %H:%M:%S")
-                        .fillna("")
+                    df_exibicao["DIGITACAO_FOLHA"] = pd.to_datetime(
+                        df_exibicao["DIGITACAO_FOLHA"], errors="coerce"
                     )
 
                 if "DATA_CADASTRO" in df_exibicao.columns:
-                    df_exibicao["DATA_CADASTRO"] = (
-                        pd.to_datetime(df_exibicao["DATA_CADASTRO"], errors="coerce")
-                        .dt.strftime("%d/%m/%Y %H:%M:%S")
-                        .fillna("")
+                    df_exibicao["DATA_CADASTRO"] = pd.to_datetime(
+                        df_exibicao["DATA_CADASTRO"], errors="coerce"
                     )
 
                 if "Envio/Checagem" in df_exibicao.columns:
-                    df_exibicao["Envio/Checagem"] = (
-                        df_exibicao["Envio/Checagem"].fillna("").astype(str)
-                    )
-                    df_exibicao["Envio/Checagem"] = df_exibicao["Envio/Checagem"].replace(
-                        ["None", "nan", "NaT"], ""
+                    df_exibicao["Envio/Checagem"] = pd.to_datetime(
+                        df_exibicao["Envio/Checagem"], errors="coerce"
                     )
 
                 df_exibicao["ENVIADO"] = (
@@ -675,6 +677,12 @@ def renderizar_dados_bancarios(
                             help="Clique no CPF para abrir o cadastro no SIAPE",
                             display_text=r"#(.+)$",
                         ),
+                        # --- ADICIONE ESTAS LINHAS AQUI ---
+                        "DIGITACAO_FOLHA": st.column_config.DatetimeColumn(
+                            "DIGITACAO_FOLHA",
+                            format="DD/MM/YYYY HH:mm:ss",
+                        ),
+                        # -----------------------------------
                         "CONTA_CORRENTE": st.column_config.TextColumn(
                             "CONTA_CORRENTE",
                             help=(
@@ -687,11 +695,15 @@ def renderizar_dados_bancarios(
                         "ENVIAR": st.column_config.CheckboxColumn(
                             "Selecionar", default=False
                         ),
-                        "DATA_CADASTRO": st.column_config.TextColumn(
-                            "Data de Cadastro", disabled=True
+                        "DATA_CADASTRO": st.column_config.DatetimeColumn(
+                            "Data de Cadastro",
+                            format="DD/MM/YYYY HH:mm:ss",
+                            disabled=True,
                         ),
-                        "Envio/Checagem": st.column_config.TextColumn(
-                            "Envio/Checagem", disabled=True
+                        "Envio/Checagem": st.column_config.DatetimeColumn(
+                            "Envio/Checagem",
+                            format="DD/MM/YYYY HH:mm:ss",
+                            disabled=True,
                         ),
                         "SEFAZ": st.column_config.TextColumn(
                             "Status SEFAZ", disabled=True
