@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import io
 import json
+import requests
 import streamlit as st
 import pandas as pd
 import oracledb
@@ -8,12 +9,12 @@ import oracledb
 # Importação da query específica do EMGERPI
 from queries import get_query_json_patronal_emgerpi
 
-# --- FUNÇÕES AUXILIARES DE CONVERSÃO E MONTAGEM ---
+# Token padrão extraído do script de transmissão
+TOKEN_SEFAZ_PADRAO = "eyJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJBUEkgZGUgSW50ZWdyYcOnw6NvIExvZ3VzIiwic3ViIjoiMzQ3NzQ5MDQzNjgiLCJpYXQiOjE3ODk0ODUxMTQsImV4cCI6MTc4OTU3MTUxNH0.PtndHNrn5Ki_xYwZ4zh39x8WkdyvzowD_2z03lWHdbk"
+
+# --- FUNÇÕES AUXILIARES DE CONVERSÃO E BANCO ---
 
 def construir_payload_json(df, mes, ano, cod_unidade, cod_relatorio):
-    """
-    Constrói a estrutura JSON genérica para as patronais SEDUC e FUNPREV.
-    """
     if df is None or df.empty:
         return None
 
@@ -26,6 +27,7 @@ def construir_payload_json(df, mes, ano, cod_unidade, cod_relatorio):
             valor_desc = float(valor_desc)
 
         pagamentos.append({
+            "codigoSefaz": str(row.get('RUBRICA', '')),
             "regimePrevidenciario": str(row['TIPO_REGIME']),
             "codigoRubrica": str(row['RUBRICA']),
             "tipoVinculo": str(row['TIPO_VINCULO']),
@@ -43,13 +45,10 @@ def construir_payload_json(df, mes, ano, cod_unidade, cod_relatorio):
         "pagamentos": pagamentos
     }
 
-    return json.dumps(payload, indent=4, ensure_ascii=False).encode('utf-8')
+    return payload
 
 def converter_para_csv(df):
     return df.to_csv(index=False, sep=';', encoding='utf-8-sig').encode('utf-8-sig')
-
-def converter_para_json_padrao(df):
-    return df.to_json(orient="records", force_ascii=False, indent=2).encode('utf-8')
 
 def executar_query(conn, query, params):
     cursor = conn.cursor()
@@ -70,77 +69,136 @@ def executar_query_emgerpi(conn, ano, mes):
         json_res = row[0]
         if hasattr(json_res, 'read'):
             json_res = json_res.read()
-        
-        json_str = str(json_res)
-        
-        try:
-            return pd.read_json(io.StringIO(json_str))
-        except Exception:
-            dados = json.loads(json_str)
-            return pd.json_normalize(dados)
-            
-    return pd.DataFrame()
+        return str(json_res)
+    return None
 
-# --- BLOCOS DE INTERFACE ---
+# --- INTEGRAÇÃO COM A API SEFAZ-PI ---
+
+def transmitir_para_sefaz(payload_data, ano, token_jwt=None):
+    if not token_jwt:
+        token_jwt = st.session_state.get("token_sefaz") or st.secrets.get("TOKEN_SEFAZ", TOKEN_SEFAZ_PADRAO)
+
+    url = f"https://tesouro.sefaz.pi.gov.br/siafe-api/folha-pagamento/contabilizacao-folha-pagamento/{ano}"
+    
+    headers = {
+        "accept": "*/*",
+        "Authorization": token_jwt.strip(),
+        "Content-Type": "application/json"
+    }
+
+    if isinstance(payload_data, str):
+        payload_json = json.loads(payload_data)
+    else:
+        payload_json = payload_data
+
+    response = requests.post(url, headers=headers, json=payload_json, timeout=30)
+    
+    if response.status_code in (200, 201):
+        return response.json()
+    else:
+        try:
+            err_data = response.json()
+            err_msg = err_data.get("message") or err_data.get("observacao") or response.text
+        except Exception:
+            err_msg = response.text
+        raise Exception(f"HTTP {response.status_code}: {err_msg}")
+
+# --- BLOCO DE RENDERIZAÇÃO DA INTERFACE ---
 
 def render_bloco_processamento(conn, titulo, id_chave, sql, mes, ano, cod_unidade=None, cod_relatorio=None):
-    st.subheader(titulo)
+    # Padronização exata do nome do arquivo (ex: FP_120_9_202609_001_93)
+    if cod_unidade and cod_relatorio:
+        nome_arquivo_base = f"FP_{cod_unidade}_9_{ano}{int(mes):02d}_001_{cod_relatorio}"
+        titulo_exibicao = f"{titulo} - {nome_arquivo_base}"
+    else:
+        nome_arquivo_base = f"PATRONAL_{id_chave.upper()}_{ano}{int(mes):02d}"
+        titulo_exibicao = titulo
+
+    st.subheader(titulo_exibicao)
     
     col_gerar, col_json, col_csv, col_enviar = st.columns([1.2, 1.2, 1.2, 1.2])
+    
     data_key = f"df_extra_{id_chave}_{ano}_{mes}"
+    json_raw_key = f"json_raw_{id_chave}_{ano}_{mes}"
+    retorno_key = f"retorno_envio_{id_chave}_{ano}_{mes}"
 
+    # 1. Botão Gerar Arquivo / JSON
     if col_gerar.button(f"⚙️ Gerar Arquivo", key=f"btn_gerar_{id_chave}"):
         try:
             with st.spinner(f"Gerando dados para {titulo}..."):
                 if id_chave == "emgerpi":
-                    df = executar_query_emgerpi(conn, ano, mes)
+                    json_str = executar_query_emgerpi(conn, ano, mes)
+                    if json_str:
+                        st.session_state[json_raw_key] = json_str
+                        dados = json.loads(json_str)
+                        st.session_state[data_key] = pd.json_normalize(dados.get("pagamentos", dados))
+                    else:
+                        st.session_state[json_raw_key] = None
+                        st.session_state[data_key] = pd.DataFrame()
                 elif sql:
                     df = executar_query(conn, sql, {"mes": mes, "ano": ano})
-                else:
-                    df = pd.DataFrame()
-                st.session_state[data_key] = df
+                    st.session_state[data_key] = df
+                    if not df.empty and cod_unidade and cod_relatorio:
+                        payload_obj = construir_payload_json(df, mes, ano, cod_unidade, cod_relatorio)
+                        st.session_state[json_raw_key] = json.dumps(payload_obj, ensure_ascii=False, indent=2)
+                st.session_state.pop(retorno_key, None)
         except Exception as e:
             st.error(f"Erro ao consultar banco de dados: {str(e)}")
             st.session_state[data_key] = None
 
     df_gerado = st.session_state.get(data_key)
+    json_raw = st.session_state.get(json_raw_key)
 
-    if df_gerado is not None:
-        if not df_gerado.empty:
-            # Definição do formato JSON e do nome padronizado do arquivo
-            if cod_unidade and cod_relatorio:
-                dados_json = construir_payload_json(df_gerado, mes, ano, cod_unidade, cod_relatorio)
-                nome_json = f"FP_{cod_unidade}_9_{ano}{mes:02d}_001_{cod_relatorio}.json"
-            else:
-                dados_json = converter_para_json_padrao(df_gerado)
-                nome_json = f"{id_chave}_{mes:02d}_{ano}.json"
-
-            # Botão JSON
+    # 2. Exibição das Ações de Download e Transmissão
+    if df_gerado is not None and not df_gerado.empty:
+        # Download JSON
+        if json_raw:
             col_json.download_button(
                 label="📄 Baixar JSON",
-                data=dados_json,
-                file_name=nome_json,
+                data=json_raw.encode('utf-8'),
+                file_name=f"{nome_arquivo_base}.json",
                 mime="application/json",
                 key=f"btn_json_{id_chave}"
             )
 
-            # Botão CSV
-            col_csv.download_button(
-                label="📊 Baixar CSV",
-                data=converter_para_csv(df_gerado),
-                file_name=f"{id_chave}_{mes:02d}_{ano}.csv",
-                mime="text/csv",
-                key=f"btn_csv_{id_chave}"
-            )
+        # Download CSV
+        col_csv.download_button(
+            label="📊 Baixar CSV",
+            data=converter_para_csv(df_gerado),
+            file_name=f"{nome_arquivo_base}.csv",
+            mime="text/csv",
+            key=f"btn_csv_{id_chave}"
+        )
 
-            # Botão Enviar
-            if col_enviar.button(f"🚀 Enviar Arquivo", key=f"btn_enviar_{id_chave}"):
-                with st.spinner("Transmitindo arquivo..."):
-                    st.success(f"✅ Arquivo ({id_chave.upper()}) transmitido com sucesso!")
+        # Botão Enviar para a SEFAZ
+        if col_enviar.button(f"🚀 Enviar Arquivo", key=f"btn_enviar_{id_chave}", type="primary"):
+            with st.spinner("Transmitindo lote para a SEFAZ..."):
+                try:
+                    payload_para_envio = json_raw if json_raw else df_gerado
+                    res_api = transmitir_para_sefaz(payload_para_envio, ano)
+                    st.session_state[retorno_key] = res_api
+                    st.success("Transmissão efetuada com sucesso!")
+                    st.rerun()
+                except Exception as e:
+                    st.error(f"❌ Falha no envio: {str(e)}")
 
+    # 3. Métricas de Retorno da SEFAZ
+    resp_sefaz = st.session_state.get(retorno_key)
+    if resp_sefaz:
+        st.write("---")
+        col_x, col_y, col_w, col_z = st.columns([1, 1, 1.4, 1])
+        with col_x:
+            st.metric("Enviados", resp_sefaz.get("qtdPagamentosRecebidos", 0))
+        with col_y:
+            st.metric("Recibo", resp_sefaz.get("codigo", "-"))
+        with col_w:
+            st.metric("Data/Hora", str(resp_sefaz.get("dataHoraCadastro", "-"))[:19].replace("T", " "))
+        with col_z:
+            st.metric("Status", resp_sefaz.get("observacao", "-"))
+
+    if df_gerado is not None and not df_gerado.empty:
+        with st.expander("🔍 Visualizar Prévia dos Dados", expanded=False):
             st.dataframe(df_gerado, use_container_width=True)
-        else:
-            st.warning("⚠️ Nenhum registro encontrado para a competência selecionada.")
 
 
 def render(conn, ano, mes, meses_lista):
@@ -149,19 +207,21 @@ def render(conn, ano, mes, meses_lista):
     st.caption(f"**Competência Selecionada:** {mes_nome}/{ano}")
     st.divider()
 
-    # --- 1. PATRONAL EMGERPI ---
+    # 1. PATRONAL EMGERPI (FP_120_9_202609_001_93)
     render_bloco_processamento(
         conn=conn,
         titulo="1. PATRONAL EMGERPI",
         id_chave="emgerpi",
         sql=None,
         mes=mes,
-        ano=ano
+        ano=ano,
+        cod_unidade="120",
+        cod_relatorio="93"
     )
 
     st.divider()
 
-    # --- 2. PATRONAL EXTRA SEDUC ---
+    # 2. PATRONAL EXTRA SEDUC (FP_011_9_202609_001_99)
     sql_seduc_extra = """
     SELECT 
         CASE 
@@ -220,7 +280,7 @@ def render(conn, ano, mes, meses_lista):
 
     st.divider()
 
-    # --- 3. PATRONAL FUNPREV ---
+    # 3. PATRONAL FUNPREV (FP_924_9_202609_001_90)
     sql_funprev = """
     SELECT 
         RUBRICA, 
@@ -299,7 +359,7 @@ def render(conn, ano, mes, meses_lista):
 
     st.divider()
 
-    # --- 4. PATRONAL SEDUC 011 ---
+    # 4. PATRONAL SEDUC 011 (FP_011_9_202609_001_90)
     sql_seduc_011 = """
     SELECT 
         CASE 
@@ -358,7 +418,7 @@ def render(conn, ano, mes, meses_lista):
 
     st.divider()
 
-    # --- 5. PATRONAL SEDUC 914 ---
+    # 5. PATRONAL SEDUC 914 (FP_914_9_202609_001_90)
     sql_seduc_914 = """
     SELECT 
         CASE 
