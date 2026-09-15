@@ -45,14 +45,14 @@ def render(conn, ano_selecionado, mes_chave, meses_disponiveis):
     col_t, col_c = st.columns([1, 2])
 
     with col_t:
-        st.session_state.auto_refresh = st.toggle("Ativar Atualização (5s)", value=st.session_state.auto_refresh)
+        st.session_state.auto_refresh = st.toggle("Ativar Atualização (10s)", value=st.session_state.auto_refresh)
 
     # Placeholder para o contador dentro da segunda coluna
     with col_c:
         placeholder_contador = st.empty()
 
     if st.session_state.auto_refresh:
-        for i in range(5, 0, -1):
+        for i in range(10, 0, -1):
             placeholder_contador.caption(f"Próxima atualização em {i}s...")
             time.sleep(1)
 
