@@ -44,7 +44,7 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(BASE_DIR, "views"))
 sys.path.insert(0, os.path.join(BASE_DIR, ".streamlit"))
 
-import auth_ui, inicio, grafico, app_siafe, responsavel, arquivos, usuarios, auditoria_integracao, auditoria_folha, valida_bb, inconsistencia_sefaz_view, consulta_credor_view, extra
+import auth_ui, inicio, grafico, app_siafe, responsavel, arquivos, usuarios, auditoria_integracao, auditoria_folha, valida_bb, inconsistencia_sefaz_view, consulta_credor_view, extra, arquivos_extra
 
 def reload_views():
     importlib.reload(auth_ui)
@@ -60,6 +60,7 @@ def reload_views():
     importlib.reload(inconsistencia_sefaz_view)
     importlib.reload(consulta_credor_view)
     importlib.reload(extra)
+    importlib.reload(arquivos_extra)
 
 reload_views()
 
@@ -81,7 +82,7 @@ def get_opcoes():
   if st.session_state.get("perfil_usuario") in ["a", "g", "c"]:
     opcoes_base.append("Usuários")
 
-  # --- RESTRIÇÃO DA OPÇÃO EXTRA ---
+  # --- RESTRIÇÃO DAS OPÇÕES EXTRAS ---
   # Liberado para o Valdiano (por login) ou para qualquer Admin (perfil 'a')
   login_bruto = st.session_state.get("login_atual")
   login_atual = str(login_bruto).lower() if login_bruto else ""
@@ -90,6 +91,7 @@ def get_opcoes():
       login_atual == "valdiano"
       or st.session_state.get("perfil_usuario") == "a"
   ):
+    opcoes_base.append("Arquivos Extras")
     opcoes_base.append("Extra")
 
   return opcoes_base
@@ -328,6 +330,7 @@ try:
     elif menu_selecionado == "Usuários": usuarios.render(conn, st.session_state.perfil_usuario)
     elif menu_selecionado == "Relatório de Inconsistências SEFAZ": inconsistencia_sefaz_view.renderizar_inconsistencia_sefaz(ano, mes, auth_ui)
     elif menu_selecionado == "Consulta Credor SEFAZ": consulta_credor_view.renderizar_consulta_credor(ano, mes)
+    elif menu_selecionado == "Arquivos Extras": arquivos_extra.render(conn, ano, mes, meses_lista)
     elif menu_selecionado == "Extra": extra.render(conn)
     elif menu_selecionado == "Validação BB":
        if st.session_state.perfil_usuario == 'a': valida_bb.render(conn)

@@ -2,10 +2,8 @@
 import streamlit as st
 import pandas as pd
 import time
-import requests
-import json
 
-from queries import get_query_detalhe_erros, get_query_json_patronal_emgerpi
+from queries import get_query_detalhe_erros
 
 def render(conn, ano_selecionado, mes_chave, meses_disponiveis):
     # --- CSS PARA ESTILO, ALINHAMENTO E ALARGAMENTO DO POPOVER ---
@@ -13,13 +11,12 @@ def render(conn, ano_selecionado, mes_chave, meses_disponiveis):
         <style>
             .block-container { padding-top: 1rem !important; padding-bottom: 1rem !important; }
 
-            /* FORÇA O POPOVER A TER O DOBRO DO TAMANHO (DE ~500px PARA 950px) */
+            /* FORÇA O POPOVER A TER O DOBRO DO TAMANHO */
             div[data-testid="stPopoverBody"] {
                 width: 950px !important;
                 max-width: 950px !important;
-                /* Desloca o painel para a esquerda para não cortar na borda direita da tela */
                 position: relative;
-                left: -020px;
+                left: -20px;
             }
 
             /* Ajuste geral do componente do popover */
@@ -33,24 +30,15 @@ def render(conn, ano_selecionado, mes_chave, meses_disponiveis):
 
     st.markdown("---")
 
-    # --- CONTROLE DE MUDANÇA DE FILTRO (LIMPEZA DO JSON E RESPOSTA AO MUDAR MÊS/ANO) ---
-    competencia_atual = f"{ano_selecionado}_{int(mes_chave):02d}"
-    if st.session_state.get('ultima_competencia_emgerpi') != competencia_atual:
-        st.session_state['json_emgerpi'] = None
-        st.session_state['resposta_sefaz'] = None
-        st.session_state['ultima_competencia_emgerpi'] = competencia_atual
-
     # --- CONTROLE DE ATUALIZAÇÃO AUTOMÁTICA ---
     if 'auto_refresh' not in st.session_state:
         st.session_state.auto_refresh = False
 
-    # Colunas para alinhar o toggle e o contador na mesma linha
     col_t, col_c = st.columns([1, 2])
 
     with col_t:
         st.session_state.auto_refresh = st.toggle("Ativar Atualização (10s)", value=st.session_state.auto_refresh)
 
-    # Placeholder para o contador dentro da segunda coluna
     with col_c:
         placeholder_contador = st.empty()
 
@@ -59,7 +47,6 @@ def render(conn, ano_selecionado, mes_chave, meses_disponiveis):
             placeholder_contador.caption(f"Próxima atualização em {i}s...")
             time.sleep(1)
 
-        # Recarrega a página após a contagem
         st.rerun()
 
     cursor = conn.cursor()
@@ -89,17 +76,12 @@ def render(conn, ano_selecionado, mes_chave, meses_disponiveis):
             cursor.execute(sql)
             rows = cursor.fetchall()
 
-            # --- PROTEÇÃO PARA QUANDO NÃO HÁ DADOS ---
             if not rows:
                 df_pivot = pd.DataFrame(columns=['STATUS', 'COLABORADOR', 'CREDITO', 'ORCAMENTARIO', 'PATRONAL', 'TOTAL', 'STATUS_INTEGRA'])
             else:
                 df_bruto = pd.DataFrame(rows, columns=['STATUS', 'TIPO', 'QTD'])
                 df_bruto['TIPO'] = df_bruto['TIPO'].astype(str).str.upper().str.strip()
-                
-                # Consolida valores caso o CASE WHEN do SQL tenha gerado status repetidos
                 df_bruto = df_bruto.groupby(['STATUS', 'TIPO'], as_index=False)['QTD'].sum()
-
-                # Executa o pivot com segurança
                 df_pivot = df_bruto.pivot(index='STATUS', columns='TIPO', values='QTD').fillna(0).astype(int).reset_index()
 
                 for col in ['V1', 'V2', 'V3', 'V4']:
@@ -107,25 +89,21 @@ def render(conn, ano_selecionado, mes_chave, meses_disponiveis):
                 df_pivot = df_pivot.rename(columns={'V1': 'COLABORADOR', 'V2': 'CREDITO', 'V3': 'ORCAMENTARIO', 'V4': 'PATRONAL'})
                 df_pivot['TOTAL'] = df_pivot[['COLABORADOR', 'CREDITO', 'ORCAMENTARIO', 'PATRONAL']].sum(axis=1)
 
-                # --- TRATAMENTO E FILTRO DE STATUS ---
                 df_pivot['STATUS_INTEGRA'] = df_pivot['STATUS'].astype(str).str.strip().str.upper()
 
-            # --- CÁLCULOS SEGUROS ---
             total_geral = int(df_pivot["TOTAL"].sum()) if "TOTAL" in df_pivot.columns else 0
             total_abertos = int(df_pivot[df_pivot['STATUS_INTEGRA'] == 'ABERTO']['TOTAL'].sum()) if not df_pivot.empty and 'STATUS_INTEGRA' in df_pivot.columns else 0
 
-            # Alertas: Inconsistências e Erros
             total_erros = int(df_pivot[df_pivot['STATUS_INTEGRA'].str.contains('ERRO|INCONSISTENCIA|EXCLUIDO', na=False)]['TOTAL'].sum()) if not df_pivot.empty and 'STATUS_INTEGRA' in df_pivot.columns else 0
             pct_erros = (total_erros / total_geral * 100) if total_geral > 0 else 0.0
 
-            # CÁLCULO DE EFICIÊNCIA
             total_fechados = int(df_pivot[df_pivot['STATUS_INTEGRA'] == 'FECHADO']['TOTAL'].sum()) if not df_pivot.empty and 'STATUS_INTEGRA' in df_pivot.columns else 0
             total_transmitidos = int(df_pivot[df_pivot['STATUS_INTEGRA'] == 'TRANSMITIDO']['TOTAL'].sum()) if not df_pivot.empty and 'STATUS_INTEGRA' in df_pivot.columns else 0
 
             total_eficientes = total_fechados + total_transmitidos + total_abertos
             taxa_eficiencia = (total_eficientes / total_geral * 100) if total_geral > 0 else 0.0
 
-            # METRICAS - Balanceado para manter o alinhamento
+            # METRICAS
             c1, c2, c3, c4, c5 = st.columns([1, 1, 1, 1, 0.7])
 
             with c1: st.metric(".. Volume Total", int(total_geral))
@@ -150,7 +128,6 @@ def render(conn, ano_selecionado, mes_chave, meses_disponiveis):
                         query = get_query_detalhe_erros(ano_selecionado, int(mes_chave))
                         df_detalhe = pd.read_sql(query, conn)
 
-                        # Mapeamento e tradução dos tipos de requisição
                         if 'TIPO_REQ' in df_detalhe.columns:
                             df_detalhe['TIPO_REQ'] = df_detalhe['TIPO_REQ'].astype(str).str.strip().str.upper()
                             mapeamento_tipos = {
@@ -178,10 +155,7 @@ def render(conn, ano_selecionado, mes_chave, meses_disponiveis):
                             width='stretch',
                             hide_index=True,
                             column_config={
-                                "LINK_LIMPO": st.column_config.LinkColumn(
-                                    "ID EVENTO",
-                                    display_text=r"evento-transmissao/(\d+)"
-                                ),
+                                "LINK_LIMPO": st.column_config.LinkColumn("ID EVENTO", display_text=r"evento-transmissao/(\d+)"),
                                 "TIPO_REQ": st.column_config.TextColumn("TIPO REQUISIÇÃO"),
                                 "NUM_RECIBO": st.column_config.TextColumn("Nº RECIBO"),
                                 "DESCRICAO": st.column_config.TextColumn("MOTIVO DO ERRO"),
@@ -192,10 +166,8 @@ def render(conn, ano_selecionado, mes_chave, meses_disponiveis):
                             }
                         )
 
-            # Limpa coluna de tratamento antes de exibir a tabela final
             df_visual = df_pivot.drop(columns=['STATUS_INTEGRA'])
 
-            # TABELA FINAL COM ESTILO AVERMELHADO
             row_total = pd.DataFrame([["TOTAL GERAL"] + [df_visual[c].sum() for c in ['COLABORADOR', 'CREDITO', 'ORCAMENTARIO', 'PATRONAL', 'TOTAL']]], columns=df_visual.columns)
             df_final = pd.concat([df_visual, row_total], ignore_index=True)
 
@@ -204,80 +176,9 @@ def render(conn, ano_selecionado, mes_chave, meses_disponiveis):
                     return ['background-color: #fce8e6'] * len(row)
                 if row['STATUS'] == 'TOTAL GERAL':
                     return ['background-color: #343a40; color: white'] * len(row)
-                return [''] * len(row)
+                return [''] * row.shape[0]
 
             st.dataframe(df_final.style.apply(aplicar_estilo, axis=1), width='stretch', hide_index=True)
-
-            # --- NOVA SEÇÃO: AÇÃO PATRONAL EMGERPI E TRANSMISSÃO SEFAZ ---
-            st.markdown("---")
-            
-            btn_desabilitado = (total_geral == 0)
-            
-            # Alinhamento horizontal do Botão e das Respostas (x, y, w, z)
-            col_btn, col_x, col_y, col_w, col_z = st.columns([1.8, 1, 1, 1.4, 1])
-
-            with col_btn:
-                if st.button("🚀 Gerar e Enviar PATRONAL EMGERPI", type="primary", disabled=btn_desabilitado):
-                    with st.spinner("Gerando JSON e enviando à SEFAZ..."):
-                        try:
-                            sql_json = get_query_json_patronal_emgerpi(ano_selecionado, mes_chave)
-                            cursor.execute(sql_json)
-                            row = cursor.fetchone()
-
-                            if row and row[0]:
-                                json_res = row[0]
-                                if hasattr(json_res, 'read'):
-                                    json_res = json_res.read()
-
-                                st.session_state['json_emgerpi'] = str(json_res)
-
-                                # Disparo HTTP POST para a API da SEFAZ
-                                url_api = f"https://tesouro.sefaz.pi.gov.br/siafe-api/folha-pagamento/contabilizacao-folha-pagamento/{ano_selecionado}"
-                                headers = {
-                                    "accept": "*/*",
-                                    "Authorization": "eyJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJBUEkgZGUgSW50ZWdyYcOnw6NvIExvZ3VzIiwic3ViIjoiMzQ3NzQ5MDQzNjgiLCJpYXQiOjE3ODk0ODUxMTQsImV4cCI6MTc4OTU3MTUxNH0.PtndHNrn5Ki_xYwZ4zh39x8WkdyvzowD_2z03lWHdbk",
-                                    "Content-Type": "application/json"
-                                }
-
-                                payload = json.loads(json_res) if isinstance(json_res, str) else json_res
-                                response = requests.post(url_api, headers=headers, json=payload, timeout=30)
-
-                                if response.status_code == 200:
-                                    st.session_state['resposta_sefaz'] = response.json()
-                                    st.success("Transmissão efetuada com sucesso!")
-                                else:
-                                    st.error(f"Erro SEFAZ ({response.status_code}): {response.text}")
-                                    st.session_state['resposta_sefaz'] = None
-                            else:
-                                st.session_state['json_emgerpi'] = None
-                                st.session_state['resposta_sefaz'] = None
-                                st.warning("Nenhum registro encontrado para a requisição Patronal (V4) nesta competência.")
-
-                        except Exception as err_json:
-                            st.error(f"Erro durante transmissão: {err_json}")
-
-            # Renderização dos retornos da SEFAZ nas posições x, y, w, z
-            resp_sefaz = st.session_state.get('resposta_sefaz')
-            if resp_sefaz:
-                with col_x:
-                    st.metric("(x) Enviados", resp_sefaz.get("qtdPagamentosRecebidos", 0))
-                with col_y:
-                    st.metric("(y) Recibo", resp_sefaz.get("codigo", "-"))
-                with col_w:
-                    st.metric("(w) Data/Hora", str(resp_sefaz.get("dataHoraCadastro", "-"))[:19].replace("T", " "))
-                with col_z:
-                    st.metric("(z) Status", resp_sefaz.get("observacao", "-"))
-
-            # Exibição do JSON e download caso esteja disponível
-            if st.session_state.get('json_emgerpi'):
-                st.download_button(
-                    label="📥 Baixar Arquivo JSON",
-                    data=st.session_state['json_emgerpi'],
-                    file_name=f"PATRONAL_EMGERPI_{ano_selecionado}_{int(mes_chave):02d}.json",
-                    mime="application/json"
-                )
-
-                st.json(st.session_state['json_emgerpi'])
 
         except Exception as e:
             st.error(f"Erro ao processar: {e}")
