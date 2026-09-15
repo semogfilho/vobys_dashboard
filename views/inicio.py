@@ -2,6 +2,8 @@
 import streamlit as st
 import pandas as pd
 import time
+import requests
+import json
 
 from queries import get_query_detalhe_erros, get_query_json_patronal_emgerpi
 
@@ -31,10 +33,11 @@ def render(conn, ano_selecionado, mes_chave, meses_disponiveis):
 
     st.markdown("---")
 
-    # --- CONTROLE DE MUDANÇA DE FILTRO (LIMPEZA DO JSON AO MUDAR MÊS/ANO) ---
+    # --- CONTROLE DE MUDANÇA DE FILTRO (LIMPEZA DO JSON E RESPOSTA AO MUDAR MÊS/ANO) ---
     competencia_atual = f"{ano_selecionado}_{int(mes_chave):02d}"
     if st.session_state.get('ultima_competencia_emgerpi') != competencia_atual:
         st.session_state['json_emgerpi'] = None
+        st.session_state['resposta_sefaz'] = None
         st.session_state['ultima_competencia_emgerpi'] = competencia_atual
 
     # --- CONTROLE DE ATUALIZAÇÃO AUTOMÁTICA ---
@@ -90,10 +93,6 @@ def render(conn, ano_selecionado, mes_chave, meses_disponiveis):
             if not rows:
                 df_pivot = pd.DataFrame(columns=['STATUS', 'COLABORADOR', 'CREDITO', 'ORCAMENTARIO', 'PATRONAL', 'TOTAL', 'STATUS_INTEGRA'])
             else:
-                #df_bruto = pd.DataFrame(rows, columns=['STATUS', 'TIPO', 'QTD'])
-                #df_bruto['TIPO'] = df_bruto['TIPO'].astype(str).str.upper().str.strip()
-                #df_pivot = df_bruto.pivot(index='STATUS', columns='TIPO', values='QTD').fillna(0).astype(int).reset_index()
-
                 df_bruto = pd.DataFrame(rows, columns=['STATUS', 'TIPO', 'QTD'])
                 df_bruto['TIPO'] = df_bruto['TIPO'].astype(str).str.upper().str.strip()
                 
@@ -102,7 +101,6 @@ def render(conn, ano_selecionado, mes_chave, meses_disponiveis):
 
                 # Executa o pivot com segurança
                 df_pivot = df_bruto.pivot(index='STATUS', columns='TIPO', values='QTD').fillna(0).astype(int).reset_index()
-
 
                 for col in ['V1', 'V2', 'V3', 'V4']:
                     if col not in df_pivot.columns: df_pivot[col] = 0
@@ -210,37 +208,68 @@ def render(conn, ano_selecionado, mes_chave, meses_disponiveis):
 
             st.dataframe(df_final.style.apply(aplicar_estilo, axis=1), width='stretch', hide_index=True)
 
-            # --- NOVA SEÇÃO: AÇÃO PATRONAL EMGERPI ---
+            # --- NOVA SEÇÃO: AÇÃO PATRONAL EMGERPI E TRANSMISSÃO SEFAZ ---
             st.markdown("---")
             
-            # Botão principal de geração com propriedade disabled baseada em total_geral
             btn_desabilitado = (total_geral == 0)
             
-            if st.button("🚀 Gerar PATRONAL EMGERPI", type="primary",  width='content', disabled=btn_desabilitado):
-                with st.spinner("Gerando JSON consolidado PATRONAL EMGERPI..."):
-                    try:
-                        sql_json = get_query_json_patronal_emgerpi(ano_selecionado, mes_chave)
-                        cursor.execute(sql_json)
-                        row = cursor.fetchone()
+            # Alinhamento horizontal do Botão e das Respostas (x, y, w, z)
+            col_btn, col_x, col_y, col_w, col_z = st.columns([1.8, 1, 1, 1.4, 1])
 
-                        if row and row[0]:
-                            json_res = row[0]
-                            if hasattr(json_res, 'read'):
-                                json_res = json_res.read()
+            with col_btn:
+                if st.button("🚀 Gerar e Enviar PATRONAL EMGERPI", type="primary", disabled=btn_desabilitado):
+                    with st.spinner("Gerando JSON e enviando à SEFAZ..."):
+                        try:
+                            sql_json = get_query_json_patronal_emgerpi(ano_selecionado, mes_chave)
+                            cursor.execute(sql_json)
+                            row = cursor.fetchone()
 
-                            st.session_state['json_emgerpi'] = str(json_res)
-                        else:
-                            st.session_state['json_emgerpi'] = None
-                            st.warning("Nenhum registro encontrado para a requisição Patronal (V4) nesta competência.")
+                            if row and row[0]:
+                                json_res = row[0]
+                                if hasattr(json_res, 'read'):
+                                    json_res = json_res.read()
 
-                    except Exception as err_json:
-                        st.error(f"Erro ao gerar JSON consolidado: {err_json}")
+                                st.session_state['json_emgerpi'] = str(json_res)
 
-            # Exibe o resultado e o botão de download apenas se houver JSON gerado para a competência atual
+                                # Disparo HTTP POST para a API da SEFAZ
+                                url_api = f"https://tesouro.sefaz.pi.gov.br/siafe-api/folha-pagamento/contabilizacao-folha-pagamento/{ano_selecionado}"
+                                headers = {
+                                    "accept": "*/*",
+                                    "Authorization": "eyJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJBUEkgZGUgSW50ZWdyYcOnw6NvIExvZ3VzIiwic3ViIjoiMzQ3NzQ5MDQzNjgiLCJpYXQiOjE3ODk0ODUxMTQsImV4cCI6MTc4OTU3MTUxNH0.PtndHNrn5Ki_xYwZ4zh39x8WkdyvzowD_2z03lWHdbk",
+                                    "Content-Type": "application/json"
+                                }
+
+                                payload = json.loads(json_res) if isinstance(json_res, str) else json_res
+                                response = requests.post(url_api, headers=headers, json=payload, timeout=30)
+
+                                if response.status_code == 200:
+                                    st.session_state['resposta_sefaz'] = response.json()
+                                    st.success("Transmissão efetuada com sucesso!")
+                                else:
+                                    st.error(f"Erro SEFAZ ({response.status_code}): {response.text}")
+                                    st.session_state['resposta_sefaz'] = None
+                            else:
+                                st.session_state['json_emgerpi'] = None
+                                st.session_state['resposta_sefaz'] = None
+                                st.warning("Nenhum registro encontrado para a requisição Patronal (V4) nesta competência.")
+
+                        except Exception as err_json:
+                            st.error(f"Erro durante transmissão: {err_json}")
+
+            # Renderização dos retornos da SEFAZ nas posições x, y, w, z
+            resp_sefaz = st.session_state.get('resposta_sefaz')
+            if resp_sefaz:
+                with col_x:
+                    st.metric("(x) Enviados", resp_sefaz.get("qtdPagamentosRecebidos", 0))
+                with col_y:
+                    st.metric("(y) Recibo", resp_sefaz.get("codigo", "-"))
+                with col_w:
+                    st.metric("(w) Data/Hora", str(resp_sefaz.get("dataHoraCadastro", "-"))[:19].replace("T", " "))
+                with col_z:
+                    st.metric("(z) Status", resp_sefaz.get("observacao", "-"))
+
+            # Exibição do JSON e download caso esteja disponível
             if st.session_state.get('json_emgerpi'):
-                st.success("✅ JSON Patronal EMGERPI consolidado com sucesso!")
-
-                # Botão de download posicionado logo abaixo da geração
                 st.download_button(
                     label="📥 Baixar Arquivo JSON",
                     data=st.session_state['json_emgerpi'],
@@ -248,7 +277,6 @@ def render(conn, ano_selecionado, mes_chave, meses_disponiveis):
                     mime="application/json"
                 )
 
-                # Exibição do JSON formatado
                 st.json(st.session_state['json_emgerpi'])
 
         except Exception as e:
