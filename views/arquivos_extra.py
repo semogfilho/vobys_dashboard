@@ -1,16 +1,20 @@
 # -*- coding: utf-8 -*-
-import io
 import json
 import requests
 import streamlit as st
 import pandas as pd
-import oracledb
+import urllib3
+
+# Desativa alertas de certificado SSL não verificado (verify=False)
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 # Importação da query específica do EMGERPI
-from queries import get_query_json_patronal_emgerpi
+try:
+    from queries import get_query_json_patronal_emgerpi
+except ImportError:
+    def get_query_json_patronal_emgerpi(ano, mes):
+        return "SELECT json_data FROM dual"
 
-# Token padrão extraído do script de transmissão
-TOKEN_SEFAZ_PADRAO = "eyJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJBUEkgZGUgSW50ZWdyYcOnw6NvIExvZ3VzIiwic3ViIjoiMzQ3NzQ5MDQzNjgiLCJpYXQiOjE3ODk0ODUxMTQsImV4cCI6MTc4OTU3MTUxNH0.PtndHNrn5Ki_xYwZ4zh39x8WkdyvzowD_2z03lWHdbk"
 
 # --- FUNÇÕES AUXILIARES DE CONVERSÃO E BANCO ---
 
@@ -20,18 +24,24 @@ def construir_payload_json(df, mes, ano, cod_unidade, cod_relatorio):
 
     pagamentos = []
     for _, row in df.iterrows():
-        valor_desc = row['DESCONTOS']
+        valor_desc = row.get('DESCONTOS', 0.0)
         if isinstance(valor_desc, str):
             valor_desc = float(valor_desc.replace(',', '.'))
         else:
             valor_desc = float(valor_desc)
 
+        valor_vant = row.get('VANTAGENS', 0.0)
+        if isinstance(valor_vant, str):
+            valor_vant = float(valor_vant.replace(',', '.'))
+        else:
+            valor_vant = float(valor_vant)
+
         pagamentos.append({
             "codigoSefaz": str(row.get('RUBRICA', '')),
-            "regimePrevidenciario": str(row['TIPO_REGIME']),
-            "codigoRubrica": str(row['RUBRICA']),
-            "tipoVinculo": str(row['TIPO_VINCULO']),
-            "valor": float(row.get('VANTAGENS', 0.0)),
+            "regimePrevidenciario": str(row.get('TIPO_REGIME', '')),
+            "codigoRubrica": str(row.get('RUBRICA', '')),
+            "tipoVinculo": str(row.get('TIPO_VINCULO', '')),
+            "valor": float(valor_vant),
             "valorDesconto": round(valor_desc, 2)
         })
 
@@ -47,16 +57,29 @@ def construir_payload_json(df, mes, ano, cod_unidade, cod_relatorio):
 
     return payload
 
+
 def converter_para_csv(df):
     return df.to_csv(index=False, sep=';', encoding='utf-8-sig').encode('utf-8-sig')
 
+
 def executar_query(conn, query, params):
     cursor = conn.cursor()
-    cursor.execute(query, params)
+    params_clean = {}
+    for k, v in params.items():
+        if k in ['mes', 'ano']:
+            try:
+                params_clean[k] = int(v)
+            except (ValueError, TypeError):
+                params_clean[k] = v
+        else:
+            params_clean[k] = v
+
+    cursor.execute(query, params_clean)
     columns = [col[0] for col in cursor.description]
     data = cursor.fetchall()
     cursor.close()
     return pd.DataFrame(data, columns=columns)
+
 
 def executar_query_emgerpi(conn, ano, mes):
     sql_json = get_query_json_patronal_emgerpi(ano, mes)
@@ -64,49 +87,79 @@ def executar_query_emgerpi(conn, ano, mes):
     cursor.execute(sql_json)
     row = cursor.fetchone()
     cursor.close()
-
-    if row and row[0]:
-        json_res = row[0]
-        if hasattr(json_res, 'read'):
-            json_res = json_res.read()
-        return str(json_res)
+    if row:
+        return row[0]
     return None
+
 
 # --- INTEGRAÇÃO COM A API SEFAZ-PI ---
 
-def transmitir_para_sefaz(payload_data, ano, token_jwt=None):
-    if not token_jwt:
-        token_jwt = st.session_state.get("token_sefaz") or st.secrets.get("TOKEN_SEFAZ", TOKEN_SEFAZ_PADRAO)
+def transmitir_para_sefaz(payload_dados, ano):
+    """Função que exige estritamente credenciais presentes na sessão para autenticação e envio."""
+    try:
+        usuario = st.session_state.get("sefaz_cpf")
+        senha = st.session_state.get("sefaz_pass")
+        is_autenticado = st.session_state.get("sefaz_auth", False)
 
-    url = f"https://tesouro.sefaz.pi.gov.br/siafe-api/folha-pagamento/contabilizacao-folha-pagamento/{ano}"
-    
-    headers = {
-        "accept": "*/*",
-        "Authorization": token_jwt.strip(),
-        "Content-Type": "application/json"
-    }
+        if not is_autenticado or not usuario or not senha:
+            return False, None, "Erro: Credenciais não informadas ou usuário desconectado da SEFAZ. Por favor, autentique-se novamente."
 
-    if isinstance(payload_data, str):
-        payload_json = json.loads(payload_data)
-    else:
-        payload_json = payload_data
+        sefaz_sec = st.secrets.get("sefaz", {})
+        base_url = sefaz_sec.get("BASE_URL") or sefaz_sec.get("base_url", "https://tesouro.sefaz.pi.gov.br/api")
 
-    response = requests.post(url, headers=headers, json=payload_json, timeout=30)
-    
-    if response.status_code in (200, 201):
-        return response.json()
-    else:
+        if not base_url:
+            return False, None, "Erro: BASE_URL da SEFAZ não configurada no secrets."
+
+        if payload_dados is None:
+            return False, None, "Erro: O payload de dados está vazio ou nulo."
+
+        if isinstance(payload_dados, str):
+            try:
+                payload_obj = json.loads(payload_dados)
+            except json.JSONDecodeError as jde:
+                return False, None, f"Erro ao converter string JSON: {str(jde)}"
+        else:
+            payload_obj = payload_dados
+
+        session = requests.Session()
+        session.verify = False
+
+        payload_auth = {"usuario": usuario, "senha": senha}
+        r_auth = session.post(f"{base_url}/auth", json=payload_auth, timeout=10)
+        r_auth.raise_for_status()
+
+        token = r_auth.json().get("token")
+        if not token:
+            return False, None, "Erro: Token de autenticação não retornado pela API /auth."
+
+        session.headers.update({"Authorization": f"Bearer {token}"})
+
+        url_final = f"{base_url}/folha-pagamento/contabilizacao-folha-pagamento/{ano}"
+        response = session.post(url_final, json=payload_obj, timeout=15)
+        sucesso = response.status_code in [200, 201]
+
         try:
-            err_data = response.json()
-            err_msg = err_data.get("message") or err_data.get("observacao") or response.text
+            retorno_json = response.json()
         except Exception:
-            err_msg = response.text
-        raise Exception(f"HTTP {response.status_code}: {err_msg}")
+            retorno_json = response.text
+
+        return sucesso, json.dumps(payload_obj, ensure_ascii=False), retorno_json
+
+    except requests.exceptions.HTTPError as he:
+        status = he.response.status_code if he.response else "Desconhecido"
+        texto = he.response.text if he.response else str(he)
+        if status in (401, 403):
+            st.session_state["sefaz_auth"] = False
+            st.session_state.pop("sefaz_cpf", None)
+            st.session_state.pop("sefaz_pass", None)
+        return False, None, f"Erro HTTP {status}: {texto}"
+    except Exception as e:
+        return False, None, str(e)
+
 
 # --- BLOCO DE RENDERIZAÇÃO DA INTERFACE ---
 
-def render_bloco_processamento(conn, titulo, id_chave, sql, mes, ano, cod_unidade=None, cod_relatorio=None):
-    # Padronização exata do nome do arquivo (ex: FP_120_9_202609_001_93)
+def render_bloco_processamento(conn, titulo, id_chave, sql, mes, ano, cod_unidade=None, cod_relatorio=None, auth_ui=None):
     if cod_unidade and cod_relatorio:
         nome_arquivo_base = f"FP_{cod_unidade}_9_{ano}{int(mes):02d}_001_{cod_relatorio}"
         titulo_exibicao = f"{titulo} - {nome_arquivo_base}"
@@ -116,11 +169,12 @@ def render_bloco_processamento(conn, titulo, id_chave, sql, mes, ano, cod_unidad
 
     st.subheader(titulo_exibicao)
     
-    col_gerar, col_json, col_csv, col_enviar = st.columns([1.2, 1.2, 1.2, 1.2])
-    
     data_key = f"df_extra_{id_chave}_{ano}_{mes}"
     json_raw_key = f"json_raw_{id_chave}_{ano}_{mes}"
     retorno_key = f"retorno_envio_{id_chave}_{ano}_{mes}"
+    flag_envio_key = f"executar_envio_{id_chave}_{ano}_{mes}"
+
+    col_gerar, col_json, col_csv, col_enviar = st.columns([1.2, 1.2, 1.2, 1.2])
 
     # 1. Botão Gerar Arquivo / JSON
     if col_gerar.button(f"⚙️ Gerar Arquivo", key=f"btn_gerar_{id_chave}"):
@@ -131,7 +185,8 @@ def render_bloco_processamento(conn, titulo, id_chave, sql, mes, ano, cod_unidad
                     if json_str:
                         st.session_state[json_raw_key] = json_str
                         dados = json.loads(json_str)
-                        st.session_state[data_key] = pd.json_normalize(dados.get("pagamentos", dados))
+                        pagamentos = dados.get("pagamentos", dados) if isinstance(dados, dict) else dados
+                        st.session_state[data_key] = pd.json_normalize(pagamentos)
                     else:
                         st.session_state[json_raw_key] = None
                         st.session_state[data_key] = pd.DataFrame()
@@ -142,6 +197,7 @@ def render_bloco_processamento(conn, titulo, id_chave, sql, mes, ano, cod_unidad
                         payload_obj = construir_payload_json(df, mes, ano, cod_unidade, cod_relatorio)
                         st.session_state[json_raw_key] = json.dumps(payload_obj, ensure_ascii=False, indent=2)
                 st.session_state.pop(retorno_key, None)
+                st.session_state.pop(flag_envio_key, None)
         except Exception as e:
             st.error(f"Erro ao consultar banco de dados: {str(e)}")
             st.session_state[data_key] = None
@@ -151,7 +207,6 @@ def render_bloco_processamento(conn, titulo, id_chave, sql, mes, ano, cod_unidad
 
     # 2. Exibição das Ações de Download e Transmissão
     if df_gerado is not None and not df_gerado.empty:
-        # Download JSON
         if json_raw:
             col_json.download_button(
                 label="📄 Baixar JSON",
@@ -161,7 +216,6 @@ def render_bloco_processamento(conn, titulo, id_chave, sql, mes, ano, cod_unidad
                 key=f"btn_json_{id_chave}"
             )
 
-        # Download CSV
         col_csv.download_button(
             label="📊 Baixar CSV",
             data=converter_para_csv(df_gerado),
@@ -170,44 +224,114 @@ def render_bloco_processamento(conn, titulo, id_chave, sql, mes, ano, cod_unidad
             key=f"btn_csv_{id_chave}"
         )
 
-        # Botão Enviar para a SEFAZ
+        # Botão para enviar arquivo com validação pontual de autenticação (SEM st.rerun aqui)
         if col_enviar.button(f"🚀 Enviar Arquivo", key=f"btn_enviar_{id_chave}", type="primary"):
-            with st.spinner("Transmitindo lote para a SEFAZ..."):
-                try:
-                    payload_para_envio = json_raw if json_raw else df_gerado
-                    res_api = transmitir_para_sefaz(payload_para_envio, ano)
-                    st.session_state[retorno_key] = res_api
-                    st.success("Transmissão efetuada com sucesso!")
-                    st.rerun()
-                except Exception as e:
-                    st.error(f"❌ Falha no envio: {str(e)}")
+            if not st.session_state.get("sefaz_auth", False):
+                st.session_state["tentando_enviar_sefaz"] = True
+                if auth_ui and hasattr(auth_ui, "garantir_autenticacao_sefaz"):
+                    auth_ui.garantir_autenticacao_sefaz(servico_nome=f"Transmissão - {titulo}")
+            else:
+                st.session_state[flag_envio_key] = True
+                st.rerun()
 
-    # 3. Métricas de Retorno da SEFAZ
+        # Processamento do Envio (Executado se a flag estiver ativa)
+        if st.session_state.get(flag_envio_key):
+            if not st.session_state.get("sefaz_auth", False):
+                st.warning("⚠️ É necessário se autenticar na SEFAZ para realizar o envio.")
+                st.session_state[flag_envio_key] = False
+            else:
+                payload_para_envio = json_raw if json_raw else df_gerado
+                if payload_para_envio is None:
+                    st.error("Nenhum dado válido para envio.")
+                    st.session_state[flag_envio_key] = False
+                else:
+                    with st.spinner("Transmitindo lote para a SEFAZ..."):
+                        sucesso, json_str, retorno = transmitir_para_sefaz(payload_para_envio, ano)
+
+                        st.session_state[flag_envio_key] = False
+                        st.session_state[retorno_key] = retorno
+
+                        if sucesso:
+                            st.success("Transmissão efetuada com sucesso!")
+                            st.rerun()
+                        else:
+                            if any(err in str(retorno) for err in ["401", "403", "Unauthorized"]):
+                                st.session_state["sefaz_auth"] = False
+                                st.session_state.pop("sefaz_cpf", None)
+                                st.session_state.pop("sefaz_pass", None)
+                                st.error("Sessão expirada ou credenciais inválidas. Por favor, autentique-se novamente.")
+                            else:
+                                st.error(f"Erro na transmissão: {retorno}")
+
+    # 3. Métricas e Tratos de Retorno da SEFAZ
     resp_sefaz = st.session_state.get(retorno_key)
     if resp_sefaz:
         st.write("---")
-        col_x, col_y, col_w, col_z = st.columns([1, 1, 1.4, 1])
-        with col_x:
-            st.metric("Enviados", resp_sefaz.get("qtdPagamentosRecebidos", 0))
-        with col_y:
-            st.metric("Recibo", resp_sefaz.get("codigo", "-"))
-        with col_w:
-            st.metric("Data/Hora", str(resp_sefaz.get("dataHoraCadastro", "-"))[:19].replace("T", " "))
-        with col_z:
-            st.metric("Status", resp_sefaz.get("observacao", "-"))
+        if isinstance(resp_sefaz, dict):
+            col_x, col_y, col_w, col_z = st.columns([1, 1, 1.4, 1])
+            with col_x:
+                st.metric("Enviados", resp_sefaz.get("qtdPagamentosRecebidos", 0))
+            with col_y:
+                st.metric("Recibo", resp_sefaz.get("codigo", "-"))
+            with col_w:
+                st.metric("Data/Hora", str(resp_sefaz.get("dataHoraCadastro", "-"))[:19].replace("T", " "))
+            with col_z:
+                st.metric("Status", resp_sefaz.get("observacao", "Sucesso"))
+        elif isinstance(resp_sefaz, list):
+            for item in resp_sefaz:
+                if isinstance(item, dict) and "erro" in item:
+                    st.warning(f"⚠️ **Retorno SEFAZ:** {item.get('erro')} (Data: {item.get('currentDate', '')})")
+                else:
+                    st.info(f"Retorno SEFAZ: {item}")
+        else:
+            st.info(f"Retorno SEFAZ: {resp_sefaz}")
 
+    # 4. Visualização e Totalização dos Dados
     if df_gerado is not None and not df_gerado.empty:
         with st.expander("🔍 Visualizar Prévia dos Dados", expanded=False):
             st.dataframe(df_gerado, use_container_width=True)
+            
+            col_v = 'valor' if 'valor' in df_gerado.columns else ('VANTAGENS' if 'VANTAGENS' in df_gerado.columns else None)
+            col_d = 'valorDesconto' if 'valorDesconto' in df_gerado.columns else ('DESCONTOS' if 'DESCONTOS' in df_gerado.columns else None)
+            
+            tot_v = pd.to_numeric(df_gerado[col_v].astype(str).str.replace(',', '.'), errors='coerce').sum() if col_v else 0.0
+            tot_d = pd.to_numeric(df_gerado[col_d].astype(str).str.replace(',', '.'), errors='coerce').sum() if col_d else 0.0
+            
+            str_tot_v = f"R$ {tot_v:,.2f}".replace(',', 'v').replace('.', ',').replace('v', '.')
+            str_tot_d = f"R$ {tot_d:,.2f}".replace(',', 'v').replace('.', ',').replace('v', '.')
+
+            st.divider()
+            col_space, col_tot_v, col_tot_d = st.columns([2, 1, 1])
+            with col_tot_v:
+                st.markdown(
+                    f"<div style='font-size: 14px; text-align: right;'>"
+                    f"<span style='color: #666; font-size: 12px;'>Total Valor/Vantagens</span><br>"
+                    f"<b>{str_tot_v}</b></div>",
+                    unsafe_allow_html=True
+                )
+            with col_tot_d:
+                st.markdown(
+                    f"<div style='font-size: 14px; text-align: right;'>"
+                    f"<span style='color: #666; font-size: 12px;'>Total Desconto</span><br>"
+                    f"<b>{str_tot_d}</b></div>",
+                    unsafe_allow_html=True
+                )
 
 
-def render(conn, ano, mes, meses_lista):
+def render(conn, ano, mes, meses_lista=None, auth_ui=None):
+    if meses_lista is None:
+        meses_lista = {
+            1: "Janeiro", 2: "Fevereiro", 3: "Março", 4: "Abril",
+            5: "Maio", 6: "Junho", 7: "Julho", 8: "Agosto",
+            9: "Setembro", 10: "Outubro", 11: "Novembro", 12: "Dezembro"
+        }
+
     st.title("📁 Gerador e Transmissor de Arquivos Extras")
-    mes_nome = meses_lista.get(mes, str(mes))
+    mes_nome = meses_lista.get(int(mes), str(mes))
     st.caption(f"**Competência Selecionada:** {mes_nome}/{ano}")
     st.divider()
 
-    # 1. PATRONAL EMGERPI (FP_120_9_202609_001_93)
+    # 1. PATRONAL EMGERPI
     render_bloco_processamento(
         conn=conn,
         titulo="1. PATRONAL EMGERPI",
@@ -216,12 +340,13 @@ def render(conn, ano, mes, meses_lista):
         mes=mes,
         ano=ano,
         cod_unidade="120",
-        cod_relatorio="93"
+        cod_relatorio="93",
+        auth_ui=auth_ui
     )
 
     st.divider()
 
-    # 2. PATRONAL EXTRA SEDUC (FP_011_9_202609_001_99)
+    # 2. PATRONAL EXTRA SEDUC
     sql_seduc_extra = """
     SELECT 
         CASE 
@@ -275,12 +400,13 @@ def render(conn, ano, mes, meses_lista):
         mes=mes,
         ano=ano,
         cod_unidade="011",
-        cod_relatorio="99"
+        cod_relatorio="99",
+        auth_ui=auth_ui
     )
 
     st.divider()
 
-    # 3. PATRONAL FUNPREV (FP_924_9_202609_001_90)
+    # 3. PATRONAL FUNPREV
     sql_funprev = """
     SELECT 
         RUBRICA, 
@@ -354,12 +480,13 @@ def render(conn, ano, mes, meses_lista):
         mes=mes,
         ano=ano,
         cod_unidade="924",
-        cod_relatorio="90"
+        cod_relatorio="90",
+        auth_ui=auth_ui
     )
 
     st.divider()
 
-    # 4. PATRONAL SEDUC 011 (FP_011_9_202609_001_90)
+    # 4. PATRONAL SEDUC 011
     sql_seduc_011 = """
     SELECT 
         CASE 
@@ -413,12 +540,13 @@ def render(conn, ano, mes, meses_lista):
         mes=mes,
         ano=ano,
         cod_unidade="011",
-        cod_relatorio="90"
+        cod_relatorio="90",
+        auth_ui=auth_ui
     )
 
     st.divider()
 
-    # 5. PATRONAL SEDUC 914 (FP_914_9_202609_001_90)
+    # 5. PATRONAL SEDUC 914
     sql_seduc_914 = """
     SELECT 
         CASE 
@@ -472,6 +600,7 @@ def render(conn, ano, mes, meses_lista):
         mes=mes,
         ano=ano,
         cod_unidade="914",
-        cod_relatorio="90"
+        cod_relatorio="90",
+        auth_ui=auth_ui
     )
 

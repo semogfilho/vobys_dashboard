@@ -4,14 +4,20 @@ import hashlib, toml, os, base64, random
 import usuarios
 import requests
 
-def garantir_autenticacao_sefaz(servico_nome):
-    # Se já estiver autenticado, não faz nada
-    if "sefaz_cpf" in st.session_state:
-        return True
+def garantir_autenticacao_sefaz(servico_nome=None):
+    """Função de entrada chamada pelas páginas."""
+    if not st.session_state.get("sefaz_auth", False):
+        modal_autenticacao_sefaz(servico_nome)
+
+
+#def garantir_autenticacao_sefaz(servico_nome):
+#    # Se já estiver autenticado, não faz nada
+#    if "sefaz_cpf" in st.session_state:
+#        return True
     
     # Se não, dispara o modal
-    modal_autenticacao_sefaz(servico_nome)
-    st.stop() # Isso PARA a execução aqui, forçando o usuário a interagir com o modal
+#    modal_autenticacao_sefaz(servico_nome)
+#    st.stop() # Isso PARA a execução aqui, forçando o usuário a interagir com o modal
 
 # O "Porteiro" - Decido se mostra o diálogo ou libera o acesso
 def verificar_credenciais_sefaz():
@@ -29,14 +35,13 @@ def verificar_credenciais_sefaz():
 
 # O "Diálogo" - A parte visual que você queria "estilosa"
 @st.dialog("Acesso SEFAZ")
-def modal_autenticacao_sefaz():
-    # Estilização CSS para um visual compacto e direto
+def modal_autenticacao_sefaz(servico_nome=None):
+    if servico_nome:
+        st.markdown(f"**{servico_nome}**")
+        
     st.markdown("""
         <style>
-        /* Removi a linha de background-color para ficar transparente/padrão */
-        div[data-testid="stDialog"] { 
-            width: 350px; 
-        }
+        div[data-testid="stDialog"] { width: 350px; }
         div.stButton > button {
             background-color: #f0f0f0;
             border: 1px solid #999;
@@ -51,18 +56,24 @@ def modal_autenticacao_sefaz():
         user_cpf = st.text_input("* Usuário")
         user_pass = st.text_input("* Senha", type="password")
         
-        # Espaçador para organizar o layout
         st.write("") 
         
-        # Botão Ok alinhado
         if st.form_submit_button("✅ Ok"):
+            # Substitua 'testar_conexao_sefaz' pela sua função real de validação
             if testar_conexao_sefaz(user_cpf, user_pass):
                 st.session_state.sefaz_auth = True
                 st.session_state.sefaz_cpf = user_cpf
                 st.session_state.sefaz_pass = user_pass
+                # IMPORTANTE: Limpa a tentativa para destravar o fluxo
+                st.session_state["tentando_enviar_sefaz"] = False
                 st.rerun()
             else:
                 st.error("Credenciais inválidas.")
+
+    # Se o modal fechar (clique no X ou fora), o script passa daqui.
+    # Garantimos que a flag de tentativa seja limpa para evitar que a tela trave:
+    if not st.session_state.get("sefaz_auth", False):
+        st.session_state["tentando_enviar_sefaz"] = False
 
 def testar_conexao_sefaz(cpf, senha):
     """

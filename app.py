@@ -265,6 +265,21 @@ with st.sidebar:
     st.divider()
 
     st.markdown(f"### 👤 {st.session_state.get('nome_usuario', 'Usuário')}")
+    
+    # --- INDICADOR DE STATUS DA SEFAZ E BOTÃO DE DESCONEXÃO ---
+    sefaz_autenticado = st.session_state.get("sefaz_auth", False)
+    if sefaz_autenticado:
+        st.markdown("🟢 **SEFAZ:** Conectado")
+        if st.button("Desconectar SEFAZ", key="btn_desconectar_sefaz"):
+            st.session_state["sefaz_auth"] = False
+            st.session_state["sefaz_cpf"] = ""
+            st.session_state["sefaz_pass"] = ""
+            st.rerun()
+    else:
+        st.markdown("🔴 **SEFAZ:** Desconectado")
+    st.divider()
+    # ---------------------------------------------------------
+
     hoje = datetime.date.today()
 
     if hoje.day >= 21:
@@ -330,7 +345,7 @@ try:
     elif menu_selecionado == "Usuários": usuarios.render(conn, st.session_state.perfil_usuario)
     elif menu_selecionado == "Relatório de Inconsistências SEFAZ": inconsistencia_sefaz_view.renderizar_inconsistencia_sefaz(ano, mes, auth_ui)
     elif menu_selecionado == "Consulta Credor SEFAZ": consulta_credor_view.renderizar_consulta_credor(ano, mes)
-    elif menu_selecionado == "Arquivos Extras": arquivos_extra.render(conn, ano, mes, meses_lista)
+    elif menu_selecionado == "Arquivos Extras": arquivos_extra.render(conn, ano, mes, meses_lista, auth_ui)
     elif menu_selecionado == "Extra": extra.render(conn)
     elif menu_selecionado == "Validação BB":
        if st.session_state.perfil_usuario == 'a': valida_bb.render(conn)
