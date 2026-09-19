@@ -594,8 +594,7 @@ def renderizar_dados_bancarios(
 
                 # Garantia da coluna LINK_SIAPE
                 if (
-                    "LINK_SIAPE" not in df_exibicao.columns
-                    and "ID_PESSOA" in df_exibicao.columns
+                    "ID_PESSOA" in df_exibicao.columns
                     and "CPF" in df_exibicao.columns
                 ):
                     df_exibicao["LINK_SIAPE"] = (

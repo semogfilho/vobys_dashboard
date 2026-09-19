@@ -121,6 +121,7 @@ def buscar_por_cpf(conn, cpf_limpo, ano, mes):
                             WHEN pbb.cod_banco IS NULL OR pb.conta_corrente IS NULL THEN 'SEM CONTA CADASTRADA'
                             ELSE pbb.cod_banco || ' / Op: ' || NVL(pb.operacao, '-') || ' / Ag: ' || NVL(pba.cod_agencia, '-') || ' / CC: ' || pb.conta_corrente
                         END AS CONTA_CORRENTE
+                        ,p.id_pessoa
                 FROM {schema}.folha_func ff
                 INNER JOIN {schema}.folha f ON f.id_folha = ff.id_folha
                 INNER JOIN sw_publico.pessoa p ON p.id_pessoa = ff.id_pessoa_funcionario
@@ -141,6 +142,7 @@ def buscar_por_cpf(conn, cpf_limpo, ano, mes):
                             WHEN pbb.cod_banco IS NULL OR pb.conta_corrente IS NULL THEN 'SEM CONTA CADASTRADA'
                             ELSE pbb.cod_banco || ' / Op: ' || NVL(pb.operacao, '-') || ' / Ag: ' || NVL(pba.cod_agencia, '-') || ' / CC: ' || pb.conta_corrente
                         END AS CONTA_CORRENTE
+                        ,p.id_pessoa
                 FROM {schema}.Estagiario_Pagamento ep
                 INNER JOIN {schema}.Estag_Folha ef ON ef.id_folha = ep.id_folha
                 INNER JOIN {schema}.estagiario e ON e.id_estagiario = ep.id_estagiario
