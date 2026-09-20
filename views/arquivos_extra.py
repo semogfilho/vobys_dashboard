@@ -2,6 +2,7 @@
 import json
 import requests
 import streamlit as st
+import streamlit.components.v1 as components
 import pandas as pd
 import urllib3
 
@@ -102,13 +103,13 @@ def transmitir_para_sefaz(payload_dados, ano):
         is_autenticado = st.session_state.get("sefaz_auth", False)
 
         if not is_autenticado or not usuario or not senha:
-            return False, None, "Erro: Credenciais não informadas ou usuário desconectado da SEFAZ. Por favor, autentique-se novamente."
+            return False, None, "Erro: Credenciais não informadas ou utilizador desconectado da SEFAZ. Por favor, autentique-se novamente."
 
         sefaz_sec = st.secrets.get("sefaz", {})
         base_url = sefaz_sec.get("BASE_URL") or sefaz_sec.get("base_url", "https://tesouro.sefaz.pi.gov.br/api")
 
         if not base_url:
-            return False, None, "Erro: BASE_URL da SEFAZ não configurada no secrets."
+            return False, None, "Erro: BASE_URL da SEFAZ não configurada nos secrets."
 
         if payload_dados is None:
             return False, None, "Erro: O payload de dados está vazio ou nulo."
@@ -176,10 +177,10 @@ def render_bloco_processamento(conn, titulo, id_chave, sql, mes, ano, cod_unidad
 
     col_gerar, col_json, col_csv, col_enviar = st.columns([1.2, 1.2, 1.2, 1.2])
 
-    # 1. Botão Gerar Arquivo / JSON
+    # 1. Botão Gerar Ficheiro / JSON
     if col_gerar.button(f"⚙️ Gerar Arquivo", key=f"btn_gerar_{id_chave}"):
         try:
-            with st.spinner(f"Gerando dados para {titulo}..."):
+            with st.spinner(f"A gerar dados para {titulo}..."):
                 if id_chave == "emgerpi":
                     json_str = executar_query_emgerpi(conn, ano, mes)
                     if json_str:
@@ -199,7 +200,7 @@ def render_bloco_processamento(conn, titulo, id_chave, sql, mes, ano, cod_unidad
                 st.session_state.pop(retorno_key, None)
                 st.session_state.pop(flag_envio_key, None)
         except Exception as e:
-            st.error(f"Erro ao consultar banco de dados: {str(e)}")
+            st.error(f"Erro ao consultar base de dados: {str(e)}")
             st.session_state[data_key] = None
 
     df_gerado = st.session_state.get(data_key)
@@ -224,7 +225,6 @@ def render_bloco_processamento(conn, titulo, id_chave, sql, mes, ano, cod_unidad
             key=f"btn_csv_{id_chave}"
         )
 
-        # Botão para enviar arquivo com validação pontual de autenticação (SEM st.rerun aqui)
         if col_enviar.button(f"🚀 Enviar Arquivo", key=f"btn_enviar_{id_chave}", type="primary"):
             if not st.session_state.get("sefaz_auth", False):
                 st.session_state["tentando_enviar_sefaz"] = True
@@ -234,10 +234,9 @@ def render_bloco_processamento(conn, titulo, id_chave, sql, mes, ano, cod_unidad
                 st.session_state[flag_envio_key] = True
                 st.rerun()
 
-        # Processamento do Envio (Executado se a flag estiver ativa)
         if st.session_state.get(flag_envio_key):
             if not st.session_state.get("sefaz_auth", False):
-                st.warning("⚠️ É necessário se autenticar na SEFAZ para realizar o envio.")
+                st.warning("⚠️ É necessário autenticar-se na SEFAZ para realizar o envio.")
                 st.session_state[flag_envio_key] = False
             else:
                 payload_para_envio = json_raw if json_raw else df_gerado
@@ -245,7 +244,7 @@ def render_bloco_processamento(conn, titulo, id_chave, sql, mes, ano, cod_unidad
                     st.error("Nenhum dado válido para envio.")
                     st.session_state[flag_envio_key] = False
                 else:
-                    with st.spinner("Transmitindo lote para a SEFAZ..."):
+                    with st.spinner("A transmitir lote para a SEFAZ..."):
                         sucesso, json_str, retorno = transmitir_para_sefaz(payload_para_envio, ano)
 
                         st.session_state[flag_envio_key] = False
@@ -263,7 +262,7 @@ def render_bloco_processamento(conn, titulo, id_chave, sql, mes, ano, cod_unidad
                             else:
                                 st.error(f"Erro na transmissão: {retorno}")
 
-    # 3. Métricas e Tratos de Retorno da SEFAZ
+    # 3. Métricas e Retornos da SEFAZ
     resp_sefaz = st.session_state.get(retorno_key)
     if resp_sefaz:
         st.write("---")
@@ -289,33 +288,140 @@ def render_bloco_processamento(conn, titulo, id_chave, sql, mes, ano, cod_unidad
     # 4. Visualização e Totalização dos Dados
     if df_gerado is not None and not df_gerado.empty:
         with st.expander("🔍 Visualizar Prévia dos Dados", expanded=False):
-            st.dataframe(df_gerado, use_container_width=True)
+            df_exibicao = df_gerado.copy()
             
-            col_v = 'valor' if 'valor' in df_gerado.columns else ('VANTAGENS' if 'VANTAGENS' in df_gerado.columns else None)
-            col_d = 'valorDesconto' if 'valorDesconto' in df_gerado.columns else ('DESCONTOS' if 'DESCONTOS' in df_gerado.columns else None)
+            cols_valores = ['VANTAGENS', 'DESCONTOS', 'valor', 'valorDesconto']
+            for col in cols_valores:
+                if col in df_exibicao.columns:
+                    if pd.api.types.is_numeric_dtype(df_exibicao[col]):
+                        df_exibicao[col] = pd.to_numeric(df_exibicao[col], errors='coerce').fillna(0.0)
+                    else:
+                        def converter_para_float(val):
+                            if pd.isna(val):
+                                return 0.0
+                            val_str = str(val).strip().replace('R$', '').strip()
+                            if not val_str:
+                                return 0.0
+                            if ',' in val_str and '.' in val_str:
+                                val_str = val_str.replace('.', '').replace(',', '.')
+                            elif ',' in val_str:
+                                val_str = val_str.replace(',', '.')
+                            try:
+                                return float(val_str)
+                            except ValueError:
+                                return 0.0
+
+                        df_exibicao[col] = df_exibicao[col].apply(converter_para_float)
+
+            # Cálculo dos totais
+            col_v = 'valor' if 'valor' in df_exibicao.columns else ('VANTAGENS' if 'VANTAGENS' in df_exibicao.columns else None)
+            col_d = 'valorDesconto' if 'valorDesconto' in df_exibicao.columns else ('DESCONTOS' if 'DESCONTOS' in df_exibicao.columns else None)
             
-            tot_v = pd.to_numeric(df_gerado[col_v].astype(str).str.replace(',', '.'), errors='coerce').sum() if col_v else 0.0
-            tot_d = pd.to_numeric(df_gerado[col_d].astype(str).str.replace(',', '.'), errors='coerce').sum() if col_d else 0.0
-            
+            tot_v = df_exibicao[col_v].sum() if col_v else 0.0
+            tot_d = df_exibicao[col_d].sum() if col_d else 0.0
+
+            # Formatação para moeda (R$)
             str_tot_v = f"R$ {tot_v:,.2f}".replace(',', 'v').replace('.', ',').replace('v', '.')
             str_tot_d = f"R$ {tot_d:,.2f}".replace(',', 'v').replace('.', ',').replace('v', '.')
 
-            st.divider()
-            col_space, col_tot_v, col_tot_d = st.columns([2, 1, 1])
-            with col_tot_v:
-                st.markdown(
-                    f"<div style='font-size: 14px; text-align: right;'>"
-                    f"<span style='color: #666; font-size: 12px;'>Total Valor/Vantagens</span><br>"
-                    f"<b>{str_tot_v}</b></div>",
-                    unsafe_allow_html=True
-                )
-            with col_tot_d:
-                st.markdown(
-                    f"<div style='font-size: 14px; text-align: right;'>"
-                    f"<span style='color: #666; font-size: 12px;'>Total Desconto</span><br>"
-                    f"<b>{str_tot_d}</b></div>",
-                    unsafe_allow_html=True
-                )
+            # Formatação para visualização em formato de moeda na tabela
+            df_tabela_formatada = df_exibicao.copy()
+            for col in cols_valores:
+                if col in df_tabela_formatada.columns:
+                    df_tabela_formatada[col] = df_tabela_formatada[col].apply(
+                        lambda x: f"R$ {x:,.2f}".replace(',', 'v').replace('.', ',').replace('v', '.')
+                    )
+
+            # Renderização via Tabela HTML customizada com cantos arredondados e bloco de totais integrado
+            html_tabela = df_tabela_formatada.to_html(index=True, classes="custom-preview-table", escape=False)
+            
+            html_completo = f"""
+            <style>
+                .preview-container {{
+                    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+                    border: 1px solid rgba(150, 150, 150, 0.2);
+                    border-radius: 8px;
+                    overflow: hidden;
+                    background-color: transparent;
+                    margin-bottom: 10px;
+                }}
+                .table-scroll {{
+                    overflow-x: auto;
+                }}
+                .custom-preview-table {{
+                    width: 100%;
+                    border-collapse: collapse;
+                    font-size: 13px;
+                    color: #31333F;
+                    margin: 0;
+                }}
+                .custom-preview-table th, .custom-preview-table td {{
+                    padding: 8px 12px;
+                    border-bottom: 1px solid rgba(150, 150, 150, 0.15);
+                    text-align: left;
+                }}
+                .custom-preview-table th {{
+                    font-weight: 600;
+                    background-color: rgba(150, 150, 150, 0.08);
+                    border-top: none;
+                }}
+                /* Cantos arredondados na primeira e última coluna do cabeçalho */
+                .custom-preview-table th:first-child {{
+                    border-top-left-radius: 8px;
+                }}
+                .custom-preview-table th:last-child {{
+                    border-top-right-radius: 8px;
+                }}
+                /* Alinhamento à direita nas colunas de valores */
+                .custom-preview-table th:nth-last-child(-n+2), 
+                .custom-preview-table td:nth-last-child(-n+2) {{
+                    text-align: right !important;
+                }}
+                /* Bloco de Totais Integrado */
+                .totals-footer {{
+                    display: flex;
+                    justify-content: flex-end;
+                    gap: 30px;
+                    padding: 12px 20px;
+                    background-color: rgba(150, 150, 150, 0.04);
+                    border-top: 1px solid rgba(150, 150, 150, 0.2);
+                }}
+                .total-item {{
+                    text-align: right;
+                }}
+                .total-label {{
+                    font-size: 11px;
+                    color: #666;
+                    font-weight: 500;
+                    margin-bottom: 2px;
+                    text-transform: uppercase;
+                    letter-spacing: 0.5px;
+                }}
+                .total-value {{
+                    font-size: 17px;
+                    font-weight: 700;
+                    color: #31333F;
+                }}
+            </style>
+            <div class="preview-container">
+                <div class="table-scroll">
+                    {html_tabela}
+                </div>
+                <div class="totals-footer">
+                    <div class="total-item">
+                        <div class="total-label">Total Valor/Vantagens</div>
+                        <div class="total-value">{str_tot_v}</div>
+                    </div>
+                    <div class="total-item">
+                        <div class="total-label">Total Desconto</div>
+                        <div class="total-value">{str_tot_d}</div>
+                    </div>
+                </div>
+            </div>
+            """
+            
+            altura_componente = min(max(180, (len(df_tabela_formatada) + 1) * 39 + 60), 450)
+            components.html(html_completo, height=altura_componente, scrolling=True)
 
 
 def render(conn, ano, mes, meses_lista=None, auth_ui=None):
