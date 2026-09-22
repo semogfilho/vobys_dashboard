@@ -262,26 +262,80 @@ def render_bloco_processamento(conn, titulo, id_chave, sql, mes, ano, cod_unidad
                             else:
                                 st.error(f"Erro na transmissão: {retorno}")
 
-    # 3. Métricas e Retornos da SEFAZ
+    # 3. Bloco Visual Moderno para Exibição do Recibo e Retorno da SEFAZ
     resp_sefaz = st.session_state.get(retorno_key)
     if resp_sefaz:
-        st.write("---")
+        st.markdown("""
+        <style>
+            .receipt-box {
+                background: linear-gradient(135deg, rgba(40, 167, 69, 0.08) 0%, rgba(23, 162, 184, 0.08) 100%);
+                border: 1px solid rgba(40, 167, 69, 0.3);
+                border-radius: 8px;
+                padding: 14px 18px;
+                margin-top: 12px;
+                margin-bottom: 12px;
+                font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            }
+            .receipt-header {
+                font-size: 13px;
+                font-weight: 700;
+                color: #28a745;
+                margin-bottom: 8px;
+                display: flex;
+                align-items: center;
+                gap: 6px;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+            }
+            .receipt-grid {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+                gap: 12px;
+            }
+            .receipt-item label {
+                font-size: 11px;
+                color: #666;
+                font-weight: 500;
+                display: block;
+                text-transform: uppercase;
+            }
+            .receipt-item value {
+                font-size: 14px;
+                font-weight: 700;
+                color: #31333F;
+            }
+        </style>
+        """, unsafe_allow_html=True)
+
         if isinstance(resp_sefaz, dict):
-            col_x, col_y, col_w, col_z = st.columns([1, 1, 1.4, 1])
-            with col_x:
-                st.metric("Enviados", resp_sefaz.get("qtdPagamentosRecebidos", 0))
-            with col_y:
-                st.metric("Recibo", resp_sefaz.get("codigo", "-"))
-            with col_w:
-                st.metric("Data/Hora", str(resp_sefaz.get("dataHoraCadastro", "-"))[:19].replace("T", " "))
-            with col_z:
-                st.metric("Status", resp_sefaz.get("observacao", "Sucesso"))
-        elif isinstance(resp_sefaz, list):
-            for item in resp_sefaz:
-                if isinstance(item, dict) and "erro" in item:
-                    st.warning(f"⚠️ **Retorno SEFAZ:** {item.get('erro')} (Data: {item.get('currentDate', '')})")
-                else:
-                    st.info(f"Retorno SEFAZ: {item}")
+            codigo_recibo = resp_sefaz.get("codigo", "N/D")
+            qtd_recebidos = resp_sefaz.get("qtdPagamentosRecebidos", 0)
+            data_hora = str(resp_sefaz.get("dataHoraCadastro", "-"))[:19].replace("T", " ")
+            status_obs = resp_sefaz.get("observacao", "Sucesso")
+
+            st.markdown(f"""
+            <div class="receipt-box">
+                <div class="receipt-header">✅ Comprovante de Transmissão / Recibo SIAFE</div>
+                <div class="receipt-grid">
+                    <div class="receipt-item">
+                        <label>Nº do Recibo / Código</label>
+                        <value>{codigo_recibo}</value>
+                    </div>
+                    <div class="receipt-item">
+                        <label>Registros Aceitos</label>
+                        <value>{qtd_recebidos}</value>
+                    </div>
+                    <div class="receipt-item">
+                        <label>Data / Hora</label>
+                        <value>{data_hora}</value>
+                    </div>
+                    <div class="receipt-item">
+                        <label>Status</label>
+                        <value>{status_obs}</value>
+                    </div>
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
         else:
             st.info(f"Retorno SEFAZ: {resp_sefaz}")
 
