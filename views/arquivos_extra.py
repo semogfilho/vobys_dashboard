@@ -158,11 +158,78 @@ def transmitir_para_sefaz(payload_dados, ano):
         return False, None, str(e)
 
 
+def consultar_recibo_sefaz(ano, mes, cod_unidade, cod_relatorio, codigo_externo):
+    """Função para consultar o recibo na SEFAZ com o tipo de folha ajustado para a EMGERPI."""
+    try:
+        usuario = st.session_state.get("sefaz_cpf", st.secrets["sefaz"]["SIAFE_CPF"])
+        senha = st.session_state.get("sefaz_pass", st.secrets["sefaz"]["SIAFE_SENHA"])
+
+        sefaz_sec = st.secrets.get("sefaz", {})
+        base_url = sefaz_sec.get("BASE_URL") or sefaz_sec.get("base_url", "https://tesouro.sefaz.pi.gov.br/api")
+
+        if not base_url:
+            return False, "Erro: BASE_URL da SEFAZ não configurada nos secrets."
+
+        session = requests.Session()
+        session.verify = False
+
+        payload_auth = {"usuario": usuario, "senha": senha}
+        r_auth = session.post(f"{base_url}/auth", json=payload_auth, timeout=10)
+        r_auth.raise_for_status()
+
+        token = r_auth.json().get("token")
+        if not token:
+            return False, "Erro: Token de autenticação não retornado pela API /auth."
+
+        session.headers.update({"Authorization": f"Bearer {token}"})
+
+        url_final = f"{base_url}/folha-pagamento/contabilizacao/{ano}"
+        
+        # Ajuste dinâmico do tipoFolha: 8 para EMGERPI (unidade 120 / RGPS), 9 para as demais
+        tipo_folha_val = 8 if str(cod_unidade) == "120" else 9
+        
+        payload_consulta = {
+            "mes": int(mes),
+            "competencia": f"{int(mes):02d}/{ano}",
+            "tipoFolha": tipo_folha_val,
+            "codigoUGSistemaExterno": str(cod_unidade),
+            "codigoExterno": str(codigo_externo),
+            "codigoRelatorio": str(cod_relatorio)
+        }
+
+        response = session.post(url_final, json=payload_consulta, timeout=15)
+        
+        try:
+            retorno_json = response.json()
+        except Exception:
+            retorno_json = response.text
+
+        if response.status_code in [200, 201]:
+            return True, retorno_json
+        elif response.status_code == 401:
+            st.session_state["sefaz_auth"] = False
+            st.session_state.pop("sefaz_cpf", None)
+            st.session_state.pop("sefaz_pass", None)
+            return False, "Erro HTTP 401: Sessão expirada. Por favor, autentique-se novamente."
+        else:
+            return False, f"Erro HTTP {response.status_code}: {retorno_json}"
+
+    except requests.exceptions.HTTPError as he:
+        status = he.response.status_code if he.response else "Desconhecido"
+        texto = he.response.text if he.response else str(he)
+        if status == 401:
+            st.session_state["sefaz_auth"] = False
+            st.session_state.pop("sefaz_cpf", None)
+            st.session_state.pop("sefaz_pass", None)
+        return False, f"Erro HTTP {status}: {texto}"
+    except Exception as e:
+        return False, str(e)
+
+
 # --- BLOCO DE RENDERIZAÇÃO DA INTERFACE ---
 
-def render_bloco_processamento(conn, titulo, id_chave, sql, mes, ano, cod_unidade=None, cod_relatorio=None, auth_ui=None, params_sql=None, seletor_folha_callback=None):
+def render_bloco_processamento(conn, titulo, id_chave, sql, mes, ano, cod_unidade=None, cod_relatorio=None, auth_ui=None, seletor_folha_callback=None):
     
-    # Se houver callback para manipulação dinâmica do título/parâmetros com base na folha escolhida
     codigo_externo = "001"
     if seletor_folha_callback is not None:
         tipo_folha_escolhida = seletor_folha_callback(id_chave)
@@ -188,10 +255,10 @@ def render_bloco_processamento(conn, titulo, id_chave, sql, mes, ano, cod_unidad
     json_raw_key = f"json_raw_{id_chave}_{ano}_{mes}_{codigo_externo}"
     retorno_key = f"retorno_envio_{id_chave}_{ano}_{mes}_{codigo_externo}"
     flag_envio_key = f"executar_envio_{id_chave}_{ano}_{mes}_{codigo_externo}"
+    flag_consulta_key = f"executar_consulta_{id_chave}_{ano}_{mes}_{codigo_externo}"
 
-    col_gerar, col_json, col_csv, col_enviar = st.columns([1.2, 1.2, 1.2, 1.2])
+    col_gerar, col_json, col_csv, col_enviar, col_consultar = st.columns([1.2, 1.2, 1.2, 1.2, 1.2])
 
-    # 1. Botão Gerar Ficheiro / JSON
     if col_gerar.button(f"⚙️ Gerar Arquivo", key=f"btn_gerar_{id_chave}_{codigo_externo}"):
         try:
             with st.spinner(f"A gerar dados para {titulo}..."):
@@ -213,6 +280,7 @@ def render_bloco_processamento(conn, titulo, id_chave, sql, mes, ano, cod_unidad
                         st.session_state[json_raw_key] = json.dumps(payload_obj, ensure_ascii=False, indent=2)
                 st.session_state.pop(retorno_key, None)
                 st.session_state.pop(flag_envio_key, None)
+                st.session_state.pop(flag_consulta_key, None)
         except Exception as e:
             st.error(f"Erro ao consultar base de dados: {str(e)}")
             st.session_state[data_key] = None
@@ -220,7 +288,11 @@ def render_bloco_processamento(conn, titulo, id_chave, sql, mes, ano, cod_unidad
     df_gerado = st.session_state.get(data_key)
     json_raw = st.session_state.get(json_raw_key)
 
-    # 2. Exibição das Ações de Download e Transmissão
+    # Botão de Consultar Recibo sempre acessível, independentemente de gerar o arquivo na tela agora
+    if col_consultar.button(f"🔍 Consultar Recibo", key=f"btn_consultar_{id_chave}_{codigo_externo}"):
+        st.session_state[flag_consulta_key] = True
+        st.rerun()
+
     if df_gerado is not None and not df_gerado.empty:
         if json_raw:
             col_json.download_button(
@@ -250,7 +322,7 @@ def render_bloco_processamento(conn, titulo, id_chave, sql, mes, ano, cod_unidad
 
         if st.session_state.get(flag_envio_key):
             if not st.session_state.get("sefaz_auth", False):
-                st.warning("⚠️ É necessário autenticar-se na SEFAZ para realizar o envio.")
+                st.warning("⚠ É necessário autenticar-se na SEFAZ para realizar o envio.")
                 st.session_state[flag_envio_key] = False
             else:
                 payload_para_envio = json_raw if json_raw else df_gerado
@@ -260,7 +332,6 @@ def render_bloco_processamento(conn, titulo, id_chave, sql, mes, ano, cod_unidad
                 else:
                     with st.spinner("A transmitir lote para a SEFAZ..."):
                         sucesso, json_str, retorno = transmitir_para_sefaz(payload_para_envio, ano)
-
                         st.session_state[flag_envio_key] = False
                         st.session_state[retorno_key] = retorno
 
@@ -276,9 +347,24 @@ def render_bloco_processamento(conn, titulo, id_chave, sql, mes, ano, cod_unidad
                             else:
                                 st.error(f"Erro na transmissão: {retorno}")
 
-    # 3. Bloco Visual Moderno para Exibição do Recibo e Retorno da SEFAZ
+    # Processamento da flag de consulta ao clicar no botão
+    if st.session_state.get(flag_consulta_key):
+        with st.spinner("A consultar recibo na SEFAZ..."):
+            sucesso, retorno = consultar_recibo_sefaz(ano, mes, cod_unidade, cod_relatorio, codigo_externo)
+            st.session_state[flag_consulta_key] = False
+            st.session_state[retorno_key] = retorno  
+
+            if sucesso:
+                st.success("Consulta realizada com sucesso!")
+                st.rerun()
+            else:
+                st.error(f"Erro na consulta: {retorno}")
+
+    # Renderização global do retorno/recibo se ele existir na sessão para este bloco
     resp_sefaz = st.session_state.get(retorno_key)
-    if resp_sefaz:
+    if resp_sefaz is not None:
+        dados_recibo = resp_sefaz[0] if isinstance(resp_sefaz, list) and len(resp_sefaz) > 0 else resp_sefaz
+
         st.markdown("""
         <style>
             .receipt-box {
@@ -321,11 +407,19 @@ def render_bloco_processamento(conn, titulo, id_chave, sql, mes, ano, cod_unidad
         </style>
         """, unsafe_allow_html=True)
 
-        if isinstance(resp_sefaz, dict):
-            codigo_recibo = resp_sefaz.get("codigo", "N/D")
-            qtd_recebidos = resp_sefaz.get("qtdPagamentosRecebidos", 0)
-            data_hora = str(resp_sefaz.get("dataHoraCadastro", "-"))[:19].replace("T", " ")
-            status_obs = resp_sefaz.get("observacao", "Sucesso")
+        if isinstance(dados_recibo, dict):
+            codigo_recibo = dados_recibo.get("codigo") or dados_recibo.get("numeroRecibo") or dados_recibo.get("id") or "N/D"
+            competencia_rec = dados_recibo.get("competencia") or dados_recibo.get("mesAno") or "-"
+            status_obs = dados_recibo.get("status") or dados_recibo.get("situacao") or "Sucesso"
+            val_bruto = dados_recibo.get("valorTotalBruto") or dados_recibo.get("valor") or 0.0
+            val_liquido = dados_recibo.get("valorTotalLiquido") or 0.0
+            
+            try:
+                val_bruto = float(val_bruto)
+                val_liquido = float(val_liquido)
+            except (ValueError, TypeError):
+                val_bruto = 0.0
+                val_liquido = 0.0
 
             st.markdown(f"""
             <div class="receipt-box">
@@ -336,24 +430,30 @@ def render_bloco_processamento(conn, titulo, id_chave, sql, mes, ano, cod_unidad
                         <value>{codigo_recibo}</value>
                     </div>
                     <div class="receipt-item">
-                        <label>Registros Aceitos</label>
-                        <value>{qtd_recebidos}</value>
-                    </div>
-                    <div class="receipt-item">
-                        <label>Data / Hora</label>
-                        <value>{data_hora}</value>
+                        <label>Competência</label>
+                        <value>{competencia_rec}</value>
                     </div>
                     <div class="receipt-item">
                         <label>Status</label>
                         <value>{status_obs}</value>
                     </div>
+                    <div class="receipt-item">
+                        <label>Valor Bruto</label>
+                        <value>R$ {val_bruto:,.2f}</value>
+                    </div>
+                    <div class="receipt-item">
+                        <label>Valor Líquido</label>
+                        <value>R$ {val_liquido:,.2f}</value>
+                    </div>
                 </div>
             </div>
             """, unsafe_allow_html=True)
+                
+        elif isinstance(resp_sefaz, list) and len(resp_sefaz) == 0:
+            st.warning("⚠️ A consulta retornou uma lista vazia. Nenhum registo encontrado para os parâmetros informados.")
         else:
             st.info(f"Retorno SEFAZ: {resp_sefaz}")
 
-    # 4. Visualização e Totalização dos Dados
     if df_gerado is not None and not df_gerado.empty:
         with st.expander("🔍 Visualizar Prévia dos Dados", expanded=False):
             df_exibicao = df_gerado.copy()
@@ -381,18 +481,15 @@ def render_bloco_processamento(conn, titulo, id_chave, sql, mes, ano, cod_unidad
 
                         df_exibicao[col] = df_exibicao[col].apply(converter_para_float)
 
-            # Cálculo dos totais
             col_v = 'valor' if 'valor' in df_exibicao.columns else ('VANTAGENS' if 'VANTAGENS' in df_exibicao.columns else None)
             col_d = 'valorDesconto' if 'valorDesconto' in df_exibicao.columns else ('DESCONTOS' if 'DESCONTOS' in df_exibicao.columns else None)
             
             tot_v = df_exibicao[col_v].sum() if col_v else 0.0
             tot_d = df_exibicao[col_d].sum() if col_d else 0.0
 
-            # Formatação para moeda (R$)
             str_tot_v = f"R$ {tot_v:,.2f}".replace(',', 'v').replace('.', ',').replace('v', '.')
             str_tot_d = f"R$ {tot_d:,.2f}".replace(',', 'v').replace('.', ',').replace('v', '.')
 
-            # Formatação para visualização em formato de moeda na tabela
             df_tabela_formatada = df_exibicao.copy()
             for col in cols_valores:
                 if col in df_tabela_formatada.columns:
@@ -400,7 +497,6 @@ def render_bloco_processamento(conn, titulo, id_chave, sql, mes, ano, cod_unidad
                         lambda x: f"R$ {x:,.2f}".replace(',', 'v').replace('.', ',').replace('v', '.')
                     )
 
-            # Renderização via Tabela HTML customizada com cantos arredondados e bloco de totais integrado
             html_tabela = df_tabela_formatada.to_html(index=True, classes="custom-preview-table", escape=False)
             
             html_completo = f"""
@@ -433,19 +529,16 @@ def render_bloco_processamento(conn, titulo, id_chave, sql, mes, ano, cod_unidad
                     background-color: rgba(150, 150, 150, 0.08);
                     border-top: none;
                 }}
-                /* Cantos arredondados na primeira e última coluna do cabeçalho */
                 .custom-preview-table th:first-child {{
                     border-top-left-radius: 8px;
                 }}
                 .custom-preview-table th:last-child {{
                     border-top-right-radius: 8px;
                 }}
-                /* Alinhamento à direita nas colunas de valores */
                 .custom-preview-table th:nth-last-child(-n+2), 
                 .custom-preview-table td:nth-last-child(-n+2) {{
                     text-align: right !important;
                 }}
-                /* Bloco de Totais Integrado */
                 .totals-footer {{
                     display: flex;
                     justify-content: flex-end;
@@ -505,7 +598,6 @@ def render(conn, ano, mes, meses_lista=None, auth_ui=None):
     st.caption(f"**Competência Selecionada:** {mes_nome}/{ano}")
     st.divider()
 
-    # 1. PATRONAL EMGERPI
     render_bloco_processamento(
         conn=conn,
         titulo="1. PATRONAL EMGERPI",
@@ -520,7 +612,6 @@ def render(conn, ano, mes, meses_lista=None, auth_ui=None):
 
     st.divider()
 
-    # 2. PATRONAL EXTRA SEDUC
     sql_seduc_extra = """
     SELECT 
         CASE 
@@ -580,7 +671,6 @@ def render(conn, ano, mes, meses_lista=None, auth_ui=None):
 
     st.divider()
 
-    # 3. PATRONAL FUNPREV (Com seletor dinâmico para Ordinária ou Suplementar)
     st.markdown("### Configuração do Tipo de Folha - Funprev")
     tipo_folha_funprev = st.radio(
         "Selecione o tipo de folha para a Funprev:",
@@ -673,7 +763,6 @@ def render(conn, ano, mes, meses_lista=None, auth_ui=None):
 
     st.divider()
 
-    # 4. PATRONAL SEDUC 011
     sql_seduc_011 = """
     SELECT 
         CASE 
@@ -733,7 +822,6 @@ def render(conn, ano, mes, meses_lista=None, auth_ui=None):
 
     st.divider()
 
-    # 5. PATRONAL SEDUC 914
     sql_seduc_914 = """
     SELECT 
         CASE 
