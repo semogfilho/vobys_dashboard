@@ -46,10 +46,13 @@ def construir_payload_json(df, mes, ano, cod_unidade, cod_relatorio, codigo_exte
             "valorDesconto": round(valor_desc, 2)
         })
 
+    # Ajuste dinâmico do tipo de folha: 8 para EMGERPI (120), 9 para as restantes
+    id_tipo_folha = 8 if str(cod_unidade) == "120" else 9
+
     payload = {
         "codigoUnidadeSistemaExterno": str(cod_unidade),
         "mes": int(mes),
-        "idTipoFolha": 9,
+        "idTipoFolha": id_tipo_folha,
         "codigoExterno": str(codigo_externo),
         "codigoRelatorioFolhaPagamento": str(cod_relatorio),
         "competencia": f"{int(mes):02d}/{ano}",
@@ -243,7 +246,9 @@ def render_bloco_processamento(conn, titulo, id_chave, sql, mes, ano, cod_unidad
                 sql = sql("ordinaria")
 
     if cod_unidade and cod_relatorio:
-        nome_arquivo_base = f"FP_{cod_unidade}_9_{ano}{int(mes):02d}_{codigo_externo}_{cod_relatorio}"
+        # Ajuste dinâmico do tipo de folha exibido no nome do arquivo (8 para EMGERPI, 9 para as demais)
+        tipo_folha_val = 8 if str(cod_unidade) == "120" else 9
+        nome_arquivo_base = f"FP_{cod_unidade}_{tipo_folha_val}_{ano}{int(mes):02d}_{codigo_externo}_{cod_relatorio}"
         titulo_exibicao = f"{titulo} - {nome_arquivo_base}"
     else:
         nome_arquivo_base = f"PATRONAL_{id_chave.upper()}_{ano}{int(mes):02d}"
