@@ -19,7 +19,7 @@ except ImportError:
 
 # --- FUNÇÕES AUXILIARES DE CONVERSÃO E BANCO ---
 
-def construir_payload_json(df, mes, ano, cod_unidade, cod_relatorio):
+def construir_payload_json(df, mes, ano, cod_unidade, cod_relatorio, codigo_externo="001"):
     if df is None or df.empty:
         return None
 
@@ -50,7 +50,7 @@ def construir_payload_json(df, mes, ano, cod_unidade, cod_relatorio):
         "codigoUnidadeSistemaExterno": str(cod_unidade),
         "mes": int(mes),
         "idTipoFolha": 9,
-        "codigoExterno": "001",
+        "codigoExterno": str(codigo_externo),
         "codigoRelatorioFolhaPagamento": str(cod_relatorio),
         "competencia": f"{int(mes):02d}/{ano}",
         "pagamentos": pagamentos
@@ -160,9 +160,23 @@ def transmitir_para_sefaz(payload_dados, ano):
 
 # --- BLOCO DE RENDERIZAÇÃO DA INTERFACE ---
 
-def render_bloco_processamento(conn, titulo, id_chave, sql, mes, ano, cod_unidade=None, cod_relatorio=None, auth_ui=None):
+def render_bloco_processamento(conn, titulo, id_chave, sql, mes, ano, cod_unidade=None, cod_relatorio=None, auth_ui=None, params_sql=None, seletor_folha_callback=None):
+    
+    # Se houver callback para manipulação dinâmica do título/parâmetros com base na folha escolhida
+    codigo_externo = "001"
+    if seletor_folha_callback is not None:
+        tipo_folha_escolhida = seletor_folha_callback(id_chave)
+        if tipo_folha_escolhida == "Suplementar":
+            codigo_externo = "002"
+            if callable(sql):
+                sql = sql("suplementar")
+        else:
+            codigo_externo = "001"
+            if callable(sql):
+                sql = sql("ordinaria")
+
     if cod_unidade and cod_relatorio:
-        nome_arquivo_base = f"FP_{cod_unidade}_9_{ano}{int(mes):02d}_001_{cod_relatorio}"
+        nome_arquivo_base = f"FP_{cod_unidade}_9_{ano}{int(mes):02d}_{codigo_externo}_{cod_relatorio}"
         titulo_exibicao = f"{titulo} - {nome_arquivo_base}"
     else:
         nome_arquivo_base = f"PATRONAL_{id_chave.upper()}_{ano}{int(mes):02d}"
@@ -170,15 +184,15 @@ def render_bloco_processamento(conn, titulo, id_chave, sql, mes, ano, cod_unidad
 
     st.subheader(titulo_exibicao)
     
-    data_key = f"df_extra_{id_chave}_{ano}_{mes}"
-    json_raw_key = f"json_raw_{id_chave}_{ano}_{mes}"
-    retorno_key = f"retorno_envio_{id_chave}_{ano}_{mes}"
-    flag_envio_key = f"executar_envio_{id_chave}_{ano}_{mes}"
+    data_key = f"df_extra_{id_chave}_{ano}_{mes}_{codigo_externo}"
+    json_raw_key = f"json_raw_{id_chave}_{ano}_{mes}_{codigo_externo}"
+    retorno_key = f"retorno_envio_{id_chave}_{ano}_{mes}_{codigo_externo}"
+    flag_envio_key = f"executar_envio_{id_chave}_{ano}_{mes}_{codigo_externo}"
 
     col_gerar, col_json, col_csv, col_enviar = st.columns([1.2, 1.2, 1.2, 1.2])
 
     # 1. Botão Gerar Ficheiro / JSON
-    if col_gerar.button(f"⚙️ Gerar Arquivo", key=f"btn_gerar_{id_chave}"):
+    if col_gerar.button(f"⚙️ Gerar Arquivo", key=f"btn_gerar_{id_chave}_{codigo_externo}"):
         try:
             with st.spinner(f"A gerar dados para {titulo}..."):
                 if id_chave == "emgerpi":
@@ -195,7 +209,7 @@ def render_bloco_processamento(conn, titulo, id_chave, sql, mes, ano, cod_unidad
                     df = executar_query(conn, sql, {"mes": mes, "ano": ano})
                     st.session_state[data_key] = df
                     if not df.empty and cod_unidade and cod_relatorio:
-                        payload_obj = construir_payload_json(df, mes, ano, cod_unidade, cod_relatorio)
+                        payload_obj = construir_payload_json(df, mes, ano, cod_unidade, cod_relatorio, codigo_externo)
                         st.session_state[json_raw_key] = json.dumps(payload_obj, ensure_ascii=False, indent=2)
                 st.session_state.pop(retorno_key, None)
                 st.session_state.pop(flag_envio_key, None)
@@ -214,7 +228,7 @@ def render_bloco_processamento(conn, titulo, id_chave, sql, mes, ano, cod_unidad
                 data=json_raw.encode('utf-8'),
                 file_name=f"{nome_arquivo_base}.json",
                 mime="application/json",
-                key=f"btn_json_{id_chave}"
+                key=f"btn_json_{id_chave}_{codigo_externo}"
             )
 
         col_csv.download_button(
@@ -222,10 +236,10 @@ def render_bloco_processamento(conn, titulo, id_chave, sql, mes, ano, cod_unidad
             data=converter_para_csv(df_gerado),
             file_name=f"{nome_arquivo_base}.csv",
             mime="text/csv",
-            key=f"btn_csv_{id_chave}"
+            key=f"btn_csv_{id_chave}_{codigo_externo}"
         )
 
-        if col_enviar.button(f"🚀 Enviar Arquivo", key=f"btn_enviar_{id_chave}", type="primary"):
+        if col_enviar.button(f"🚀 Enviar Arquivo", key=f"btn_enviar_{id_chave}_{codigo_externo}", type="primary"):
             if not st.session_state.get("sefaz_auth", False):
                 st.session_state["tentando_enviar_sefaz"] = True
                 if auth_ui and hasattr(auth_ui, "garantir_autenticacao_sefaz"):
@@ -566,82 +580,95 @@ def render(conn, ano, mes, meses_lista=None, auth_ui=None):
 
     st.divider()
 
-    # 3. PATRONAL FUNPREV
-    sql_funprev = """
-    SELECT 
-        RUBRICA, 
-        DESCRIMINACAO, 
-        'RPPS' AS TIPO_REGIME, 
-        CASE 
-            WHEN S.ID_REGIME IN (9, 1000003) THEN 'MILITAR' 
-            ELSE 'CIVIL' 
-        END AS TIPO_VINCULO, 
-        0 AS VANTAGENS, 
-        REPLACE(TO_CHAR(SUM(S.VALOR_CALCULADO)), ',', '.') AS DESCONTOS 
-    FROM ( 
-        SELECT 
-            CASE 
-                WHEN FR.COD_RUBRICA IN (714470, 714475, 714480) THEN SUM(FF.VALOR_CALCULADO * -1) 
-                ELSE SUM(FF.VALOR_CALCULADO) 
-            END AS VALOR_CALCULADO, 
-            FR.COD_RUBRICA, 
-            CASE 
-                WHEN FO.TIPO_FOLHA_SEFAZ = 'C7' THEN '934' 
-                ELSE '924' 
-            END AS RUBRICA, 
-            CASE 
-                WHEN FO.TIPO_FOLHA_SEFAZ = 'C7' THEN 'PIAUIPREV - Patronal - Pensionista' 
-                ELSE 'PIAUIPREV - Patronal - Aposentado' 
-            END AS DESCRIMINACAO, 
-            FI.ID_REGIME 
-        FROM SW_FUNPREV.FOLHA_CONTRACHEQUE FC 
-        JOIN SW_FUNPREV.FOLHA FO ON FO.ID_FOLHA = FC.ID_FOLHA 
-        JOIN SW_FUNPREV.FUNCIONARIO_INGRESSO FI ON FI.ID_FUNCIONARIO = FC.ID_FUNCIONARIO 
-        JOIN SW_FUNPREV.FOLHA_FICHA_FINANCEIRA FF ON FF.ID_FOLHA_FUNCIONARIO = FC.ID_FOLHA_FUNCIONARIO 
-        JOIN SW_PUBLICO.FOLHA_RUBRICA FR ON FR.ID_RUBRICA = FF.ID_RUBRICA 
-        WHERE FO.MES = :mes 
-          AND FO.ANO = :ano 
-          AND FO.ID_TIPO_FOLHA IN (1000000) 
-          AND FC.ID_PENSIONISTA IS NULL 
-          AND FC.ID_PENSIONISTA_PA IS NULL 
-          AND FR.COD_RUBRICA IN (714400, 714403, 714405, 714410, 714436, 714450, 714460, 714455, 714420, 714452, 714470, 714475, 714480) 
-        GROUP BY FO.TIPO_FOLHA_SEFAZ, FR.COD_RUBRICA, FI.ID_REGIME 
+    # 3. PATRONAL FUNPREV (Com seletor dinâmico para Ordinária ou Suplementar)
+    st.markdown("### Configuração do Tipo de Folha - Funprev")
+    tipo_folha_funprev = st.radio(
+        "Selecione o tipo de folha para a Funprev:",
+        options=["Ordinária", "Suplementar"],
+        horizontal=True,
+        key="radio_tipo_folha_funprev"
+    )
+
+    def get_sql_funprev(tipo):
+        condicao_tipo_folha = "FO.ID_TIPO_FOLHA IN (1000000)" if tipo == "ordinaria" else "NOT FO.ID_TIPO_FOLHA IN (1000000)"
         
-        UNION ALL 
-        
+        return f"""
         SELECT 
+            RUBRICA, 
+            DESCRIMINACAO, 
+            'RPPS' AS TIPO_REGIME, 
             CASE 
-                WHEN FR.COD_RUBRICA IN (714470, 714475, 714480) THEN SUM(FF.VALOR_CALCULADO * -1) 
-                ELSE SUM(FF.VALOR_CALCULADO) 
-            END AS VALOR_CALCULADO, 
-            FR.COD_RUBRICA, 
-            '934' AS RUBRICA, 
-            'PIAUIPREV - Patronal - Pensionista' AS DESCRIMINACAO, 
-            FI.ID_REGIME 
-        FROM SW_FUNPREV.FOLHA_CONTRACHEQUE FC 
-        JOIN SW_FUNPREV.FOLHA FO ON FO.ID_FOLHA = FC.ID_FOLHA 
-        JOIN SW_FUNPREV.FUNC_PENSAO_CIVIL PC ON PC.ID_PENSIONISTA = FC.ID_PENSIONISTA 
-        JOIN SW_FUNPREV.FUNCIONARIO_INGRESSO FI ON FI.ID_FUNCIONARIO = PC.ID_FUNCIONARIO 
-        JOIN SW_FUNPREV.FOLHA_FICHA_FINANCEIRA FF ON FF.ID_FOLHA_FUNCIONARIO = FC.ID_FOLHA_FUNCIONARIO 
-        JOIN SW_PUBLICO.FOLHA_RUBRICA FR ON FR.ID_RUBRICA = FF.ID_RUBRICA 
-        WHERE FO.MES = :mes 
-          AND FO.ANO = :ano 
-          AND FO.ID_TIPO_FOLHA IN (1000000) 
-          AND FR.COD_RUBRICA IN (714400, 714403, 714405, 714410, 714436, 714450, 714460, 714455, 714420, 714452, 714470, 714475, 714480) 
-        GROUP BY FO.TIPO_FOLHA_SEFAZ, FR.COD_RUBRICA, FI.ID_REGIME 
-    ) S 
-    GROUP BY S.RUBRICA, S.DESCRIMINACAO, S.ID_REGIME
-    """
+                WHEN S.ID_REGIME IN (9, 1000003) THEN 'MILITAR' 
+                ELSE 'CIVIL' 
+            END AS TIPO_VINCULO, 
+            0 AS VANTAGENS, 
+            REPLACE(TO_CHAR(SUM(S.VALOR_CALCULADO)), ',', '.') AS DESCONTOS 
+        FROM ( 
+            SELECT 
+                CASE 
+                    WHEN FR.COD_RUBRICA IN (714470, 714475, 714480) THEN SUM(FF.VALOR_CALCULADO * -1) 
+                    ELSE SUM(FF.VALOR_CALCULADO) 
+                END AS VALOR_CALCULADO, 
+                FR.COD_RUBRICA, 
+                CASE 
+                    WHEN FO.TIPO_FOLHA_SEFAZ = 'C7' THEN '934' 
+                    ELSE '924' 
+                END AS RUBRICA, 
+                CASE 
+                    WHEN FO.TIPO_FOLHA_SEFAZ = 'C7' THEN 'PIAUIPREV - Patronal - Pensionista' 
+                    ELSE 'PIAUIPREV - Patronal - Aposentado' 
+                END AS DESCRIMINACAO, 
+                FI.ID_REGIME 
+            FROM SW_FUNPREV.FOLHA_CONTRACHEQUE FC 
+            JOIN SW_FUNPREV.FOLHA FO ON FO.ID_FOLHA = FC.ID_FOLHA 
+            JOIN SW_FUNPREV.FUNCIONARIO_INGRESSO FI ON FI.ID_FUNCIONARIO = FC.ID_FUNCIONARIO 
+            JOIN SW_FUNPREV.FOLHA_FICHA_FINANCEIRA FF ON FF.ID_FOLHA_FUNCIONARIO = FC.ID_FOLHA_FUNCIONARIO 
+            JOIN SW_PUBLICO.FOLHA_RUBRICA FR ON FR.ID_RUBRICA = FF.ID_RUBRICA 
+            WHERE FO.MES = :mes 
+              AND FO.ANO = :ano 
+              AND {condicao_tipo_folha} 
+              AND FC.ID_PENSIONISTA IS NULL 
+              AND FC.ID_PENSIONISTA_PA IS NULL 
+              AND FR.COD_RUBRICA IN (714400, 714403, 714405, 714410, 714436, 714450, 714460, 714455, 714420, 714452, 714470, 714475, 714480) 
+            GROUP BY FO.TIPO_FOLHA_SEFAZ, FR.COD_RUBRICA, FI.ID_REGIME 
+            
+            UNION ALL 
+            
+            SELECT 
+                CASE 
+                    WHEN FR.COD_RUBRICA IN (714470, 714475, 714480) THEN SUM(FF.VALOR_CALCULADO * -1) 
+                    ELSE SUM(FF.VALOR_CALCULADO) 
+                END AS VALOR_CALCULADO, 
+                FR.COD_RUBRICA, 
+                '934' AS RUBRICA, 
+                'PIAUIPREV - Patronal - Pensionista' AS DESCRIMINACAO, 
+                FI.ID_REGIME 
+            FROM SW_FUNPREV.FOLHA_CONTRACHEQUE FC 
+            JOIN SW_FUNPREV.FOLHA FO ON FO.ID_FOLHA = FC.ID_FOLHA 
+            JOIN SW_FUNPREV.FUNC_PENSAO_CIVIL PC ON PC.ID_PENSIONISTA = FC.ID_PENSIONISTA 
+            JOIN SW_FUNPREV.FUNCIONARIO_INGRESSO FI ON FI.ID_FUNCIONARIO = PC.ID_FUNCIONARIO 
+            JOIN SW_FUNPREV.FOLHA_FICHA_FINANCEIRA FF ON FF.ID_FOLHA_FUNCIONARIO = FC.ID_FOLHA_FUNCIONARIO 
+            JOIN SW_PUBLICO.FOLHA_RUBRICA FR ON FR.ID_RUBRICA = FF.ID_RUBRICA 
+            WHERE FO.MES = :mes 
+              AND FO.ANO = :ano 
+              AND {condicao_tipo_folha} 
+              AND FR.COD_RUBRICA IN (714400, 714403, 714405, 714410, 714436, 714450, 714460, 714455, 714420, 714452, 714470, 714475, 714480) 
+            GROUP BY FO.TIPO_FOLHA_SEFAZ, FR.COD_RUBRICA, FI.ID_REGIME 
+        ) S 
+        GROUP BY S.RUBRICA, S.DESCRIMINACAO, S.ID_REGIME
+        """
+
     render_bloco_processamento(
         conn=conn,
         titulo="3. PATRONAL FUNPREV",
         id_chave="funprev",
-        sql=sql_funprev,
+        sql=get_sql_funprev,
         mes=mes,
         ano=ano,
         cod_unidade="924",
         cod_relatorio="90",
-        auth_ui=auth_ui
+        auth_ui=auth_ui,
+        seletor_folha_callback=lambda k: tipo_folha_funprev
     )
 
     st.divider()
