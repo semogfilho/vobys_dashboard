@@ -231,22 +231,19 @@ def consultar_recibo_sefaz(ano, mes, cod_unidade, cod_relatorio, codigo_externo)
 
 # --- BLOCO DE RENDERIZAÇÃO DA INTERFACE ---
 
-def render_bloco_processamento(conn, titulo, id_chave, sql, mes, ano, cod_unidade=None, cod_relatorio=None, auth_ui=None, seletor_folha_callback=None):
+def render_bloco_processamento(conn, titulo, id_chave, sql, mes, ano, cod_unidade=None, cod_relatorio=None, auth_ui=None, seletor_folha_global="Ordinária"):
     
     codigo_externo = "001"
-    if seletor_folha_callback is not None:
-        tipo_folha_escolhida = seletor_folha_callback(id_chave)
-        if tipo_folha_escolhida == "Suplementar":
-            codigo_externo = "002"
-            if callable(sql):
-                sql = sql("suplementar")
-        else:
-            codigo_externo = "001"
-            if callable(sql):
-                sql = sql("ordinaria")
+    if seletor_folha_global == "Suplementar":
+        codigo_externo = "002"
+        if callable(sql):
+            sql = sql("suplementar")
+    else:
+        codigo_externo = "001"
+        if callable(sql):
+            sql = sql("ordinaria")
 
     if cod_unidade and cod_relatorio:
-        # Ajuste dinâmico do tipo de folha exibido no nome do arquivo (8 para EMGERPI, 9 para as demais)
         tipo_folha_val = 8 if str(cod_unidade) == "120" else 9
         nome_arquivo_base = f"FP_{cod_unidade}_{tipo_folha_val}_{ano}{int(mes):02d}_{codigo_externo}_{cod_relatorio}"
         titulo_exibicao = f"{titulo} - {nome_arquivo_base}"
@@ -293,7 +290,6 @@ def render_bloco_processamento(conn, titulo, id_chave, sql, mes, ano, cod_unidad
     df_gerado = st.session_state.get(data_key)
     json_raw = st.session_state.get(json_raw_key)
 
-    # Botão de Consultar Recibo sempre acessível, independentemente de gerar o arquivo na tela agora
     if col_consultar.button(f"🔍 Consultar Recibo", key=f"btn_consultar_{id_chave}_{codigo_externo}"):
         st.session_state[flag_consulta_key] = True
         st.rerun()
@@ -352,7 +348,6 @@ def render_bloco_processamento(conn, titulo, id_chave, sql, mes, ano, cod_unidad
                             else:
                                 st.error(f"Erro na transmissão: {retorno}")
 
-    # Processamento da flag de consulta ao clicar no botão
     if st.session_state.get(flag_consulta_key):
         with st.spinner("A consultar recibo na SEFAZ..."):
             sucesso, retorno = consultar_recibo_sefaz(ano, mes, cod_unidade, cod_relatorio, codigo_externo)
@@ -365,7 +360,6 @@ def render_bloco_processamento(conn, titulo, id_chave, sql, mes, ano, cod_unidad
             else:
                 st.error(f"Erro na consulta: {retorno}")
 
-    # Renderização global do retorno/recibo se ele existir na sessão para este bloco
     resp_sefaz = st.session_state.get(retorno_key)
     if resp_sefaz is not None:
         dados_recibo = resp_sefaz[0] if isinstance(resp_sefaz, list) and len(resp_sefaz) > 0 else resp_sefaz
@@ -600,7 +594,21 @@ def render(conn, ano, mes, meses_lista=None, auth_ui=None):
 
     st.title("📁 Gerador e Transmissor de Arquivos Extras")
     mes_nome = meses_lista.get(int(mes), str(mes))
-    st.caption(f"**Competência Selecionada:** {mes_nome}/{ano}")
+    
+    # Cabeçalho unificado global: competência e seletor geral do tipo de folha lado a lado
+    col_comp, col_tipo_folha = st.columns([1.5, 2.5])
+    
+    with col_comp:
+        st.caption(f"**Competência Selecionada:** {mes_nome}/{ano}")
+        
+    with col_tipo_folha:
+        tipo_folha_global = st.radio(
+            "Tipo de Folha Geral:",
+            options=["Ordinária", "Suplementar"],
+            horizontal=True,
+            key="radio_tipo_folha_global"
+        )
+
     st.divider()
 
     render_bloco_processamento(
@@ -612,7 +620,8 @@ def render(conn, ano, mes, meses_lista=None, auth_ui=None):
         ano=ano,
         cod_unidade="120",
         cod_relatorio="93",
-        auth_ui=auth_ui
+        auth_ui=auth_ui,
+        seletor_folha_global=tipo_folha_global
     )
 
     st.divider()
@@ -671,18 +680,11 @@ def render(conn, ano, mes, meses_lista=None, auth_ui=None):
         ano=ano,
         cod_unidade="011",
         cod_relatorio="99",
-        auth_ui=auth_ui
+        auth_ui=auth_ui,
+        seletor_folha_global=tipo_folha_global
     )
 
     st.divider()
-
-    st.markdown("### Configuração do Tipo de Folha - Funprev")
-    tipo_folha_funprev = st.radio(
-        "Selecione o tipo de folha para a Funprev:",
-        options=["Ordinária", "Suplementar"],
-        horizontal=True,
-        key="radio_tipo_folha_funprev"
-    )
 
     def get_sql_funprev(tipo):
         condicao_tipo_folha = "FO.ID_TIPO_FOLHA IN (1000000)" if tipo == "ordinaria" else "NOT FO.ID_TIPO_FOLHA IN (1000000)"
@@ -763,7 +765,7 @@ def render(conn, ano, mes, meses_lista=None, auth_ui=None):
         cod_unidade="924",
         cod_relatorio="90",
         auth_ui=auth_ui,
-        seletor_folha_callback=lambda k: tipo_folha_funprev
+        seletor_folha_global=tipo_folha_global
     )
 
     st.divider()
@@ -822,7 +824,8 @@ def render(conn, ano, mes, meses_lista=None, auth_ui=None):
         ano=ano,
         cod_unidade="011",
         cod_relatorio="90",
-        auth_ui=auth_ui
+        auth_ui=auth_ui,
+        seletor_folha_global=tipo_folha_global
     )
 
     st.divider()
@@ -881,6 +884,7 @@ def render(conn, ano, mes, meses_lista=None, auth_ui=None):
         ano=ano,
         cod_unidade="914",
         cod_relatorio="90",
-        auth_ui=auth_ui
+        auth_ui=auth_ui,
+        seletor_folha_global=tipo_folha_global
     )
 

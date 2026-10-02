@@ -67,34 +67,34 @@ reload_views()
 
 # 5. Validação final de menu
 def get_opcoes():
-  opcoes_base = [
-      "Inicio",
-      "Grafico",
-      "Pagto Pendente",
-      "Responsavel",
-      "Arquivos/ID",
-      "Auditoria",
-      "Auditoria Folha",
-      "Consulta Credor SEFAZ",
-      "Relatório de Inconsistências SEFAZ",
-  ]
+    opcoes_base = [
+        "Inicio",
+        "Grafico",
+        "Pagto Pendente",
+        "Responsavel",
+        "Arquivos/ID",
+        "Auditoria",
+        "Auditoria Folha",
+        "Consulta Credor SEFAZ",
+        "Relatório de Inconsistências SEFAZ",
+    ]
 
-  if st.session_state.get("perfil_usuario") in ["a", "g", "c"]:
-    opcoes_base.append("Usuários")
+    if st.session_state.get("perfil_usuario") in ["a", "g", "c"]:
+        opcoes_base.append("Usuários")
 
-  # --- RESTRIÇÃO DAS OPÇÕES EXTRAS ---
-  # Liberado para o Valdiano (por login) ou para qualquer Admin (perfil 'a')
-  login_bruto = st.session_state.get("login_atual")
-  login_atual = str(login_bruto).lower() if login_bruto else ""
+    # --- RESTRIÇÃO DAS OPÇÕES EXTRAS ---
+    # Liberado para o Valdiano (por login), Admin ('a') ou Gerente ('g')
+    login_bruto = st.session_state.get("login_atual")
+    login_atual = str(login_bruto).lower() if login_bruto else ""
 
-  if (
-      login_atual == "valdiano"
-      or st.session_state.get("perfil_usuario") == "a"
-  ):
-    opcoes_base.append("Arquivos Extras")
-    opcoes_base.append("Extra")
+    if (
+        login_atual == "valdiano"
+        or st.session_state.get("perfil_usuario") in ["a", "g"]
+    ):
+        opcoes_base.append("Arquivos Extras")
+        opcoes_base.append("Extra")
 
-  return opcoes_base
+    return opcoes_base
 
 
 def restaurar_sessao():
