@@ -1,9 +1,51 @@
 # auditoria/tipo_folha_x_tipo_arquivo_sefaz.py
 import pandas as pd
 
+
+def _gerar_link_siape(df):
+    """
+    Formata a coluna DESCRICAO_TIPO transformando-a em URL com o rótulo após o '#'.
+    Aplica URLs diferentes para folhas do tipo NORMAL e ESTAGIARIO.
+    """
+    if df.empty or "ID_FOLHA" not in df.columns or "DESCRICAO_TIPO" not in df.columns:
+        return df
+
+    df_temp = df.copy()
+
+    def montar_url(row):
+        descricao = str(row.get("DESCRICAO_TIPO", ""))
+        id_folha = row.get("ID_FOLHA")
+        orgao = str(row.get("ORGAO", "")).lower()
+        tipo_registro = str(row.get("TIPO_REGISTRO", "")).upper()
+
+        # Se já for um link http ou não tiver ID_FOLHA válido, mantém como está
+        if descricao.startswith("http") or pd.isna(id_folha):
+            return descricao
+
+        # Link específico para Folha de Estagiário
+        if tipo_registro == "ESTAGIARIO":
+            return (
+                f"https://siape.sead.pi.gov.br/adm/{orgao}/"
+                f"folha-estagiario-menor-aprendiz-bolsista/"
+                f"estagiario-menor-aprendiz-bolsista/folhas/folha/"
+                f"{int(id_folha)}/dados-folha#{descricao}"
+            )
+
+        # Link padrão para Folha de Funcionário (NORMAL)
+        return (
+            f"https://siape.sead.pi.gov.br/adm/{orgao}/"
+            f"folha-funcionario/folhas/folhas/folha-de-pagamento/"
+            f"{int(id_folha)}/inicial/dados-da-folha#{descricao}"
+        )
+
+    df_temp["DESCRICAO_TIPO"] = df_temp.apply(montar_url, axis=1)
+    return df_temp
+
+
 def executar_auditoria(conn, ano, mes, apenas_inconsistentes=False):
     cursor = conn.cursor()
     cursor.execute("SELECT owner FROM all_tables WHERE table_name = 'FOLHA' AND owner LIKE 'SW_%'")
+    #cursor.execute("SELECT owner FROM all_tables WHERE owner in ('SW_SADA','SW_SEDUC') and  table_name = 'FOLHA' AND owner LIKE 'SW_%'")
     schemas_geral = [row[0] for row in cursor.fetchall()]
 
     cursor.execute("SELECT owner FROM all_tables WHERE table_name = 'ESTAG_FOLHA' AND owner LIKE 'SW_%'")
@@ -83,6 +125,7 @@ def executar_auditoria(conn, ano, mes, apenas_inconsistentes=False):
 
         subquery_folha = f"""
             SELECT
+                f1.ID_FOLHA,
                 fs.CODIGO_SEFAZ,
                 f1.TIPO_ARQUIVO,
                 f1.TIPO_FOLHA_SEFAZ,
@@ -167,6 +210,7 @@ def executar_auditoria(conn, ano, mes, apenas_inconsistentes=False):
 
             subquery_estagiario = f"""
                 SELECT
+                    ef.ID_FOLHA,
                     fs.CODIGO_SEFAZ as CODIGO_SEFAZ,
                     LPAD(TO_CHAR(ef.seq_arquivo), 3, '0') as TIPO_ARQUIVO,
                     'C5' as TIPO_FOLHA_SEFAZ,
@@ -196,7 +240,7 @@ def executar_auditoria(conn, ano, mes, apenas_inconsistentes=False):
     if "QTDE_PAGAMENTOS" in df.columns:
         df = df.rename(columns={"QTDE_PAGAMENTOS": "QTDE PAGAMENTOS"})
 
-    return df
+    return _gerar_link_siape(df)
 
 
 def executar_auditoria_com_a_Quantidade(conn, ano, mes, apenas_inconsistentes=False):
@@ -209,14 +253,11 @@ def executar_auditoria_com_a_Quantidade(conn, ano, mes, apenas_inconsistentes=Fa
     for schema in schemas:
         orgao_nome = schema.replace('SW_', '')
         
-        # Filtro base obrigatório do período
         where_clause = f"f1.ANO = {ano} AND f1.MES = {int(mes)}"
         
-        # Se marcado, captura as quebras estruturais considerando a unidade orçamentária
         if apenas_inconsistentes:
             where_clause += f"""
                 AND (
-                     -- 1. Arquivos filhotes sem o respectivo pai na mesma chave e unidade orçamentária
                      (
                           (f1.TIPO_ARQUIVO > '001' AND f1.TIPO_ARQUIVO < '020')
                           OR 
@@ -239,7 +280,6 @@ def executar_auditoria_com_a_Quantidade(conn, ano, mes, apenas_inconsistentes=Fa
                                END
                      )
                      OR
-                     -- 2. Conflito por duplicidade: mais de um arquivo base (001 ou 020) para a mesma chave
                      (
                           f1.TIPO_ARQUIVO IN ('001', '020')
                           AND (
@@ -260,6 +300,7 @@ def executar_auditoria_com_a_Quantidade(conn, ano, mes, apenas_inconsistentes=Fa
 
         query_parts.append(f"""
             SELECT
+                f1.ID_FOLHA,
                 fs.CODIGO_SEFAZ,
                 f1.TIPO_ARQUIVO,
                 f1.TIPO_FOLHA_SEFAZ,
@@ -275,6 +316,7 @@ def executar_auditoria_com_a_Quantidade(conn, ano, mes, apenas_inconsistentes=Fa
                 f1.DESCRICAO,
                 f1.DATA_FECHAMENTO,
                 f1.DATA_CADASTRO,
+                'NORMAL' as TIPO_REGISTRO,
                 (SELECT COUNT(*) FROM {schema}.FOLHA_FUNC ff WHERE ff.ID_FOLHA = f1.ID_FOLHA AND ff.IND_REMUNERACAO = 'S') as QTDE_REGISTROS
             FROM {schema}.FOLHA f1
             JOIN SW_PUBLICO.FOLHA_TAB_TIPO t ON f1.ID_TIPO_FOLHA = t.ID_TIPO_FOLHA
@@ -288,7 +330,7 @@ def executar_auditoria_com_a_Quantidade(conn, ano, mes, apenas_inconsistentes=Fa
 
     query_final = " UNION ALL ".join(query_parts) + " ORDER BY CODIGO_SEFAZ, TIPO_ARQUIVO, TIPO_FOLHA_SEFAZ, CODIGO_RELATORIO, ORGAO"
     df = pd.read_sql(query_final, conn)
-    return df
+    return _gerar_link_siape(df)
 
 
 def executar_auditoria_x1(conn, ano, mes):
@@ -302,6 +344,7 @@ def executar_auditoria_x1(conn, ano, mes):
         orgao_nome = schema.replace('SW_', '')
         query_parts.append(f"""
             SELECT
+                f1.ID_FOLHA,
                 fs.CODIGO_SEFAZ,
                 f1.TIPO_ARQUIVO,
                 f1.TIPO_FOLHA_SEFAZ,
@@ -311,6 +354,7 @@ def executar_auditoria_x1(conn, ano, mes):
                 f1.DESCRICAO,
                 f1.DATA_FECHAMENTO,
                 f1.DATA_CADASTRO,
+                'NORMAL' as TIPO_REGISTRO,
                 (SELECT COUNT(*) FROM {schema}.FOLHA_FUNC ff WHERE ff.ID_FOLHA = f1.ID_FOLHA AND ff.IND_REMUNERACAO = 'S') as QTDE_REGISTROS
             FROM {schema}.FOLHA f1
             JOIN SW_PUBLICO.FOLHA_TAB_TIPO t ON f1.ID_TIPO_FOLHA = t.ID_TIPO_FOLHA
@@ -324,8 +368,7 @@ def executar_auditoria_x1(conn, ano, mes):
 
     query_final = " UNION ALL ".join(query_parts)
     df = pd.read_sql(query_final, conn)
-    return df
-
+    return _gerar_link_siape(df)
 
 
 def executar_auditoria_original(conn, ano, mes):
@@ -339,6 +382,7 @@ def executar_auditoria_original(conn, ano, mes):
         orgao_nome = schema.replace('SW_', '')
         query_parts.append(f"""
             SELECT
+                f1.ID_FOLHA,
                 '{orgao_nome}' as ORGAO,
                 f1.CHAVE_FOLHA,
                 t.DESCRICAO_TIPO,
@@ -348,6 +392,7 @@ def executar_auditoria_original(conn, ano, mes):
                 f1.DATA_CADASTRO,
                 fs.CODIGO_SEFAZ,
                 f1.TIPO_FOLHA_SEFAZ,
+                'NORMAL' as TIPO_REGISTRO,
                 (SELECT COUNT(*) FROM {schema}.FOLHA_FUNC ff WHERE ff.ID_FOLHA = f1.ID_FOLHA AND ff.IND_REMUNERACAO = 'S') as QTDE_REGISTROS
             FROM {schema}.FOLHA f1
             JOIN SW_PUBLICO.FOLHA_TAB_TIPO t ON f1.ID_TIPO_FOLHA = t.ID_TIPO_FOLHA
@@ -364,7 +409,6 @@ def executar_auditoria_original(conn, ano, mes):
                   FROM {schema}.FOLHA f2
                   WHERE f2.ANO = f1.ANO
                     AND f2.MES = f1.MES
-                    -- AND f2.ID_CODIGO_SEFAZ = f1.ID_CODIGO_SEFAZ
                     AND f2.TIPO_FOLHA_SEFAZ = f1.TIPO_FOLHA_SEFAZ
                     AND f2.TIPO_ARQUIVO = 
                         CASE 
@@ -379,7 +423,7 @@ def executar_auditoria_original(conn, ano, mes):
 
     query_final = " UNION ALL ".join(query_parts)
     df = pd.read_sql(query_final, conn)
-    return df
+    return _gerar_link_siape(df)
 
 
 def executar_auditoria_antigo(conn, ano, mes):
@@ -393,6 +437,7 @@ def executar_auditoria_antigo(conn, ano, mes):
         orgao_nome = schema.replace('SW_', '')
         query_parts.append(f"""
             SELECT
+                f.ID_FOLHA,
                 '{orgao_nome}' as ORGAO,
                 f.CHAVE_FOLHA,
                 t.DESCRICAO_TIPO,
@@ -401,6 +446,7 @@ def executar_auditoria_antigo(conn, ano, mes):
                 f.DATA_FECHAMENTO,
                 f.DATA_CADASTRO,
                 fs.CODIGO_SEFAZ,
+                'NORMAL' as TIPO_REGISTRO,
                 (SELECT COUNT(*) FROM {schema}.FOLHA_FUNC ff WHERE ff.ID_FOLHA = f.ID_FOLHA AND Ff.IND_REMUNERACAO='S') as QTDE_REGISTROS
             FROM {schema}.FOLHA f
             JOIN SW_PUBLICO.FOLHA_TAB_TIPO t ON f.ID_TIPO_FOLHA = t.ID_TIPO_FOLHA
@@ -413,13 +459,14 @@ def executar_auditoria_antigo(conn, ano, mes):
             )
         """)
 
+    if not query_parts:
+        return pd.DataFrame()
+
     query_final = " UNION ALL ".join(query_parts)
     df = pd.read_sql(query_final, conn)
     
-# ADICIONE ISTO PARA DEBUGAR:
-    print(f"DEBUG: Registros encontrados: {len(df)}")
     if not df.empty:
-        df = df[["ORGAO","CODIGO_SEFAZ", "CHAVE_FOLHA", "DESCRICAO", "DATA_CADASTRO", "DATA_FECHAMENTO", "DESCRICAO_TIPO", "TIPO_ARQUIVO", "QTDE_REGISTROS"]]
+        df = df[["ID_FOLHA", "ORGAO", "CODIGO_SEFAZ", "CHAVE_FOLHA", "DESCRICAO", "DATA_CADASTRO", "DATA_FECHAMENTO", "DESCRICAO_TIPO", "TIPO_ARQUIVO", "TIPO_REGISTRO", "QTDE_REGISTROS"]]
     
-    return df
+    return _gerar_link_siape(df)
 

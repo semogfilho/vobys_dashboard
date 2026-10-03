@@ -1,17 +1,19 @@
-import streamlit as st
-import pandas as pd
 import json, copy
+import pandas as pd
+import streamlit as st
+
 import auth_ui
 import dados_bancarios_view
 
 st.cache_data.clear()
 
 from auditoria import (
-    tipo_folha_x_tipo_arquivo_sefaz,
+    batimento_json,
     colaboradores_novatos,
     novos_dados_bancario,
-    batimento_json
+    tipo_folha_x_tipo_arquivo_sefaz,
 )
+
 
 def render(conn, ano, mes, sub_opcao):
 
@@ -45,7 +47,6 @@ def render(conn, ano, mes, sub_opcao):
 
             # Aplica o estilo se a coluna SITUACAO existir no DataFrame
             if 'SITUACAO' in df_consistencia.columns:
-                #df_exibicao = df_consistencia.style.applymap(colorir_situacao, subset=['SITUACAO'])
                 df_exibicao = df_consistencia.style.map(colorir_situacao, subset=['SITUACAO'])
             else:
                 df_exibicao = df_consistencia
@@ -55,6 +56,11 @@ def render(conn, ano, mes, sub_opcao):
                 use_container_width=True,
                 hide_index=True,
                 column_config={
+                    "DESCRICAO_TIPO": st.column_config.LinkColumn(
+                        "Descrição da Folha",
+                        help="Clique para abrir os detalhes da folha no SIAPE",
+                        display_text=r"#(.+)$",  # Extrai e exibe apenas a descrição após o '#'
+                    ),
                     "DATA_FECHAMENTO": st.column_config.DatetimeColumn(
                         "Data Fechamento", format="DD-MM-YYYY HH:mm:ss"
                     ),
@@ -223,6 +229,7 @@ def render(conn, ano, mes, sub_opcao):
         df = colaboradores_novatos.executar_auditoria_novatos(conn, ano, mes)
         st.dataframe(df)
 
-# Opção 3: Dados Bancários
+    # Opção 3: Dados Bancários
     elif sub_opcao == "Dados Bancários":
         dados_bancarios_view.renderizar_dados_bancarios(conn, ano, mes, auth_ui, novos_dados_bancario)
+
