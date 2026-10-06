@@ -1,4 +1,4 @@
-import json, copy
+import json, copy, textwrap
 import pandas as pd
 import streamlit as st
 
@@ -33,48 +33,88 @@ def render(conn, ano, mes, sub_opcao):
         df_consistencia = tipo_folha_x_tipo_arquivo_sefaz.executar_auditoria(conn, ano, mes, apenas_inconsistentes=filtrar_inconsistencias)
 
         if df_consistencia is not None and not df_consistencia.empty:
+            df_exibicao = df_consistencia.copy()
+
+            # 1. Função para formatar o link com o atributo 'title' (Exibe a dica ao passar o rato)
+            def formatar_link_com_tooltip(url_val):
+                if pd.isna(url_val) or not str(url_val).strip():
+                    return ""
+                val_str = str(url_val)
+                # Extrai o texto após o '#' (ou usa o valor original)
+                texto = val_str.split('#')[-1] if '#' in val_str else val_str
+                return f'<a href="{val_str}" target="_blank" title="Clique para abrir os detalhes da folha no SIAPE" style="color: #1f77b4; text-decoration: underline; font-weight: 500;">{texto}</a>'
+
+            if 'DESCRICAO_TIPO' in df_exibicao.columns:
+                df_exibicao['DESCRICAO_TIPO'] = df_exibicao['DESCRICAO_TIPO'].apply(formatar_link_com_tooltip)
+
+            # 2. Formatação das colunas de data
             for col in ['DATA_FECHAMENTO', 'DATA_CADASTRO']:
-                if col in df_consistencia.columns:
-                    df_consistencia[col] = pd.to_datetime(df_consistencia[col], errors='coerce')
+                if col in df_exibicao.columns:
+                    df_exibicao[col] = pd.to_datetime(df_exibicao[col], errors='coerce').dt.strftime('%d-%m-%Y %H:%M:%S').fillna('')
 
-            # Função para aplicar estilo de destaque em vermelho na coluna SITUACAO
-            def colorir_situacao(val):
-                if val is not None:
-                    val_str = str(val).lower()
-                    if 'duplicado' in val_str or 'fora da sequencia' in val_str:
-                        return 'color: #ff4b4b; font-weight: bold;'
-                return ''
+            # 3. Formatação da coluna SITUACAO (Destaque em vermelho quando inconsistente)
+            if 'SITUACAO' in df_exibicao.columns:
+                def formatar_situacao(val):
+                    if val is not None:
+                        val_str = str(val).lower()
+                        if 'duplicado' in val_str or 'fora da sequencia' in val_str:
+                            return f'<span style="color: #ff4b4b; font-weight: bold;">{val}</span>'
+                    return str(val) if val is not None else ''
+                df_exibicao['SITUACAO'] = df_exibicao['SITUACAO'].apply(formatar_situacao)
 
-            # Aplica o estilo se a coluna SITUACAO existir no DataFrame
-            if 'SITUACAO' in df_consistencia.columns:
-                df_exibicao = df_consistencia.style.map(colorir_situacao, subset=['SITUACAO'])
-            else:
-                df_exibicao = df_consistencia
+            # Renomeia os cabeçalhos para exibição
+            colunas_renomeadas = {
+                "DESCRICAO_TIPO": "Descrição da Folha",
+                "DATA_FECHAMENTO": "Data Fechamento",
+                "DATA_CADASTRO": "Data Cadastro",
+                "SITUACAO": "Situação",
+                "QTDE PAGAMENTOS": "Qtde Pagamentos"
+            }
+            df_exibicao.rename(columns=colunas_renomeadas, inplace=True)
 
-            st.dataframe(
-                df_exibicao,
-                use_container_width=True,
-                hide_index=True,
-                column_config={
-                    "DESCRICAO_TIPO": st.column_config.LinkColumn(
-                        "Descrição da Folha",
-                        help="Clique para abrir os detalhes da folha no SIAPE",
-                        display_text=r"#(.+)$",  # Extrai e exibe apenas a descrição após o '#'
-                    ),
-                    "DATA_FECHAMENTO": st.column_config.DatetimeColumn(
-                        "Data Fechamento", format="DD-MM-YYYY HH:mm:ss"
-                    ),
-                    "DATA_CADASTRO": st.column_config.DatetimeColumn(
-                        "Data Cadastro", format="DD-MM-YYYY HH:mm:ss"
-                    ),
-                    "SITUACAO": st.column_config.TextColumn(
-                        "Situação", help="Status da consistência estrutural do arquivo"
-                    ),
-                    "QTDE PAGAMENTOS": st.column_config.NumberColumn(
-                        "Qtde Pagamentos", format="%d"
-                    )
-                }
-            )
+            # Converte para tabela HTML permitindo tooltips e estilos avançados
+            html_tabela = df_exibicao.to_html(escape=False, index=False, classes="custom-df-table")
+
+            # Estilo CSS sem recuo de espaços (textwrap.dedent impede que o Markdown trate como bloco de código)
+            css = textwrap.dedent("""
+            <style>
+            .custom-df-container {
+                width: 100%;
+                overflow-x: auto;
+                border: 1px solid #e6e8eb;
+                border-radius: 8px;
+                margin-bottom: 1rem;
+            }
+            .custom-df-table {
+                width: 100%;
+                border-collapse: collapse;
+                font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+                font-size: 14px;
+                color: #31333f;
+            }
+            .custom-df-table thead tr {
+                background-color: #f8f9fb;
+                border-bottom: 1px solid #e6e8eb;
+                text-align: left;
+            }
+            .custom-df-table th, .custom-df-table td {
+                padding: 10px 14px;
+                white-space: nowrap;
+                border-bottom: 1px solid #f0f2f6;
+            }
+            .custom-df-table tbody tr:nth-of-type(even) {
+                background-color: #fafbfc;
+            }
+            .custom-df-table tbody tr:hover {
+                background-color: #f0f5ff;
+            }
+            </style>
+            """).strip()
+
+            html_final = f'{css}\n<div class="custom-df-container">\n{html_tabela}\n</div>'
+
+            # Renderiza a tabela HTML formatada no Streamlit
+            st.markdown(html_final, unsafe_allow_html=True)
 
             # --- RODAPÉ: TOTAL DE REGISTROS E QTDE PAGAMENTOS ---
             st.markdown("---")
