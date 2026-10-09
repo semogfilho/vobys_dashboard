@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import json
+import textwrap
 import pandas as pd
 import streamlit as st
 
@@ -54,6 +55,54 @@ def extrair_texto_payload(blob_data):
         return None
 
 
+def renderizar_tabela_html(df):
+    """Renderiza a tabela em HTML estilizado com alinhamento à direita na coluna de valor."""
+    html_tabela = df.to_html(escape=False, index=False, classes="custom-df-table")
+
+    css = textwrap.dedent("""
+        <style>
+        .custom-df-container {
+            width: 100%;
+            overflow-x: auto;
+            border: 1px solid #e6e8eb;
+            border-radius: 8px;
+            margin-top: 0.5rem;
+            margin-bottom: 1rem;
+        }
+        .custom-df-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            font-size: 14px;
+            color: #31333f;
+        }
+        .custom-df-table thead tr {
+            background-color: #f8f9fb;
+            border-bottom: 1px solid #e6e8eb;
+        }
+        .custom-df-table th, .custom-df-table td {
+            padding: 10px 14px;
+            white-space: nowrap;
+            border-bottom: 1px solid #f0f2f6;
+            text-align: left;
+        }
+        /* Força o alinhamento da última coluna (Valores) à direita */
+        .custom-df-table th:last-child, .custom-df-table td:last-child {
+            text-align: right !important;
+        }
+        .custom-df-table tbody tr:nth-of-type(even) {
+            background-color: #fafbfc;
+        }
+        .custom-df-table tbody tr:hover {
+            background-color: #f0f5ff;
+        }
+        </style>
+    """).strip()
+
+    html_final = f'{css}\n<div class="custom-df-container">\n{html_tabela}\n</div>'
+    st.markdown(html_final, unsafe_allow_html=True)
+
+
 def carregar_dados_patronais(conn, ano, mes):
     """Consulta os registros patronais (IND_TIPO_REQUISICAO = 'V4') buscando o JSON
     na tabela Siafe_Evento_Integ_Payload e a sigla na tabela de empresa.
@@ -68,7 +117,6 @@ def carregar_dados_patronais(conn, ano, mes):
             sei.recibo,
             sei.codigo_sefaz,
             sei.tipo_arquivo,
-            sei.chave_folha,
             e.sigla AS empresa_sigla,
             seip.json AS payload_blob
         FROM sw_publico.SIAFE_EVENTO_INTEGRACAO sei
@@ -124,7 +172,6 @@ def carregar_dados_patronais(conn, ano, mes):
         recibo = str(row.get("recibo")) if row.get("recibo") is not None else "-"
         cod_sefaz = row.get("codigo_sefaz") or cod_sefaz_json or "-"
         tp_arquivo = row.get("tipo_arquivo") or tp_arquivo_json or "-"
-        chave_folha = row.get("chave_folha") or "-"
 
         st_raw = str(row.get("status_vobys") or "").upper()
         status_desc = STATUS_MAP.get(st_raw, st_raw if st_raw else "ABERTO")
@@ -139,7 +186,6 @@ def carregar_dados_patronais(conn, ano, mes):
                 "Código Sefaz": cod_sefaz,
                 "Tipo de Arquivo": tp_arquivo,
                 "Código de Relatório": cod_relatorio_json or "-",
-                "Chave Folha": chave_folha,
                 "Total Desconto": total_desconto,
             }
         )
@@ -150,6 +196,18 @@ def carregar_dados_patronais(conn, ano, mes):
 def render(conn, ano, mes, meses_lista):
     st.title(f"📊 Totalização de Arquivos Patronais ({meses_lista[mes]}/{ano})")
 
+    # Injeção de CSS para limitar a altura do menu suspenso do multiselect
+    st.markdown(
+        """
+        <style>
+            div[data-baseweb="popover"] {
+                max-height: 220px !important;
+            }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+
     with st.spinner("Carregando e processando arquivos patronais..."):
         df_patronal = carregar_dados_patronais(conn, ano, mes)
 
@@ -157,23 +215,23 @@ def render(conn, ano, mes, meses_lista):
         st.warning("Nenhum arquivo Patronal encontrado para o período.")
         return
 
-    # --- PAINEL DE FILTROS DE CONTEÚDO ---
+    # --- 1. PAINEL DE FILTROS DE CONTEÚDO ---
     with st.expander("🎯 Filtros de Pesquisa / Seleção de Valores", expanded=True):
         f_col1, f_col2, f_col3, f_col4 = st.columns(4)
 
-        # 1. Filtro por Empresa
+        # Filtro por Empresa
         empresas_disponiveis = sorted([x for x in df_patronal["Empresa"].unique() if x != "-"])
         sel_empresa = f_col1.multiselect("Empresa:", options=empresas_disponiveis, placeholder="Todas")
 
-        # 2. Filtro por Código de Relatório
+        # Filtro por Código de Relatório
         relatorios_disponiveis = sorted([x for x in df_patronal["Código de Relatório"].unique() if x != "-"])
         sel_relatorio = f_col2.multiselect("Código de Relatório:", options=relatorios_disponiveis, placeholder="Todos")
 
-        # 3. Filtro por Tipo de Arquivo
+        # Filtro por Tipo de Arquivo
         tipos_disponiveis = sorted([x for x in df_patronal["Tipo de Arquivo"].unique() if x != "-"])
         sel_tipo = f_col3.multiselect("Tipo de Arquivo:", options=tipos_disponiveis, placeholder="Todos")
 
-        # 4. Filtro por Status
+        # Filtro por Status
         status_disponiveis = sorted([x for x in df_patronal["Status"].unique() if x != "-"])
         sel_status = f_col4.multiselect("Status:", options=status_disponiveis, placeholder="Todos")
 
@@ -189,6 +247,21 @@ def render(conn, ano, mes, meses_lista):
     if sel_status:
         df_filtrado = df_filtrado[df_filtrado["Status"].isin(sel_status)]
 
+    # --- 2. MÉTRICAS ---
+    col1, col2 = st.columns(2)
+    col1.metric("Total de Arquivos Filtrados", len(df_filtrado))
+
+    soma_total = df_filtrado["Total Desconto"].sum() if not df_filtrado.empty else 0.0
+    soma_fmt = formatar_moeda_br(soma_total)
+    col2.metric("Somatório Geral Filtrado (R$)", soma_fmt)
+
+    st.divider()
+
+    if df_filtrado.empty:
+        st.info("Nenhum registro encontrado para os filtros selecionados.")
+        return
+
+    # --- 3. AGRUPAMENTO DINÂMICO ---
     st.markdown("### 🔍 Agrupamento Dinâmico")
     opcoes_agrupamento = [
         "Empresa",
@@ -206,21 +279,7 @@ def render(conn, ano, mes, meses_lista):
         help="Marque os campos para agrupar e calcular o somatório do valorDesconto",
     )
 
-    st.divider()
-
-    # Métricas no topo
-    col1, col2 = st.columns(2)
-    col1.metric("Total de Arquivos Filtrados", len(df_filtrado))
-
-    soma_total = df_filtrado["Total Desconto"].sum() if not df_filtrado.empty else 0.0
-    soma_fmt = formatar_moeda_br(soma_total)
-    col2.metric("Somatório Geral Filtrado (R$)", soma_fmt)
-
-    st.divider()
-
-    if df_filtrado.empty:
-        st.info("Nenhum registro encontrado para os filtros selecionados.")
-        return
+    st.write("")
 
     if campos_agrupamento:
         df_resumo = (
@@ -231,36 +290,21 @@ def render(conn, ano, mes, meses_lista):
             .sort_values(by="Total_Valor_Desconto", ascending=False)
         )
 
-        # Formata o valor antes da exibição
         df_resumo_exibir = df_resumo.copy()
         df_resumo_exibir["Total_Valor_Desconto"] = df_resumo_exibir["Total_Valor_Desconto"].apply(formatar_moeda_br)
+        df_resumo_exibir.rename(columns={"Total_Valor_Desconto": "valorDesconto Total"}, inplace=True)
 
         st.caption(
             f"Exibindo resumo agrupado por: **{', '.join(campos_agrupamento)}**"
         )
-        st.dataframe(
-            df_resumo_exibir,
-            use_container_width=True,
-            hide_index=True,
-            column_config={
-                "Recibo": st.column_config.TextColumn("Recibo"),
-                "Total_Valor_Desconto": st.column_config.TextColumn("valorDesconto Total"),
-            },
-        )
+        renderizar_tabela_html(df_resumo_exibir)
     else:
         st.info(
             "Nenhum filtro de agrupamento selecionado. Exibindo a listagem detalhada de registros:"
         )
         df_detalhe_exibir = df_filtrado.copy()
         df_detalhe_exibir["Total Desconto"] = df_detalhe_exibir["Total Desconto"].apply(formatar_moeda_br)
+        df_detalhe_exibir.rename(columns={"Total Desconto": "valorDesconto Total"}, inplace=True)
 
-        st.dataframe(
-            df_detalhe_exibir,
-            use_container_width=True,
-            hide_index=True,
-            column_config={
-                "Recibo": st.column_config.TextColumn("Recibo"),
-                "Total Desconto": st.column_config.TextColumn("valorDesconto Total"),
-            },
-        )
+        renderizar_tabela_html(df_detalhe_exibir)
 
