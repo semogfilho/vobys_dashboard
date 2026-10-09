@@ -15,6 +15,21 @@ STATUS_MAP = {
 }
 
 
+def formatar_moeda_br(val):
+    """Formata valores numéricos para o padrão de moeda brasileiro (ex: R$ 108.881,59)."""
+    if pd.isna(val) or val is None:
+        return "R$ 0,00"
+    try:
+        val_float = float(val)
+        return (
+            f"R$ {val_float:,.2f}".replace(",", "v")
+            .replace(".", ",")
+            .replace("v", ".")
+        )
+    except Exception:
+        return "R$ 0,00"
+
+
 def extrair_texto_payload(blob_data):
     """Extrai a string JSON do BLOB/CLOB lidando com buffers e delimitadores."""
     if blob_data is None:
@@ -41,7 +56,6 @@ def extrair_texto_payload(blob_data):
 
 def carregar_dados_patronais(conn, ano, mes):
     """Consulta os registros patronais (IND_TIPO_REQUISICAO = 'V4') buscando o JSON
-
     na tabela Siafe_Evento_Integ_Payload e a sigla na tabela de empresa.
     """
     query = """
@@ -75,7 +89,6 @@ def carregar_dados_patronais(conn, ano, mes):
     if df_raw.empty:
         return pd.DataFrame()
 
-    # Garantir nomes das colunas em minúsculo
     df_raw.columns = [c.lower() for c in df_raw.columns]
 
     registros = []
@@ -108,7 +121,7 @@ def carregar_dados_patronais(conn, ano, mes):
         id_reg = row.get("id_siafe_evento_integracao")
         dt_cad = row.get("data_cadastro")
         empresa = row.get("empresa_sigla") or cod_sefaz_json or "-"
-        recibo = row.get("recibo") or "-"
+        recibo = str(row.get("recibo")) if row.get("recibo") is not None else "-"
         cod_sefaz = row.get("codigo_sefaz") or cod_sefaz_json or "-"
         tp_arquivo = row.get("tipo_arquivo") or tp_arquivo_json or "-"
         chave_folha = row.get("chave_folha") or "-"
@@ -121,8 +134,6 @@ def carregar_dados_patronais(conn, ano, mes):
                 "Id": id_reg,
                 "Data Cadastro": dt_cad,
                 "Empresa": empresa,
-                "Mês": row.get("mes") or mes,
-                "Ano": row.get("ano") or ano,
                 "Status": status_desc,
                 "Recibo": recibo,
                 "Código Sefaz": cod_sefaz,
@@ -146,78 +157,110 @@ def render(conn, ano, mes, meses_lista):
         st.warning("Nenhum arquivo Patronal encontrado para o período.")
         return
 
+    # --- PAINEL DE FILTROS DE CONTEÚDO ---
+    with st.expander("🎯 Filtros de Pesquisa / Seleção de Valores", expanded=True):
+        f_col1, f_col2, f_col3, f_col4 = st.columns(4)
+
+        # 1. Filtro por Empresa
+        empresas_disponiveis = sorted([x for x in df_patronal["Empresa"].unique() if x != "-"])
+        sel_empresa = f_col1.multiselect("Empresa:", options=empresas_disponiveis, placeholder="Todas")
+
+        # 2. Filtro por Código de Relatório
+        relatorios_disponiveis = sorted([x for x in df_patronal["Código de Relatório"].unique() if x != "-"])
+        sel_relatorio = f_col2.multiselect("Código de Relatório:", options=relatorios_disponiveis, placeholder="Todos")
+
+        # 3. Filtro por Tipo de Arquivo
+        tipos_disponiveis = sorted([x for x in df_patronal["Tipo de Arquivo"].unique() if x != "-"])
+        sel_tipo = f_col3.multiselect("Tipo de Arquivo:", options=tipos_disponiveis, placeholder="Todos")
+
+        # 4. Filtro por Status
+        status_disponiveis = sorted([x for x in df_patronal["Status"].unique() if x != "-"])
+        sel_status = f_col4.multiselect("Status:", options=status_disponiveis, placeholder="Todos")
+
+    # Aplicação dos filtros ao DataFrame
+    df_filtrado = df_patronal.copy()
+
+    if sel_empresa:
+        df_filtrado = df_filtrado[df_filtrado["Empresa"].isin(sel_empresa)]
+    if sel_relatorio:
+        df_filtrado = df_filtrado[df_filtrado["Código de Relatório"].isin(sel_relatorio)]
+    if sel_tipo:
+        df_filtrado = df_filtrado[df_filtrado["Tipo de Arquivo"].isin(sel_tipo)]
+    if sel_status:
+        df_filtrado = df_filtrado[df_filtrado["Status"].isin(sel_status)]
+
+    st.markdown("### 🔍 Agrupamento Dinâmico")
     opcoes_agrupamento = [
         "Empresa",
         "Código de Relatório",
         "Código Sefaz",
         "Tipo de Arquivo",
-        "Mês",
-        "Ano",
         "Status",
         "Recibo",
     ]
 
-    st.markdown("### 🔍 Agrupamento Dinâmico")
     campos_agrupamento = st.multiselect(
         "Selecione os campos para agrupar e totalizar os valores:",
         options=opcoes_agrupamento,
-        default=["Empresa", "Código de Relatório"],
-        help="Marque os campos para agrupar e calcular a quantidade de arquivos e o somatório do valorDesconto",
+        default=["Empresa", "Código de Relatório", "Tipo de Arquivo", "Status", "Recibo"],
+        help="Marque os campos para agrupar e calcular o somatório do valorDesconto",
     )
 
     st.divider()
 
+    # Métricas no topo
     col1, col2 = st.columns(2)
-    col1.metric("Total de Arquivos", len(df_patronal))
+    col1.metric("Total de Arquivos Filtrados", len(df_filtrado))
 
-    soma_total = df_patronal["Total Desconto"].sum()
-    soma_fmt = (
-        f"R$ {soma_total:,.2f}".replace(",", "v")
-        .replace(".", ",")
-        .replace("v", ".")
-    )
-    col2.metric("Somatório Geral (R$)", soma_fmt)
+    soma_total = df_filtrado["Total Desconto"].sum() if not df_filtrado.empty else 0.0
+    soma_fmt = formatar_moeda_br(soma_total)
+    col2.metric("Somatório Geral Filtrado (R$)", soma_fmt)
 
     st.divider()
+
+    if df_filtrado.empty:
+        st.info("Nenhum registro encontrado para os filtros selecionados.")
+        return
 
     if campos_agrupamento:
         df_resumo = (
-            df_patronal.groupby(campos_agrupamento, as_index=False)
+            df_filtrado.groupby(campos_agrupamento, as_index=False)
             .agg(
-                Qtd_Arquivos=("Id", "count"),
                 Total_Valor_Desconto=("Total Desconto", "sum"),
             )
             .sort_values(by="Total_Valor_Desconto", ascending=False)
         )
 
+        # Formata o valor antes da exibição
+        df_resumo_exibir = df_resumo.copy()
+        df_resumo_exibir["Total_Valor_Desconto"] = df_resumo_exibir["Total_Valor_Desconto"].apply(formatar_moeda_br)
+
         st.caption(
             f"Exibindo resumo agrupado por: **{', '.join(campos_agrupamento)}**"
         )
         st.dataframe(
-            df_resumo,
+            df_resumo_exibir,
             use_container_width=True,
             hide_index=True,
             column_config={
-                "Total_Valor_Desconto": st.column_config.NumberColumn(
-                    "Total valorDesconto (R$)", format="R$ %.2f"
-                ),
-                "Qtd_Arquivos": st.column_config.NumberColumn(
-                    "Qtd. Arquivos", format="%d"
-                ),
+                "Recibo": st.column_config.TextColumn("Recibo"),
+                "Total_Valor_Desconto": st.column_config.TextColumn("valorDesconto Total"),
             },
         )
     else:
         st.info(
             "Nenhum filtro de agrupamento selecionado. Exibindo a listagem detalhada de registros:"
         )
+        df_detalhe_exibir = df_filtrado.copy()
+        df_detalhe_exibir["Total Desconto"] = df_detalhe_exibir["Total Desconto"].apply(formatar_moeda_br)
+
         st.dataframe(
-            df_patronal,
+            df_detalhe_exibir,
             use_container_width=True,
             hide_index=True,
             column_config={
-                "Total Desconto": st.column_config.NumberColumn(
-                    "valorDesconto Total (R$)", format="R$ %.2f"
-                )
+                "Recibo": st.column_config.TextColumn("Recibo"),
+                "Total Desconto": st.column_config.TextColumn("valorDesconto Total"),
             },
         )
 
