@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 import json
-import textwrap
 import pandas as pd
 import streamlit as st
 
@@ -17,7 +16,7 @@ STATUS_MAP = {
 
 
 def formatar_moeda_br(val):
-    """Formata valores numéricos para o padrão de moeda brasileiro (ex: R$ 108.881,59)."""
+    """Formata valores numéricos para o padrão de moeda brasileiro nas métricas no topo."""
     if pd.isna(val) or val is None:
         return "R$ 0,00"
     try:
@@ -53,54 +52,6 @@ def extrair_texto_payload(blob_data):
         return raw_str.strip()
     except Exception:
         return None
-
-
-def renderizar_tabela_html(df):
-    """Renderiza a tabela em HTML estilizado com alinhamento à direita na coluna de valor."""
-    html_tabela = df.to_html(escape=False, index=False, classes="custom-df-table")
-
-    css = textwrap.dedent("""
-        <style>
-        .custom-df-container {
-            width: 100%;
-            overflow-x: auto;
-            border: 1px solid #e6e8eb;
-            border-radius: 8px;
-            margin-top: 0.5rem;
-            margin-bottom: 1rem;
-        }
-        .custom-df-table {
-            width: 100%;
-            border-collapse: collapse;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            font-size: 14px;
-            color: #31333f;
-        }
-        .custom-df-table thead tr {
-            background-color: #f8f9fb;
-            border-bottom: 1px solid #e6e8eb;
-        }
-        .custom-df-table th, .custom-df-table td {
-            padding: 10px 14px;
-            white-space: nowrap;
-            border-bottom: 1px solid #f0f2f6;
-            text-align: left;
-        }
-        /* Força o alinhamento da última coluna (Valores) à direita */
-        .custom-df-table th:last-child, .custom-df-table td:last-child {
-            text-align: right !important;
-        }
-        .custom-df-table tbody tr:nth-of-type(even) {
-            background-color: #fafbfc;
-        }
-        .custom-df-table tbody tr:hover {
-            background-color: #f0f5ff;
-        }
-        </style>
-    """).strip()
-
-    html_final = f'{css}\n<div class="custom-df-container">\n{html_tabela}\n</div>'
-    st.markdown(html_final, unsafe_allow_html=True)
 
 
 def carregar_dados_patronais(conn, ano, mes):
@@ -186,7 +137,7 @@ def carregar_dados_patronais(conn, ano, mes):
                 "Código Sefaz": cod_sefaz,
                 "Tipo de Arquivo": tp_arquivo,
                 "Código de Relatório": cod_relatorio_json or "-",
-                "Total Desconto": total_desconto,
+                "Total Desconto": float(total_desconto),
             }
         )
 
@@ -196,7 +147,7 @@ def carregar_dados_patronais(conn, ano, mes):
 def render(conn, ano, mes, meses_lista):
     st.title(f"📊 Totalização de Arquivos Patronais ({meses_lista[mes]}/{ano})")
 
-    # Injeção de CSS para limitar a altura do menu suspenso do multiselect
+    # Injeção de CSS para limitar a altura do menu suspenso do multiselect e evitar sobreposição
     st.markdown(
         """
         <style>
@@ -290,21 +241,35 @@ def render(conn, ano, mes, meses_lista):
             .sort_values(by="Total_Valor_Desconto", ascending=False)
         )
 
-        df_resumo_exibir = df_resumo.copy()
-        df_resumo_exibir["Total_Valor_Desconto"] = df_resumo_exibir["Total_Valor_Desconto"].apply(formatar_moeda_br)
-        df_resumo_exibir.rename(columns={"Total_Valor_Desconto": "valorDesconto Total"}, inplace=True)
-
         st.caption(
             f"Exibindo resumo agrupado por: **{', '.join(campos_agrupamento)}**"
         )
-        renderizar_tabela_html(df_resumo_exibir)
+        st.dataframe(
+            df_resumo,
+            use_container_width=True,
+            hide_index=True,
+            column_config={
+                "Recibo": st.column_config.TextColumn("Recibo"),
+                "Total_Valor_Desconto": st.column_config.NumberColumn(
+                    "valorDesconto Total",
+                    format="R$ %.2f"
+                ),
+            },
+        )
     else:
         st.info(
             "Nenhum filtro de agrupamento selecionado. Exibindo a listagem detalhada de registros:"
         )
-        df_detalhe_exibir = df_filtrado.copy()
-        df_detalhe_exibir["Total Desconto"] = df_detalhe_exibir["Total Desconto"].apply(formatar_moeda_br)
-        df_detalhe_exibir.rename(columns={"Total Desconto": "valorDesconto Total"}, inplace=True)
-
-        renderizar_tabela_html(df_detalhe_exibir)
+        st.dataframe(
+            df_filtrado,
+            use_container_width=True,
+            hide_index=True,
+            column_config={
+                "Recibo": st.column_config.TextColumn("Recibo"),
+                "Total Desconto": st.column_config.NumberColumn(
+                    "valorDesconto Total",
+                    format="R$ %.2f"
+                ),
+            },
+        )
 
