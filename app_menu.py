@@ -17,6 +17,9 @@ import auth_ui
 if "autenticado" not in st.session_state:
     st.session_state["autenticado"] = False
 
+if "sub_menu_auditoria" not in st.session_state:
+    st.session_state["sub_menu_auditoria"] = "Consistência Folha"
+
 # 2. Se NÃO estiver autenticado, exibe a tela de login
 if not st.session_state.get("autenticado", False):
     st.markdown("""
@@ -131,7 +134,8 @@ def obter_usuario_logado():
         "1": "Administrador", "a": "Administrador",
         "2": "Gerente", "g": "Gerente",
         "3": "Consulta", "c": "Consulta",
-        "4": "Supervisor", "s": "Supervisor"
+        "4": "Supervisor", "s": "Supervisor",
+        "comum": "Comum"
     }
     perfil_nome = perfis_nomes.get(str(perfil).lower(), "Administrador")
     
@@ -142,7 +146,7 @@ def obter_usuario_logado():
         "perfil_nome": perfil_nome
     }
 
-def carregar_modulos_do_banco(perfil_id):
+def carregar_modulos_do_banco(perfil_id, login_usuario=""):
     conn = obter_conexao()
     if not conn:
         return []
@@ -150,7 +154,9 @@ def carregar_modulos_do_banco(perfil_id):
     p_str = str(perfil_id).lower()
     try:
         cursor = conn.cursor()
-        if p_str in ["a", "administrador", "1", "jose.gomes"]:
+        
+        # Se for admin master ou perfil 'a'/'1', traz todos os módulos ativos
+        if p_str in ["a", "administrador", "1", "jose.gomes"] or login_usuario == "jose.gomes":
             sql_simples = """
                 SELECT DISTINCT m.id, m.nome_menu, m.arquivo_view, m.icone, m.ordem
                 FROM josegomes.modulo m
@@ -159,14 +165,28 @@ def carregar_modulos_do_banco(perfil_id):
             """
             df = pd.read_sql(sql_simples, conn)
         else:
+            # Consulta robusta que busca perfis vinculados na tabela perfil_modulo considerando id ou descrição
             query = """
                 SELECT DISTINCT m.id, m.nome_menu, m.arquivo_view, m.icone, m.ordem
                 FROM josegomes.modulo m
                 INNER JOIN josegomes.perfil_modulo pm ON m.id = pm.id_modulo
-                WHERE pm.id_perfil = :p AND m.ativo = 1
+                INNER JOIN josegomes.perfil p ON pm.id_perfil = p.id
+                WHERE (LOWER(p.descricao) LIKE '%' || :p1 || '%' OR TO_CHAR(p.id) = :p2) AND m.ativo = 1
                 ORDER BY m.ordem ASC
             """
-            df = pd.read_sql(query, conn, params={"p": perfil_id})
+            df = pd.read_sql(query, conn, params={"p1": p_str, "p2": p_str})
+            
+            # Se ainda vier vazio, busca diretamente pelo id_perfil cru da sessão na tabela perfil_modulo
+            if df.empty:
+                query_alt = """
+                    SELECT DISTINCT m.id, m.nome_menu, m.arquivo_view, m.icone, m.ordem
+                    FROM josegomes.modulo m
+                    INNER JOIN josegomes.perfil_modulo pm ON m.id = pm.id_modulo
+                    WHERE pm.id_perfil = :p1 AND m.ativo = 1
+                    ORDER BY m.ordem ASC
+                """
+                df = pd.read_sql(query_alt, conn, params={"p1": str(perfil_id)})
+
         conn.close()
         return df.to_dict('records')
     except Exception as e:
@@ -194,6 +214,24 @@ def main():
                 div[data-testid="stMarkdown"] hr {
                     margin-top: 0.5rem !important;
                     margin-bottom: 0.5rem !important;
+                }
+                .botao-sair-container {
+                    margin-top: 0.5rem !important;
+                }
+                /* Botão Sair compacto, alinhado e com cantos sutis */
+                [data-testid="stSidebar"] div.stButton > button {
+                    background-color: transparent !important;
+                    border: 1px solid rgba(49, 51, 63, 0.2) !important;
+                    color: rgb(49, 51, 63) !important;
+                    border-radius: 8px !important;
+                    box-shadow: none !important;
+                    width: auto !important;
+                    padding: 0.35rem 1.25rem !important;
+                }
+                [data-testid="stSidebar"] div.stButton > button:hover {
+                    border-color: rgb(49, 51, 63) !important;
+                    color: rgb(49, 51, 63) !important;
+                    background-color: rgba(49, 51, 63, 0.02) !important;
                 }
             </style>
         """, unsafe_allow_html=True)
@@ -233,30 +271,37 @@ def main():
         mes = st.selectbox("Mês:", list(meses_lista.keys()), index=mes_sugerido - 1, format_func=lambda x: meses_lista[x])
         st.divider()
 
-        modulos = carregar_modulos_do_banco(usuario_atual["perfil_id"])
-        if not modulos:
-            st.sidebar.warning("Nenhum módulo liberado para o seu perfil.")
-            return
-
-        opcoes_menu = {m["NOME_MENU"] if "NOME_MENU" in m else m["nome_menu"]: m for m in modulos}
+        modulos = carregar_modulos_do_banco(usuario_atual["perfil_id"], usuario_atual["usuario"])
         
-        if "menu_atual" not in st.session_state or st.session_state.menu_atual not in opcoes_menu:
-            st.session_state.menu_atual = list(opcoes_menu.keys())[0]
+        opcoes_menu = {}
+        if modulos:
+            opcoes_menu = {m["NOME_MENU"] if "NOME_MENU" in m else m["nome_menu"]: m for m in modulos}
+            
+            if "menu_atual" not in st.session_state or st.session_state.menu_atual not in opcoes_menu:
+                st.session_state.menu_atual = list(opcoes_menu.keys())[0]
 
-        escolha_menu = st.sidebar.radio("Menu:", options=list(opcoes_menu.keys()), index=list(opcoes_menu.keys()).index(st.session_state.menu_atual), key="menu_principal")
-        st.session_state.menu_atual = escolha_menu
+            escolha_menu = st.sidebar.radio("Menu:", options=list(opcoes_menu.keys()), index=list(opcoes_menu.keys()).index(st.session_state.menu_atual), key="menu_principal")
+            st.session_state.menu_atual = escolha_menu
 
-        sub_opcao = None
-        if "auditoria" in escolha_menu.lower() and "folha" in escolha_menu.lower():
-            st.markdown("---")
-            with st.container(border=True):
-                st.markdown("**Subopções de Auditoria:**")
-                sub_opcao = st.radio(
-                    "Selecione a subopção de auditoria:",
-                    ["Consistência Folha", "Dados Bancários", "Auditoria de Integridade"],
-                    label_visibility="collapsed"
-                )
+            if "auditoria" in escolha_menu.lower() and "folha" in escolha_menu.lower():
+                with st.container(border=True):
+                    st.caption("Subopções de Auditoria:")
+                    st.radio(
+                        "Selecione a Auditoria:",
+                        [
+                           "Consistência Folha",
+                           "Dados Bancários",
+                           "Auditoria de Integridade"
+                        ],
+                        index=["Consistência Folha", "Dados Bancários", "Auditoria de Integridade"].index(st.session_state.get("sub_menu_auditoria", "Consistência Folha")),
+                        label_visibility="collapsed",
+                        key="sub_menu_auditoria"
+                    )
+        else:
+            st.warning("⚠️ Nenhum módulo liberado para o seu perfil.")
+            escolha_menu = None
 
+        st.divider()
         st.markdown('<div class="botao-sair-container">', unsafe_allow_html=True)
         if st.button("Sair"):
             for key in list(st.session_state.keys()): del st.session_state[key]
@@ -264,7 +309,10 @@ def main():
             st.rerun()
         st.markdown('</div>', unsafe_allow_html=True)
 
-    # Execução e renderização da view selecionada de forma 100% dinâmica
+    if not opcoes_menu or not escolha_menu:
+        st.info("Por favor, contate o administrador para associar módulos ao seu perfil de acesso.")
+        return
+
     modulo_selecionado = opcoes_menu[escolha_menu]
     caminho_view = modulo_selecionado.get("ARQUIVO_VIEW") or modulo_selecionado.get("arquivo_view")
 
@@ -274,8 +322,8 @@ def main():
         
         if hasattr(view_module, "render"):
             try:
-                if sub_opcao:
-                    view_module.render(obter_conexao(), ano, mes, sub_opcao)
+                if "auditoria" in escolha_menu.lower() and "folha" in escolha_menu.lower():
+                    view_module.render(obter_conexao(), ano, mes, st.session_state.sub_menu_auditoria)
                 else:
                     view_module.render(obter_conexao(), ano, mes, meses_lista)
             except TypeError:

@@ -1,7 +1,7 @@
 
 Collecting usage statistics. To deactivate, set browser.gatherUsageStats to false.
 
-2026-10-09 17:21:31.665 Uvicorn server started on 0.0.0.0:8501
+2026-10-10 03:27:18.498 Uvicorn server started on 0.0.0.0:8501
 
   You can now view your Streamlit app in your browser.
 
@@ -9,13 +9,5 @@ Collecting usage statistics. To deactivate, set browser.gatherUsageStats to fals
   Network URL: http://10.0.52.171:8501
   External URL: http://200.23.153.196:8501
 
-/home/jose.gomes/vobys_dashboard/auditoria/tipo_folha_x_tipo_arquivo_sefaz.py:238: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
-  df = pd.read_sql(query_final, conn)
-/home/jose.gomes/vobys_dashboard/views/app_siafe.py:24: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
-  return pd.read_sql(GET_SIGLAS_EMPRESA, _conn)
-/home/jose.gomes/vobys_dashboard/auditoria/tipo_folha_x_tipo_arquivo_sefaz.py:238: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
-  df = pd.read_sql(query_final, conn)
-/home/jose.gomes/vobys_dashboard/auditoria/tipo_folha_x_tipo_arquivo_sefaz.py:238: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
-  df = pd.read_sql(query_final, conn)
-/home/jose.gomes/vobys_dashboard/auditoria/tipo_folha_x_tipo_arquivo_sefaz.py:238: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
-  df = pd.read_sql(query_final, conn)
+/home/jose.gomes/vobys_dashboard/views/patronal_resumo.py:85: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df_raw = pd.read_sql(query, conn, params={"ano": ano, "mes": mes})
