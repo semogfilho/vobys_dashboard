@@ -3,7 +3,7 @@ import json
 import pandas as pd
 import streamlit as st
 
-# Mapeamento oficial de status VOBYS
+# Mapeamento oficial de status VOBYS atualizado
 STATUS_MAP = {
     "P": "PENDENTE",
     "T": "TRANSMITIDO",
@@ -12,6 +12,8 @@ STATUS_MAP = {
     "I": "INCONSISTENCIA DE CADASTRO",
     "O": "OUTRAS INCONSISTENCIAS",
     "E": "ERRO",
+    "X": "EXCLUIDO",
+    "V": "VALIDADO",
 }
 
 
@@ -120,7 +122,14 @@ def carregar_dados_patronais(conn, ano, mes):
         id_reg = row.get("id_siafe_evento_integracao")
         dt_cad = row.get("data_cadastro")
         empresa = row.get("empresa_sigla") or cod_sefaz_json or "-"
-        recibo = str(row.get("recibo")) if row.get("recibo") is not None else "-"
+        
+        # Converte o recibo para número inteiro se possível, senão 0
+        rec_raw = row.get("recibo")
+        try:
+            recibo = int(rec_raw) if rec_raw is not None else 0
+        except Exception:
+            recibo = 0
+
         cod_sefaz = row.get("codigo_sefaz") or cod_sefaz_json or "-"
         tp_arquivo = row.get("tipo_arquivo") or tp_arquivo_json or "-"
 
@@ -145,12 +154,27 @@ def carregar_dados_patronais(conn, ano, mes):
 
 
 def render(conn, ano, mes, meses_lista):
-    st.title(f"📊 Totalização de Arquivos Patronais ({meses_lista[mes]}/{ano})")
-
-    # Injeção de CSS para limitar a altura do menu suspenso do multiselect e evitar sobreposição
+    # Injeção de CSS para espaçamento adequado sem cortes no topo
     st.markdown(
         """
         <style>
+            .block-container {
+                padding-top: 2rem !important;
+                padding-bottom: 1rem !important;
+            }
+            h1 {
+                margin-top: 0rem !important;
+                padding-bottom: 0.2rem !important;
+                font-size: 1.8rem !important;
+            }
+            hr {
+                margin: 0.4rem 0 !important;
+            }
+            h3 {
+                margin-top: 0.2rem !important;
+                margin-bottom: 0.2rem !important;
+                font-size: 1.2rem !important;
+            }
             div[data-baseweb="popover"] {
                 max-height: 220px !important;
             }
@@ -158,6 +182,8 @@ def render(conn, ano, mes, meses_lista):
         """,
         unsafe_allow_html=True,
     )
+
+    st.title(f"📊 Totalização de Arquivos Patronais ({meses_lista[mes]}/{ano})")
 
     with st.spinner("Carregando e processando arquivos patronais..."):
         df_patronal = carregar_dados_patronais(conn, ano, mes)
@@ -167,26 +193,21 @@ def render(conn, ano, mes, meses_lista):
         return
 
     # --- 1. PAINEL DE FILTROS DE CONTEÚDO ---
-    with st.expander("🎯 Filtros de Pesquisa / Seleção de Valores", expanded=True):
+    with st.expander("🎯 Filtros de Pesquisa / Seleção de Valores", expanded=False):
         f_col1, f_col2, f_col3, f_col4 = st.columns(4)
 
-        # Filtro por Empresa
         empresas_disponiveis = sorted([x for x in df_patronal["Empresa"].unique() if x != "-"])
         sel_empresa = f_col1.multiselect("Empresa:", options=empresas_disponiveis, placeholder="Todas")
 
-        # Filtro por Código de Relatório
         relatorios_disponiveis = sorted([x for x in df_patronal["Código de Relatório"].unique() if x != "-"])
         sel_relatorio = f_col2.multiselect("Código de Relatório:", options=relatorios_disponiveis, placeholder="Todos")
 
-        # Filtro por Tipo de Arquivo
         tipos_disponiveis = sorted([x for x in df_patronal["Tipo de Arquivo"].unique() if x != "-"])
         sel_tipo = f_col3.multiselect("Tipo de Arquivo:", options=tipos_disponiveis, placeholder="Todos")
 
-        # Filtro por Status
         status_disponiveis = sorted([x for x in df_patronal["Status"].unique() if x != "-"])
         sel_status = f_col4.multiselect("Status:", options=status_disponiveis, placeholder="Todos")
 
-    # Aplicação dos filtros ao DataFrame
     df_filtrado = df_patronal.copy()
 
     if sel_empresa:
@@ -198,7 +219,7 @@ def render(conn, ano, mes, meses_lista):
     if sel_status:
         df_filtrado = df_filtrado[df_filtrado["Status"].isin(sel_status)]
 
-    # --- 2. MÉTRICAS ---
+    # --- 2. MÉTRICAS COMPACTAS ---
     col1, col2 = st.columns(2)
     col1.metric("Total de Arquivos Filtrados", len(df_filtrado))
 
@@ -230,8 +251,6 @@ def render(conn, ano, mes, meses_lista):
         help="Marque os campos para agrupar e calcular o somatório do valorDesconto",
     )
 
-    st.write("")
-
     if campos_agrupamento:
         df_resumo = (
             df_filtrado.groupby(campos_agrupamento, as_index=False)
@@ -249,7 +268,7 @@ def render(conn, ano, mes, meses_lista):
             use_container_width=True,
             hide_index=True,
             column_config={
-                "Recibo": st.column_config.TextColumn("Recibo"),
+                "Recibo": st.column_config.NumberColumn("Recibo", format="%d"),
                 "Total_Valor_Desconto": st.column_config.NumberColumn(
                     "valorDesconto Total",
                     format="R$ %.2f"
@@ -265,7 +284,7 @@ def render(conn, ano, mes, meses_lista):
             use_container_width=True,
             hide_index=True,
             column_config={
-                "Recibo": st.column_config.TextColumn("Recibo"),
+                "Recibo": st.column_config.NumberColumn("Recibo", format="%d"),
                 "Total Desconto": st.column_config.NumberColumn(
                     "valorDesconto Total",
                     format="R$ %.2f"
