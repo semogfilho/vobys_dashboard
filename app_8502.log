@@ -884,3 +884,43 @@ For `use_container_width=True`, use `width='stretch'`. For `use_container_width=
 `use_container_width` will be removed after 2025-12-31.
 
 For `use_container_width=True`, use `width='stretch'`. For `use_container_width=False`, use `width='content'`.
+/home/jose.gomes/vobys_dashboard/app_menu.py:186: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  arquivo_view = st.text_input("Caminho View (ex: gestao_perfil)")
+/home/jose.gomes/vobys_dashboard/app_menu.py:186: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  arquivo_view = st.text_input("Caminho View (ex: gestao_perfil)")
+/home/jose.gomes/vobys_dashboard/app_menu.py:207: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  else:
+2026-10-10 02:49:27.498 Please replace `use_container_width` with `width`.
+
+`use_container_width` will be removed after 2025-12-31.
+
+For `use_container_width=True`, use `width='stretch'`. For `use_container_width=False`, use `width='content'`.
+/home/jose.gomes/vobys_dashboard/app_menu.py:215: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  if not df_mod.empty:
+2026-10-10 02:49:27.671 Please replace `use_container_width` with `width`.
+
+`use_container_width` will be removed after 2025-12-31.
+
+For `use_container_width=True`, use `width='stretch'`. For `use_container_width=False`, use `width='content'`.
+/home/jose.gomes/vobys_dashboard/app_menu.py:160: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  query = "SELECT id_modulo FROM josegomes.perfil_modulo WHERE id_perfil = :perfil_id"
+/home/jose.gomes/vobys_dashboard/app_menu.py:160: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  query = "SELECT id_modulo FROM josegomes.perfil_modulo WHERE id_perfil = :perfil_id"
+/home/jose.gomes/vobys_dashboard/app_menu.py:160: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  query = "SELECT id_modulo FROM josegomes.perfil_modulo WHERE id_perfil = :perfil_id"
+/home/jose.gomes/vobys_dashboard/app_menu.py:160: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  query = "SELECT id_modulo FROM josegomes.perfil_modulo WHERE id_perfil = :perfil_id"
+/home/jose.gomes/vobys_dashboard/views/gestao_perfil.py:18: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  return pd.read_sql(query, conn)
+2026-10-10 02:59:28.657 Please replace `use_container_width` with `width`.
+
+`use_container_width` will be removed after 2025-12-31.
+
+For `use_container_width=True`, use `width='stretch'`. For `use_container_width=False`, use `width='content'`.
+/home/jose.gomes/vobys_dashboard/views/gestao_perfil.py:23: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  return pd.read_sql(query, conn)
+2026-10-10 02:59:28.815 Please replace `use_container_width` with `width`.
+
+`use_container_width` will be removed after 2025-12-31.
+
+For `use_container_width=True`, use `width='stretch'`. For `use_container_width=False`, use `width='content'`.
