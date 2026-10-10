@@ -390,7 +390,7 @@ def render(conn, ano=None, mes=None, meses_lista=None, *args, **kwargs):
             },
         )
 
-    # --- 6. ISOLAMENTO E DETECÇÃO EXATA DE RECIBOS DIVERGENTES ---
+    # --- 6. ISOLAMENTO, DETECÇÃO EXATA E RAIZ DO DESCOMPASSO DINÂMICA ---
     with st.expander("🚨 Recibos com Divergência Efetiva Detectados", expanded=True):
         df_v1 = df_filtrado[df_filtrado["Tipo Requisição"] == "COLABORADOR"].copy()
         df_v3 = df_filtrado[df_filtrado["Tipo Requisição"] == "ORÇAMENTARIO"].copy()
@@ -426,10 +426,10 @@ def render(conn, ano=None, mes=None, meses_lista=None, *args, **kwargs):
                                     {
                                         "Empresa": empresa_g,
                                         "Código de Relatório": cod_rel,
-                                        "Recibo Colaborador (V1)": rec_v1,
-                                        "Recibo Orçamentário (V3)": rec_v3,
-                                        "Valor Bruto V1 (R$)": val_bruto,
-                                        "Provento Orçamentário V3 (R$)": val_prov,
+                                        "Recibo Colaborador": rec_v1,
+                                        "Recibo Orçamentário": rec_v3,
+                                        "Valor Bruto Colaborador (R$)": val_bruto,
+                                        "Provento Orçamentário (R$)": val_prov,
                                         "Diferença (R$)": diff_rec,
                                     }
                                 )
@@ -442,24 +442,51 @@ def render(conn, ano=None, mes=None, meses_lista=None, *args, **kwargs):
                 use_container_width=True,
                 hide_index=True,
                 column_config={
-                    "Recibo Colaborador (V1)": st.column_config.NumberColumn("Recibo V1", format="%d"),
-                    "Recibo Orçamentário (V3)": st.column_config.NumberColumn("Recibo V3", format="%d"),
-                    "Valor Bruto V1 (R$)": st.column_config.NumberColumn("Bruto V1 (R$)", format="R$ %.2f"),
-                    "Provento Orçamentário V3 (R$)": st.column_config.NumberColumn("Provento V3 (R$)", format="R$ %.2f"),
+                    "Recibo Colaborador": st.column_config.NumberColumn("Recibo Colaborador", format="%d"),
+                    "Recibo Orçamentário": st.column_config.NumberColumn("Recibo Orçamentário", format="%d"),
+                    "Valor Bruto Colaborador (R$)": st.column_config.NumberColumn("Bruto Colaborador (R$)", format="R$ %.2f"),
+                    "Provento Orçamentário (R$)": st.column_config.NumberColumn("Provento Orçamentário (R$)", format="R$ %.2f"),
                     "Diferença (R$)": st.column_config.NumberColumn("Diferença (R$)", format="R$ %.2f"),
                 },
             )
             
-            lista_v1 = sorted(df_rec_prob["Recibo Colaborador (V1)"].unique())
-            lista_v3 = sorted(df_rec_prob["Recibo Orçamentário (V3)"].unique())
-            str_v1 = ", ".join(map(str, lista_v1))
-            str_v3 = ", ".join(map(str, lista_v3))
-            sugestao_recibos = ", ".join(map(str, sorted(set(lista_v1 + lista_v3))))
+            lista_colab = sorted(df_rec_prob["Recibo Colaborador"].unique())
+            lista_orc = sorted(df_rec_prob["Recibo Orçamentário"].unique())
+            str_colab = ", ".join(map(str, lista_colab))
+            str_orc = ", ".join(map(str, lista_orc))
+            sugestao_recibos = ", ".join(map(str, sorted(set(lista_colab + lista_orc))))
 
             st.markdown(
                 f"💡 Recibos afetados para copiar e auditar no painel abaixo: "
-                f"<span style='color: #ff4b4b; font-weight: bold;'>{str_v3}</span>, "
-                f"<span style='color: #ff4b4b; font-weight: bold;'>{str_v1}</span>",
+                f"<span style='color: #ff4b4b; font-weight: bold; font-size: 1.1rem;'>{str_colab}</span>, "
+                f"<span style='color: #ff4b4b; font-weight: bold; font-size: 1.1rem;'>{str_orc}</span>",
+                unsafe_allow_html=True
+            )
+
+            # --- DETALHAMENTO DINÂMICO: RAIZ DO DESCOMPASSO ---
+            prim = df_rec_prob.iloc[0]
+            rec_colab_top = prim["Recibo Colaborador"]
+            rec_orc_top = prim["Recibo Orçamentário"]
+            bruto_top = prim["Valor Bruto Colaborador (R$)"]
+            prov_top = prim["Provento Orçamentário (R$)"]
+            diff_top = abs(prim["Diferença (R$)"])
+            
+            bruto_fmt = formatar_moeda_br(bruto_top)
+            prov_fmt = formatar_moeda_br(prov_top)
+            diff_fmt = formatar_moeda_br(diff_top)
+
+            st.markdown(
+                f"""
+                <div style="background-color: #f0f2f6; padding: 16px; border-radius: 8px; border-left: 5px solid #ff4b4b; margin-top: 15px;">
+                    <h4 style="margin-top: 0; color: #1f1f1f; font-size: 1.15rem;">🧩 Raiz do Descompasso (Análise de Causa)</h4>
+                    <ul style="margin-bottom: 0; font-size: 1.05rem; line-height: 1.6; color: #31333f;">
+                        <li><b>Recibos Envolvidos:</b> Colaborador <span style="color: #ff4b4b; font-weight: bold;">{rec_colab_top}</span> | Orçamentário <span style="color: #ff4b4b; font-weight: bold;">{rec_orc_top}</span></li>
+                        <li><b>Diferença Apurada:</b> <span style="color: #ff4b4b; font-weight: bold;">{diff_fmt}</span> (Proventos Orçamentários: {prov_fmt} - Bruto Colaborador: {bruto_fmt})</li>
+                        <li><b>Diagnóstico:</b> O total cadastrado no lote orçamentário ({prov_fmt}) difere do somatório dos colaboradores no arquivo de folha ({bruto_fmt}).</li>
+                        <li><b>Causa Provável:</b> Desalinhamento na quantidade de registros ou rubricas processadas entre o arquivo de colaboradores e a contabilização orçamentária para esta entidade.</li>
+                    </ul>
+                </div>
+                """,
                 unsafe_allow_html=True
             )
         else:
