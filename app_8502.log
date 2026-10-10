@@ -905,3 +905,214 @@ For `use_container_width=True`, use `width='stretch'`. For `use_container_width=
 For `use_container_width=True`, use `width='stretch'`. For `use_container_width=False`, use `width='content'`.
 /home/jose.gomes/vobys_dashboard/app_menu.py:166: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
   p_num = mapa_perfis_id.get(p_str, p_str)
+/home/jose.gomes/vobys_dashboard/app_menu.py:166: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  p_num = mapa_perfis_id.get(p_str, p_str)
+/home/jose.gomes/vobys_dashboard/app_menu.py:166: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  p_num = mapa_perfis_id.get(p_str, p_str)
+/home/jose.gomes/vobys_dashboard/app_menu.py:166: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  p_num = mapa_perfis_id.get(p_str, p_str)
+/home/jose.gomes/vobys_dashboard/app_menu.py:166: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  p_num = mapa_perfis_id.get(p_str, p_str)
+/home/jose.gomes/vobys_dashboard/app_menu.py:166: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  p_num = mapa_perfis_id.get(p_str, p_str)
+/home/jose.gomes/vobys_dashboard/app_menu.py:166: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  p_num = mapa_perfis_id.get(p_str, p_str)
+/home/jose.gomes/vobys_dashboard/app_menu.py:166: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  p_num = mapa_perfis_id.get(p_str, p_str)
+/home/jose.gomes/vobys_dashboard/app_menu.py:166: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  p_num = mapa_perfis_id.get(p_str, p_str)
+/home/jose.gomes/vobys_dashboard/app_menu.py:166: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  p_num = mapa_perfis_id.get(p_str, p_str)
+/home/jose.gomes/vobys_dashboard/app_menu.py:166: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  p_num = mapa_perfis_id.get(p_str, p_str)
+/home/jose.gomes/vobys_dashboard/app_menu.py:166: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  p_num = mapa_perfis_id.get(p_str, p_str)
+/home/jose.gomes/vobys_dashboard/app_menu.py:166: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  p_num = mapa_perfis_id.get(p_str, p_str)
+/home/jose.gomes/vobys_dashboard/app_menu.py:166: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  p_num = mapa_perfis_id.get(p_str, p_str)
+/home/jose.gomes/vobys_dashboard/app_menu.py:166: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  p_num = mapa_perfis_id.get(p_str, p_str)
+/home/jose.gomes/vobys_dashboard/app_menu.py:166: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  p_num = mapa_perfis_id.get(p_str, p_str)
+/home/jose.gomes/vobys_dashboard/app_menu.py:177: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  if df.empty:
+/home/jose.gomes/vobys_dashboard/views/patronal_resumo.py:85: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df_raw = pd.read_sql(query, conn, params={"ano": ano, "mes": mes})
+2026-10-10 04:01:43.742 Please replace `use_container_width` with `width`.
+
+`use_container_width` will be removed after 2025-12-31.
+
+For `use_container_width=True`, use `width='stretch'`. For `use_container_width=False`, use `width='content'`.
+/home/jose.gomes/vobys_dashboard/app_menu.py:177: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  if df.empty:
+Ignoring fixed x limits to fulfill fixed data aspect with adjustable data limits.
+/home/jose.gomes/vobys_dashboard/app_menu.py:177: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  if df.empty:
+/home/jose.gomes/vobys_dashboard/app_menu.py:166: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  p_num = mapa_perfis_id.get(p_str, p_str)
+/home/jose.gomes/vobys_dashboard/app_menu.py:166: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  p_num = mapa_perfis_id.get(p_str, p_str)
+/home/jose.gomes/vobys_dashboard/app_menu.py:166: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  p_num = mapa_perfis_id.get(p_str, p_str)
+/home/jose.gomes/vobys_dashboard/app_menu.py:166: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  p_num = mapa_perfis_id.get(p_str, p_str)
+/home/jose.gomes/vobys_dashboard/app_menu.py:166: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  p_num = mapa_perfis_id.get(p_str, p_str)
+/home/jose.gomes/vobys_dashboard/app_menu.py:166: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  p_num = mapa_perfis_id.get(p_str, p_str)
+/home/jose.gomes/vobys_dashboard/app_menu.py:166: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  p_num = mapa_perfis_id.get(p_str, p_str)
+Ignoring fixed x limits to fulfill fixed data aspect with adjustable data limits.
+/home/jose.gomes/vobys_dashboard/app_menu.py:166: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  p_num = mapa_perfis_id.get(p_str, p_str)
+/home/jose.gomes/vobys_dashboard/app_menu.py:177: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  if df.empty:
+/home/jose.gomes/vobys_dashboard/app_menu.py:166: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  p_num = mapa_perfis_id.get(p_str, p_str)
+/home/jose.gomes/vobys_dashboard/views/gestao_perfil.py:17: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  return pd.read_sql(query, conn)
+2026-10-10 04:03:08.945 Please replace `use_container_width` with `width`.
+
+`use_container_width` will be removed after 2025-12-31.
+
+For `use_container_width=True`, use `width='stretch'`. For `use_container_width=False`, use `width='content'`.
+/home/jose.gomes/vobys_dashboard/views/gestao_perfil.py:22: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  return pd.read_sql(query, conn)
+2026-10-10 04:03:08.958 Please replace `use_container_width` with `width`.
+
+`use_container_width` will be removed after 2025-12-31.
+
+For `use_container_width=True`, use `width='stretch'`. For `use_container_width=False`, use `width='content'`.
+/home/jose.gomes/vobys_dashboard/app_menu.py:166: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  p_num = mapa_perfis_id.get(p_str, p_str)
+/home/jose.gomes/vobys_dashboard/views/gestao_perfil.py:17: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  return pd.read_sql(query, conn)
+2026-10-10 04:03:12.927 Please replace `use_container_width` with `width`.
+
+`use_container_width` will be removed after 2025-12-31.
+
+For `use_container_width=True`, use `width='stretch'`. For `use_container_width=False`, use `width='content'`.
+/home/jose.gomes/vobys_dashboard/views/gestao_perfil.py:22: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  return pd.read_sql(query, conn)
+2026-10-10 04:03:12.942 Please replace `use_container_width` with `width`.
+
+`use_container_width` will be removed after 2025-12-31.
+
+For `use_container_width=True`, use `width='stretch'`. For `use_container_width=False`, use `width='content'`.
+/home/jose.gomes/vobys_dashboard/app_menu.py:166: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  p_num = mapa_perfis_id.get(p_str, p_str)
+/home/jose.gomes/vobys_dashboard/views/gestao_perfil.py:17: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  return pd.read_sql(query, conn)
+/home/jose.gomes/vobys_dashboard/app_menu.py:166: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  p_num = mapa_perfis_id.get(p_str, p_str)
+/home/jose.gomes/vobys_dashboard/views/gestao_perfil.py:17: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  return pd.read_sql(query, conn)
+2026-10-10 04:03:21.586 Please replace `use_container_width` with `width`.
+
+`use_container_width` will be removed after 2025-12-31.
+
+For `use_container_width=True`, use `width='stretch'`. For `use_container_width=False`, use `width='content'`.
+/home/jose.gomes/vobys_dashboard/views/gestao_perfil.py:22: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  return pd.read_sql(query, conn)
+2026-10-10 04:03:21.602 Please replace `use_container_width` with `width`.
+
+`use_container_width` will be removed after 2025-12-31.
+
+For `use_container_width=True`, use `width='stretch'`. For `use_container_width=False`, use `width='content'`.
+/home/jose.gomes/vobys_dashboard/app_menu.py:177: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  if df.empty:
+/home/jose.gomes/vobys_dashboard/app_menu.py:166: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  p_num = mapa_perfis_id.get(p_str, p_str)
+/home/jose.gomes/vobys_dashboard/views/gestao_perfil.py:17: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  return pd.read_sql(query, conn)
+/home/jose.gomes/vobys_dashboard/app_menu.py:166: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  p_num = mapa_perfis_id.get(p_str, p_str)
+/home/jose.gomes/vobys_dashboard/views/gestao_perfil.py:17: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  return pd.read_sql(query, conn)
+2026-10-10 04:03:42.660 Please replace `use_container_width` with `width`.
+
+`use_container_width` will be removed after 2025-12-31.
+
+For `use_container_width=True`, use `width='stretch'`. For `use_container_width=False`, use `width='content'`.
+/home/jose.gomes/vobys_dashboard/views/gestao_perfil.py:22: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  return pd.read_sql(query, conn)
+2026-10-10 04:03:42.675 Please replace `use_container_width` with `width`.
+
+`use_container_width` will be removed after 2025-12-31.
+
+For `use_container_width=True`, use `width='stretch'`. For `use_container_width=False`, use `width='content'`.
+/home/jose.gomes/vobys_dashboard/app_menu.py:166: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  p_num = mapa_perfis_id.get(p_str, p_str)
+/home/jose.gomes/vobys_dashboard/app_menu.py:166: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  p_num = mapa_perfis_id.get(p_str, p_str)
+/home/jose.gomes/vobys_dashboard/app_menu.py:166: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  p_num = mapa_perfis_id.get(p_str, p_str)
+/home/jose.gomes/vobys_dashboard/app_menu.py:166: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  p_num = mapa_perfis_id.get(p_str, p_str)
+/home/jose.gomes/vobys_dashboard/app_menu.py:166: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  p_num = mapa_perfis_id.get(p_str, p_str)
+/home/jose.gomes/vobys_dashboard/app_menu.py:166: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  p_num = mapa_perfis_id.get(p_str, p_str)
+/home/jose.gomes/vobys_dashboard/app_menu.py:166: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  p_num = mapa_perfis_id.get(p_str, p_str)
+/home/jose.gomes/vobys_dashboard/app_menu.py:166: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  p_num = mapa_perfis_id.get(p_str, p_str)
+/home/jose.gomes/vobys_dashboard/app_menu.py:166: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  p_num = mapa_perfis_id.get(p_str, p_str)
+/home/jose.gomes/vobys_dashboard/app_menu.py:166: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  p_num = mapa_perfis_id.get(p_str, p_str)
+/home/jose.gomes/vobys_dashboard/app_menu.py:166: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  p_num = mapa_perfis_id.get(p_str, p_str)
+/home/jose.gomes/vobys_dashboard/app_menu.py:166: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  p_num = mapa_perfis_id.get(p_str, p_str)
+/home/jose.gomes/vobys_dashboard/app_menu.py:166: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  p_num = mapa_perfis_id.get(p_str, p_str)
+/home/jose.gomes/vobys_dashboard/app_menu.py:166: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  p_num = mapa_perfis_id.get(p_str, p_str)
+/home/jose.gomes/vobys_dashboard/app_menu.py:166: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  p_num = mapa_perfis_id.get(p_str, p_str)
+/home/jose.gomes/vobys_dashboard/app_menu.py:166: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  p_num = mapa_perfis_id.get(p_str, p_str)
+/home/jose.gomes/vobys_dashboard/app_menu.py:166: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  p_num = mapa_perfis_id.get(p_str, p_str)
+/home/jose.gomes/vobys_dashboard/app_menu.py:166: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  p_num = mapa_perfis_id.get(p_str, p_str)
+/home/jose.gomes/vobys_dashboard/app_menu.py:166: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  p_num = mapa_perfis_id.get(p_str, p_str)
+/home/jose.gomes/vobys_dashboard/app_menu.py:166: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  p_num = mapa_perfis_id.get(p_str, p_str)
+/home/jose.gomes/vobys_dashboard/app_menu.py:166: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  p_num = mapa_perfis_id.get(p_str, p_str)
+/home/jose.gomes/vobys_dashboard/app_menu.py:166: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  p_num = mapa_perfis_id.get(p_str, p_str)
+/home/jose.gomes/vobys_dashboard/app_menu.py:166: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  p_num = mapa_perfis_id.get(p_str, p_str)
+/home/jose.gomes/vobys_dashboard/app_menu.py:166: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  p_num = mapa_perfis_id.get(p_str, p_str)
+/home/jose.gomes/vobys_dashboard/app_menu.py:177: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  if df.empty:
+/home/jose.gomes/vobys_dashboard/app_menu.py:166: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  p_num = mapa_perfis_id.get(p_str, p_str)
+/home/jose.gomes/vobys_dashboard/app_menu.py:166: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  p_num = mapa_perfis_id.get(p_str, p_str)
+/home/jose.gomes/vobys_dashboard/app_menu.py:177: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  if df.empty:
+/home/jose.gomes/vobys_dashboard/app_menu.py:177: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  if df.empty:
+/home/jose.gomes/vobys_dashboard/app_menu.py:177: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  if df.empty:
+/home/jose.gomes/vobys_dashboard/app_menu.py:177: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  if df.empty:
+/home/jose.gomes/vobys_dashboard/app_menu.py:177: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  if df.empty:
+/home/jose.gomes/vobys_dashboard/app_menu.py:177: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  if df.empty:
+/home/jose.gomes/vobys_dashboard/app_menu.py:177: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  if df.empty:
+/home/jose.gomes/vobys_dashboard/app_menu.py:177: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  if df.empty:
+/home/jose.gomes/vobys_dashboard/app_menu.py:177: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  if df.empty:
+/home/jose.gomes/vobys_dashboard/app_menu.py:177: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  if df.empty:

@@ -22,14 +22,13 @@ requer_reset = "nao"
 [usuario."evandro.macedo"]
 nome = "Evandro Macedo Santana"
 email = "evandromsantana@hotmail.com"
-tipo = "g"
+tipo = "c"
 senha_hash = "e115d2e8691f9dcb0e7a5b29a71ff442b51f89439dc5d324a03f7403eac1d67e"
 requer_reset = "sim"
 
 [usuario.valdiano]
 nome = "Valdiano Sousa"
 email = "evandromsantana@hotmail.com"
-tipo = "g"
+tipo = "c"
 senha_hash = "52e8e47b38e854580afce4aade15dbd5ce0c0464da711afe71da123687d5a4cd"
 requer_reset = "nao"
-
