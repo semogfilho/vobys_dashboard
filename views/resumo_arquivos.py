@@ -234,7 +234,6 @@ def render(conn, ano=None, mes=None, meses_lista=None, *args, **kwargs):
             div[data-baseweb="popover"] {
                 max-height: 220px !important;
             }
-            /* Ajuste para acomodar valores monetários grandes nos cartões de métrica */
             div[data-testid="stMetricValue"] {
                 font-size: 1.35rem !important;
             }
@@ -289,7 +288,7 @@ def render(conn, ano=None, mes=None, meses_lista=None, *args, **kwargs):
     if sel_status:
         df_filtrado = df_filtrado[df_filtrado["Status"].isin(sel_status)]
 
-    # --- 4. MÉTRICAS COMPACTAS COM DISTRIBUIÇÃO OTIMIZADA PARA VALORES GRANDES ---
+    # --- 4. MÉTRICAS COMPACTAS COM DISTRIBUIÇÃO OTIMIZADA ---
     m_col1, m_col2, m_col3, m_col4, m_col5, m_col6 = st.columns([1, 1.8, 1.8, 1.8, 1.8, 1.8])
 
     m_col1.metric("Arquivos", len(df_filtrado))
@@ -309,12 +308,24 @@ def render(conn, ano=None, mes=None, meses_lista=None, *args, **kwargs):
     soma_desc_patr = df_filtrado["Desconto Patronal"].sum() if not df_filtrado.empty else 0.0
     m_col6.metric("Desc. Patronal", formatar_moeda_br(soma_desc_patr))
 
+    # --- 4.1. ALERTA DE DIVERGÊNCIA MATEMÁTICA ---
+    soma_esperada = soma_liquido + soma_desc_orc
+    diferenca = round(soma_bruto - soma_esperada, 2)
+
+    if abs(diferenca) > 0.01:
+        diff_fmt = formatar_moeda_br(abs(diferenca))
+        st.warning(
+            f"⚠️ **Atenção:** Existe uma divergência de **{diff_fmt}** entre o "
+            f"Valor Bruto = Líquido + Orçamentário"
+        )
+
     st.divider()
 
     if df_filtrado.empty:
         st.info("Nenhum registro encontrado para os filtros selecionados.")
         return
 
+    # --- 5. AGRUPAMENTO DINÂMICO ---
     st.markdown("### 🔍 Agrupamento Dinâmico")
     opcoes_agrupamento = [
         "Empresa",
@@ -378,4 +389,55 @@ def render(conn, ano=None, mes=None, meses_lista=None, *args, **kwargs):
                 "Desconto Patronal": st.column_config.NumberColumn("Desc. Patronal (R$)", format="R$ %.2f"),
             },
         )
+
+    # --- 6. MÓDULO DE INSPEÇÃO / AUDITORIA DE RECIBOS ESPECÍFICOS ---
+    with st.expander("🔎 Auditoria de Recibos Específicos (Ex: 8304 e 5220)", expanded=False):
+        st.markdown("Digite os números dos recibos que deseja inspecionar detalhadamente para comparar o conteúdo dos payloads:")
+        recibos_input = st.text_input("Recibos (separados por vírgula):", value="8304, 5220, 8349, 5288")
+        
+        if st.button("Carregar Detalhes dos Recibos"):
+            try:
+                lista_rec = [int(r.strip()) for r in recibos_input.split(",") if r.strip().isdigit()]
+                if lista_rec:
+                    query_insp = f"""
+                        SELECT 
+                            sei.id_siafe_evento_integracao,
+                            sei.recibo AS RECIBO,
+                            sei.IND_TIPO_REQUISICAO,
+                            sei.status_vobys,
+                            sei.tipo_arquivo,
+                            seip.json AS payload_blob
+                        FROM sw_publico.SIAFE_EVENTO_INTEGRACAO sei
+                        JOIN SW_PUBLICO.Siafe_Evento_Integ_Payload seip 
+                            ON seip.id_siafe_evento_integracao = sei.id_siafe_evento_integracao
+                        WHERE sei.ANO = :ano
+                          AND sei.MES = :mes
+                          AND sei.RECIBO IN ({','.join(map(str, lista_rec))})
+                    """
+                    df_insp = pd.read_sql(query_insp, conn, params={"ano": ano, "mes": mes})
+                    if not df_insp.empty:
+                        for _, row_insp in df_insp.iterrows():
+                            # Mapeamento robusto de colunas maiúsculas/minúsculas do banco
+                            row_dict = {str(k).lower(): v for k, v in row_insp.items()}
+                            rec_num = row_dict.get("recibo")
+                            tp_req = row_dict.get("ind_tipo_requisicao")
+                            id_int = row_dict.get("id_siafe_evento_integracao")
+                            blob = row_dict.get("payload_blob")
+                            
+                            json_texto = extrair_texto_payload(blob)
+                            
+                            st.markdown(f"**Recibo: `{rec_num}` | Tipo Req: `{tp_req}` | ID Int: `{id_int}`**")
+                            if json_texto:
+                                try:
+                                    dados_json = json.loads(json_texto)
+                                    st.json(dados_json)
+                                except Exception:
+                                    st.text(json_texto)
+                            else:
+                                st.warning("Payload vazio ou inválido.")
+                            st.divider()
+                    else:
+                        st.info("Nenhum registro encontrado para os recibos informados no período selecionado.")
+            except Exception as e:
+                st.error(f"Erro ao consultar recibos: {e}")
 
