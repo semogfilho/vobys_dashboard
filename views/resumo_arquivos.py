@@ -390,10 +390,87 @@ def render(conn, ano=None, mes=None, meses_lista=None, *args, **kwargs):
             },
         )
 
-    # --- 6. MÓDULO DE INSPEÇÃO / AUDITORIA DE RECIBOS ESPECÍFICOS ---
-    with st.expander("🔎 Auditoria de Recibos Específicos (Ex: 8304 e 5220)", expanded=False):
+    # --- 6. ISOLAMENTO E DETECÇÃO EXATA DE RECIBOS DIVERGENTES ---
+    with st.expander("🚨 Recibos com Divergência Efetiva Detectados", expanded=True):
+        df_v1 = df_filtrado[df_filtrado["Tipo Requisição"] == "COLABORADOR"].copy()
+        df_v3 = df_filtrado[df_filtrado["Tipo Requisição"] == "ORÇAMENTARIO"].copy()
+
+        recibos_problematicos = []
+
+        if not df_v1.empty and not df_v3.empty:
+            for empresa_g in df_filtrado["Empresa"].unique():
+                df_v1_emp = df_v1[df_v1["Empresa"] == empresa_g]
+                df_v3_emp = df_v3[df_v3["Empresa"] == empresa_g]
+
+                for cod_rel in df_filtrado["Código de Relatório"].unique():
+                    sub_v1 = df_v1_emp[df_v1_emp["Código de Relatório"] == cod_rel]
+                    sub_v3 = df_v3_emp[df_v3_emp["Código de Relatório"] == cod_rel]
+
+                    if not sub_v1.empty and not sub_v3.empty:
+                        for _, r_v1 in sub_v1.iterrows():
+                            val_bruto = r_v1["Valor Bruto"]
+                            val_liq = r_v1["Valor Líquido"]
+                            rec_v1 = r_v1["Recibo"]
+
+                            sub_v3_work = sub_v3.copy()
+                            sub_v3_work["diff_prov"] = (sub_v3_work["Valor Provento"] - val_bruto).abs()
+                            best_match_idx = sub_v3_work["diff_prov"].idxmin()
+                            r_v3 = sub_v3_work.loc[best_match_idx]
+
+                            val_prov = r_v3["Valor Provento"]
+                            rec_v3 = r_v3["Recibo"]
+                            diff_rec = round(val_bruto - val_prov, 2)
+
+                            if abs(diff_rec) > 0.01:
+                                recibos_problematicos.append(
+                                    {
+                                        "Empresa": empresa_g,
+                                        "Código de Relatório": cod_rel,
+                                        "Recibo Colaborador (V1)": rec_v1,
+                                        "Recibo Orçamentário (V3)": rec_v3,
+                                        "Valor Bruto V1 (R$)": val_bruto,
+                                        "Provento Orçamentário V3 (R$)": val_prov,
+                                        "Diferença (R$)": diff_rec,
+                                    }
+                                )
+
+        if recibos_problematicos:
+            df_rec_prob = pd.DataFrame(recibos_problematicos).drop_duplicates()
+            st.markdown("Foram isolados com precisão os pares de recibos que apresentam descompasso interno de valores:")
+            st.dataframe(
+                df_rec_prob,
+                use_container_width=True,
+                hide_index=True,
+                column_config={
+                    "Recibo Colaborador (V1)": st.column_config.NumberColumn("Recibo V1", format="%d"),
+                    "Recibo Orçamentário (V3)": st.column_config.NumberColumn("Recibo V3", format="%d"),
+                    "Valor Bruto V1 (R$)": st.column_config.NumberColumn("Bruto V1 (R$)", format="R$ %.2f"),
+                    "Provento Orçamentário V3 (R$)": st.column_config.NumberColumn("Provento V3 (R$)", format="R$ %.2f"),
+                    "Diferença (R$)": st.column_config.NumberColumn("Diferença (R$)", format="R$ %.2f"),
+                },
+            )
+            
+            lista_v1 = sorted(df_rec_prob["Recibo Colaborador (V1)"].unique())
+            lista_v3 = sorted(df_rec_prob["Recibo Orçamentário (V3)"].unique())
+            str_v1 = ", ".join(map(str, lista_v1))
+            str_v3 = ", ".join(map(str, lista_v3))
+            sugestao_recibos = ", ".join(map(str, sorted(set(lista_v1 + lista_v3))))
+
+            st.markdown(
+                f"💡 Recibos afetados para copiar e auditar no painel abaixo: "
+                f"<span style='color: #ff4b4b; font-weight: bold;'>{str_v3}</span>, "
+                f"<span style='color: #ff4b4b; font-weight: bold;'>{str_v1}</span>",
+                unsafe_allow_html=True
+            )
+        else:
+            st.success("Nenhum par de recibos com divergência individual encontrado para os filtros aplicados!")
+
+    # --- 7. MÓDULO DE INSPEÇÃO / AUDITORIA DE RECIBOS ESPECÍFICOS ---
+    with st.expander("🔎 Auditoria de Recibos Específicos (Payload JSON)", expanded=False):
         st.markdown("Digite os números dos recibos que deseja inspecionar detalhadamente para comparar o conteúdo dos payloads:")
-        recibos_input = st.text_input("Recibos (separados por vírgula):", value="8304, 5220, 8349, 5288")
+        
+        val_padrao = sugestao_recibos if 'sugestao_recibos' in locals() and sugestao_recibos else "8304, 5220"
+        recibos_input = st.text_input("Recibos (separados por vírgula):", value=val_padrao)
         
         if st.button("Carregar Detalhes dos Recibos"):
             try:
@@ -417,7 +494,6 @@ def render(conn, ano=None, mes=None, meses_lista=None, *args, **kwargs):
                     df_insp = pd.read_sql(query_insp, conn, params={"ano": ano, "mes": mes})
                     if not df_insp.empty:
                         for _, row_insp in df_insp.iterrows():
-                            # Mapeamento robusto de colunas maiúsculas/minúsculas do banco
                             row_dict = {str(k).lower(): v for k, v in row_insp.items()}
                             rec_num = row_dict.get("recibo")
                             tp_req = row_dict.get("ind_tipo_requisicao")
