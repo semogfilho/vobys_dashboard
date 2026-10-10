@@ -67,15 +67,21 @@ def extrair_texto_payload(blob_data):
         return None
 
 
-def carregar_dados_arquivos(conn, ano, mes, requisicao_selecionada):
+def carregar_dados_arquivos(conn, ano, mes, requisicoes_selecionadas):
     filtro_req = ""
     params = {"ano": ano, "mes": mes}
 
-    if requisicao_selecionada != "TODOS":
-        codigo_req = TIPO_REQUISICAO_MAP.get(requisicao_selecionada.upper())
-        if codigo_req:
-            filtro_req = "AND sei.IND_TIPO_REQUISICAO = :tipo_req"
-            params["tipo_req"] = codigo_req
+    if requisicoes_selecionadas and "TODOS" not in [r.upper() for r in requisicoes_selecionadas]:
+        codigos_req = [
+            TIPO_REQUISICAO_MAP.get(r.upper())
+            for r in requisicoes_selecionadas
+            if TIPO_REQUISICAO_MAP.get(r.upper())
+        ]
+        if codigos_req:
+            param_names = [f":req_{i}" for i in range(len(codigos_req))]
+            filtro_req = f"AND sei.IND_TIPO_REQUISICAO IN ({', '.join(param_names)})"
+            for i, cod in enumerate(codigos_req):
+                params[f"req_{i}"] = cod
 
     query = f"""
         SELECT 
@@ -244,22 +250,24 @@ def render(conn, ano=None, mes=None, meses_lista=None, *args, **kwargs):
 
     st.title(f"📊 Totalização de Arquivos ({nome_mes}/{ano})")
 
-    tipos_requisicao = ["TODOS", "COLABORADOR", "CREDITO", "ORÇAMENTARIO", "PATRONAL"]
+    tipos_requisicao_opcoes = ["COLABORADOR", "CREDITO", "ORÇAMENTARIO", "PATRONAL"]
     
-    col_sel_req, _ = st.columns([2, 2])
-    requisicao_selecionada = col_sel_req.selectbox(
-        "Selecione o Tipo de Requisição:",
-        options=tipos_requisicao,
-        index=0
+    col_sel_req, _ = st.columns([3, 1])
+    requisicoes_selecionadas = col_sel_req.multiselect(
+        "Selecione o(s) Tipo(s) de Requisição:",
+        options=tipos_requisicao_opcoes,
+        default=[],
+        placeholder="Todos os Tipos"
     )
 
     st.divider()
 
-    with st.spinner(f"Carregando e processando arquivos ({requisicao_selecionada})..."):
-        df_dados = carregar_dados_arquivos(conn, ano, mes, requisicao_selecionada)
+    desc_spinner = ", ".join(requisicoes_selecionadas) if requisicoes_selecionadas else "Todos"
+    with st.spinner(f"Carregando e processando arquivos ({desc_spinner})..."):
+        df_dados = carregar_dados_arquivos(conn, ano, mes, requisicoes_selecionadas)
 
     if df_dados.empty:
-        st.warning(f"Nenhum registro encontrado para a requisição '{requisicao_selecionada}' no período.")
+        st.warning("Nenhum registro encontrado para os tipos de requisição selecionados no período.")
         return
 
     with st.expander("🎯 Filtros de Pesquisa / Seleção de Valores", expanded=False):
@@ -325,70 +333,70 @@ def render(conn, ano=None, mes=None, meses_lista=None, *args, **kwargs):
         st.info("Nenhum registro encontrado para os filtros selecionados.")
         return
 
-    # --- 5. AGRUPAMENTO DINÂMICO ---
-    st.markdown("### 🔍 Agrupamento Dinâmico")
-    opcoes_agrupamento = [
-        "Empresa",
-        "Código de Relatório",
-        "Código Sefaz",
-        "Tipo Requisição",
-        "Tipo de Arquivo",
-        "Status",
-        "Recibo",
-    ]
+    # --- 5. AGRUPAMENTO DINÂMICO (ENVELOPADO EM EXPANDER) ---
+    with st.expander("🔍 Agrupamento Dinâmico de Registros", expanded=False):
+        opcoes_agrupamento = [
+            "Empresa",
+            "Código de Relatório",
+            "Código Sefaz",
+            "Tipo Requisição",
+            "Tipo de Arquivo",
+            "Status",
+            "Recibo",
+        ]
 
-    campos_agrupamento = st.multiselect(
-        "Selecione os campos para agrupar e totalizar os valores:",
-        options=opcoes_agrupamento,
-        default=["Empresa", "Código de Relatório", "Tipo de Arquivo", "Status", "Recibo"],
-        help="Marque os campos para agrupar e calcular os somatórios",
-    )
+        campos_agrupamento = st.multiselect(
+            "Selecione os campos para agrupar e totalizar os valores:",
+            options=opcoes_agrupamento,
+            default=["Empresa", "Código de Relatório", "Tipo de Arquivo", "Status", "Recibo"],
+            help="Marque os campos para agrupar e calcular os somatórios",
+        )
 
-    if campos_agrupamento:
-        df_resumo = (
-            df_filtrado.groupby(campos_agrupamento, as_index=False)
-            .agg(
-                Valor_Bruto=("Valor Bruto", "sum"),
-                Valor_Liquido=("Valor Líquido", "sum"),
-                Valor_Provento=("Valor Provento", "sum"),
-                Desconto_Orcamentario=("Desconto Orçamentário", "sum"),
-                Desconto_Patronal=("Desconto Patronal", "sum"),
+        if campos_agrupamento:
+            df_resumo = (
+                df_filtrado.groupby(campos_agrupamento, as_index=False)
+                .agg(
+                    Valor_Bruto=("Valor Bruto", "sum"),
+                    Valor_Liquido=("Valor Líquido", "sum"),
+                    Valor_Provento=("Valor Provento", "sum"),
+                    Desconto_Orcamentario=("Desconto Orçamentário", "sum"),
+                    Desconto_Patronal=("Desconto Patronal", "sum"),
+                )
             )
-        )
 
-        st.caption(
-            f"Exibindo resumo agrupado por: **{', '.join(campos_agrupamento)}**"
-        )
-        st.dataframe(
-            df_resumo,
-            use_container_width=True,
-            hide_index=True,
-            column_config={
-                "Recibo": st.column_config.NumberColumn("Recibo", format="%d"),
-                "Valor_Bruto": st.column_config.NumberColumn("Valor Bruto (R$)", format="R$ %.2f"),
-                "Valor_Liquido": st.column_config.NumberColumn("Valor Líquido (R$)", format="R$ %.2f"),
-                "Valor_Provento": st.column_config.NumberColumn("Valor Provento (R$)", format="R$ %.2f"),
-                "Desconto_Orcamentario": st.column_config.NumberColumn("Desc. Orçamentário (R$)", format="R$ %.2f"),
-                "Desconto_Patronal": st.column_config.NumberColumn("Desc. Patronal (R$)", format="R$ %.2f"),
-            },
-        )
-    else:
-        st.info(
-            "Nenhum filtro de agrupamento selecionado. Exibindo a listagem detalhada de registros:"
-        )
-        st.dataframe(
-            df_filtrado,
-            use_container_width=True,
-            hide_index=True,
-            column_config={
-                "Recibo": st.column_config.NumberColumn("Recibo", format="%d"),
-                "Valor Bruto": st.column_config.NumberColumn("Valor Bruto (R$)", format="R$ %.2f"),
-                "Valor Líquido": st.column_config.NumberColumn("Valor Líquido (R$)", format="R$ %.2f"),
-                "Valor Provento": st.column_config.NumberColumn("Valor Provento (R$)", format="R$ %.2f"),
-                "Desconto Orçamentário": st.column_config.NumberColumn("Desc. Orçamentário (R$)", format="R$ %.2f"),
-                "Desconto Patronal": st.column_config.NumberColumn("Desc. Patronal (R$)", format="R$ %.2f"),
-            },
-        )
+            st.caption(
+                f"Exibindo resumo agrupado por: **{', '.join(campos_agrupamento)}**"
+            )
+            st.dataframe(
+                df_resumo,
+                use_container_width=True,
+                hide_index=True,
+                column_config={
+                    "Recibo": st.column_config.NumberColumn("Recibo", format="%d"),
+                    "Valor_Bruto": st.column_config.NumberColumn("Valor Bruto (R$)", format="R$ %.2f"),
+                    "Valor_Liquido": st.column_config.NumberColumn("Valor Líquido (R$)", format="R$ %.2f"),
+                    "Valor_Provento": st.column_config.NumberColumn("Valor Provento (R$)", format="R$ %.2f"),
+                    "Desconto_Orcamentario": st.column_config.NumberColumn("Desc. Orçamentário (R$)", format="R$ %.2f"),
+                    "Desconto_Patronal": st.column_config.NumberColumn("Desc. Patronal (R$)", format="R$ %.2f"),
+                },
+            )
+        else:
+            st.info(
+                "Nenhum filtro de agrupamento selecionado. Exibindo a listagem detalhada de registros:"
+            )
+            st.dataframe(
+                df_filtrado,
+                use_container_width=True,
+                hide_index=True,
+                column_config={
+                    "Recibo": st.column_config.NumberColumn("Recibo", format="%d"),
+                    "Valor Bruto": st.column_config.NumberColumn("Valor Bruto (R$)", format="R$ %.2f"),
+                    "Valor Líquido": st.column_config.NumberColumn("Valor Líquido (R$)", format="R$ %.2f"),
+                    "Valor Provento": st.column_config.NumberColumn("Valor Provento (R$)", format="R$ %.2f"),
+                    "Desconto Orçamentário": st.column_config.NumberColumn("Desc. Orçamentário (R$)", format="R$ %.2f"),
+                    "Desconto Patronal": st.column_config.NumberColumn("Desc. Patronal (R$)", format="R$ %.2f"),
+                },
+            )
 
     # --- 6. ISOLAMENTO, DETECÇÃO EXATA E RAIZ DO DESCOMPASSO DINÂMICA ---
     with st.expander("🚨 Recibos com Divergência Efetiva Detectados", expanded=True):
@@ -428,25 +436,30 @@ def render(conn, ano=None, mes=None, meses_lista=None, *args, **kwargs):
                                         "Código de Relatório": cod_rel,
                                         "Recibo Colaborador": rec_v1,
                                         "Recibo Orçamentário": rec_v3,
-                                        "Valor Bruto Colaborador (R$)": val_bruto,
-                                        "Provento Orçamentário (R$)": val_prov,
-                                        "Diferença (R$)": diff_rec,
+                                        "Bruto Colaborador (R$)": formatar_moeda_br(val_bruto),
+                                        "Provento Orçamentário (R$)": formatar_moeda_br(val_prov),
+                                        "Diferença (R$)": formatar_moeda_br(diff_rec),
+                                        # Guardamos os valores numéricos brutos para uso na análise de causa
+                                        "_val_bruto_num": val_bruto,
+                                        "_val_prov_num": val_prov,
+                                        "_diff_num": diff_rec,
                                     }
                                 )
 
         if recibos_problematicos:
             df_rec_prob = pd.DataFrame(recibos_problematicos).drop_duplicates()
             st.markdown("Foram isolados com precisão os pares de recibos que apresentam descompasso interno de valores:")
+            
+            # Removemos colunas auxiliares numéricas da exibição na tabela
+            df_exibicao = df_rec_prob.drop(columns=["_val_bruto_num", "_val_prov_num", "_diff_num"])
+            
             st.dataframe(
-                df_rec_prob,
+                df_exibicao,
                 use_container_width=True,
                 hide_index=True,
                 column_config={
                     "Recibo Colaborador": st.column_config.NumberColumn("Recibo Colaborador", format="%d"),
                     "Recibo Orçamentário": st.column_config.NumberColumn("Recibo Orçamentário", format="%d"),
-                    "Valor Bruto Colaborador (R$)": st.column_config.NumberColumn("Bruto Colaborador (R$)", format="R$ %.2f"),
-                    "Provento Orçamentário (R$)": st.column_config.NumberColumn("Provento Orçamentário (R$)", format="R$ %.2f"),
-                    "Diferença (R$)": st.column_config.NumberColumn("Diferença (R$)", format="R$ %.2f"),
                 },
             )
             
@@ -467,13 +480,9 @@ def render(conn, ano=None, mes=None, meses_lista=None, *args, **kwargs):
             prim = df_rec_prob.iloc[0]
             rec_colab_top = prim["Recibo Colaborador"]
             rec_orc_top = prim["Recibo Orçamentário"]
-            bruto_top = prim["Valor Bruto Colaborador (R$)"]
-            prov_top = prim["Provento Orçamentário (R$)"]
-            diff_top = abs(prim["Diferença (R$)"])
-            
-            bruto_fmt = formatar_moeda_br(bruto_top)
-            prov_fmt = formatar_moeda_br(prov_top)
-            diff_fmt = formatar_moeda_br(diff_top)
+            bruto_top_fmt = prim["Bruto Colaborador (R$)"]
+            prov_top_fmt = prim["Provento Orçamentário (R$)"]
+            diff_top_fmt = prim["Diferença (R$)"]
 
             st.markdown(
                 f"""
@@ -481,8 +490,8 @@ def render(conn, ano=None, mes=None, meses_lista=None, *args, **kwargs):
                     <h4 style="margin-top: 0; color: #1f1f1f; font-size: 1.15rem;">🧩 Raiz do Descompasso (Análise de Causa)</h4>
                     <ul style="margin-bottom: 0; font-size: 1.05rem; line-height: 1.6; color: #31333f;">
                         <li><b>Recibos Envolvidos:</b> Colaborador <span style="color: #ff4b4b; font-weight: bold;">{rec_colab_top}</span> | Orçamentário <span style="color: #ff4b4b; font-weight: bold;">{rec_orc_top}</span></li>
-                        <li><b>Diferença Apurada:</b> <span style="color: #ff4b4b; font-weight: bold;">{diff_fmt}</span> (Proventos Orçamentários: {prov_fmt} - Bruto Colaborador: {bruto_fmt})</li>
-                        <li><b>Diagnóstico:</b> O total cadastrado no lote orçamentário ({prov_fmt}) difere do somatório dos colaboradores no arquivo de folha ({bruto_fmt}).</li>
+                        <li><b>Diferença Apurada:</b> <span style="color: #ff4b4b; font-weight: bold;">{diff_top_fmt}</span> (Proventos Orçamentários: {prov_top_fmt} - Bruto Colaborador: {bruto_top_fmt})</li>
+                        <li><b>Diagnóstico:</b> O total cadastrado no lote orçamentário ({prov_top_fmt}) difere do somatório dos colaboradores no arquivo de folha ({bruto_top_fmt}).</li>
                         <li><b>Causa Provável:</b> Desalinhamento na quantidade de registros ou rubricas processadas entre o arquivo de colaboradores e a contabilização orçamentária para esta entidade.</li>
                     </ul>
                 </div>
