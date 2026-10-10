@@ -1,24 +1,23 @@
 # -*- coding: utf-8 -*-
-import importlib
 import datetime
+import importlib
 import os
 import sys
 import pandas as pd
 import streamlit as st
 
-# Garante que a pasta views está no path para importar o auth_ui
+# Garante que a pasta views e a .streamlit estão no path para importações
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(BASE_DIR, "views"))
 sys.path.insert(0, os.path.join(BASE_DIR, ".streamlit"))
 
-import auth_ui  # <-- Importação necessária
+import auth_ui
 
 # 1. Configuração inicial do estado de autenticação
 if "autenticado" not in st.session_state:
-  st.session_state["autenticado"] = False
+    st.session_state["autenticado"] = False
 
-# 2. Se NÃO estiver autenticado, exibe a tela de login
-# Se NÃO estiver autenticado, exibe a tela de login idêntica à do app.py
+# 2. Se NÃO estiver autenticado, exibe a tela de login idêntica à do app.py
 if not st.session_state.get("autenticado", False):
     st.markdown("""
         <style>
@@ -113,7 +112,7 @@ if not st.session_state.get("autenticado", False):
         unsafe_allow_html=True
     )
 
-    # Bloco centralizado idêntico ao app.py
+    # Bloco centralizado utilizando a UI oficial do sistema
     _, col_center, _ = st.columns([0.01, 0.98, 0.01])
     with col_center:
         with st.container(border=True):
@@ -122,19 +121,14 @@ if not st.session_state.get("autenticado", False):
     st.stop()
 
 # ==============================================================================
-# DAQUI PARA BAIXO FICA O CONTEÚDO NORMAL DO app_menu.py APÓS O LOGIN
+# CONFIGURAÇÃO DA PÁGINA APÓS A AUTENTICAÇÃO
 # ==============================================================================
-# Configuração da página em modo wide
 st.set_page_config(
     page_title="NTGD - Gestão Dinâmica",
     page_icon="📊",
     layout="wide",
     initial_sidebar_state="expanded",
 )
-
-# Garante que a pasta views esteja no path para importação correta
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-sys.path.insert(0, os.path.join(BASE_DIR, "views"))
 
 # ---------------------------------------------------------
 # CONEXÃO COM O BANCO DE DADOS ORACLE
@@ -145,69 +139,86 @@ except ImportError:
     def get_connection():
         return None
 
-
 def obter_conexao():
     try:
         return get_connection()
     except Exception:
         return None
 
-
 def obter_usuario_logado():
-    """Retorna o usuário logado real associado ao perfil de Administrador."""
-    return {"usuario": "jose.gomes", "perfil_id": 1, "perfil_nome": "Administrador"}
-
-
+    """Retorna o usuário logado real obtido da sessão do auth_ui."""
+    nome = st.session_state.get("nome_usuario", "Usuário")
+    login = st.session_state.get("login_atual", "jose.gomes")
+    perfil = st.session_state.get("perfil_usuario", "a")
+    
+    perfis_nomes = {
+        "1": "Administrador", "a": "Administrador",
+        "2": "Gerente", "g": "Gerente",
+        "3": "Consulta", "c": "Consulta",
+        "4": "Supervisor", "s": "Supervisor"
+    }
+    perfil_nome = perfis_nomes.get(str(perfil).lower(), "Administrador")
+    
+    return {
+        "usuario": login,
+        "nome": nome,
+        "perfil_id": perfil,
+        "perfil_nome": perfil_nome
+    }
 
 def carregar_modulos_do_banco(perfil_id):
-    """Consulta no banco os módulos liberados para o perfil do usuário."""
+    """Consulta no banco os módulos liberados para o perfil do usuário de forma flexível."""
     conn = obter_conexao()
     if not conn:
-        st.error("Não foi possível estabelecer conexão com o banco de dados.")
         return []
 
-    query = """
-        SELECT m.id, m.nome_menu, m.arquivo_view, m.icone, m.ordem
-        FROM josegomes.modulo m
-        INNER JOIN josegomes.perfil_modulo pm ON m.id = pm.id_modulo
-        WHERE pm.id_perfil = :perfil_id AND m.ativo = 1
-        ORDER BY m.ordem ASC
-    """
+    p_str = str(perfil_id).lower()
+    
     try:
-        df = pd.read_sql(query, conn, params={"perfil_id": perfil_id})
+        cursor = conn.cursor()
+        if p_str in ["a", "administrador", "1", "jose.gomes"]:
+            sql_simples = """
+                SELECT DISTINCT m.id, m.nome_menu, m.arquivo_view, m.icone, m.ordem
+                FROM josegomes.modulo m
+                WHERE m.ativo = 1
+                ORDER BY m.ordem ASC
+            """
+            df = pd.read_sql(sql_simples, conn)
+        else:
+            query = """
+                SELECT DISTINCT m.id, m.nome_menu, m.arquivo_view, m.icone, m.ordem
+                FROM josegomes.modulo m
+                INNER JOIN josegomes.perfil_modulo pm ON m.id = pm.id_modulo
+                WHERE pm.id_perfil = :p AND m.ativo = 1
+                ORDER BY m.ordem ASC
+            """
+            df = pd.read_sql(query, conn, params={"p": perfil_id})
         conn.close()
         return df.to_dict('records')
     except Exception as e:
-        st.error(f"Erro ao consultar módulos no banco: {e}")
         if conn:
             conn.close()
         return []
 
-
 def carregar_todos_modulos():
     conn = obter_conexao()
-    if not conn:
-        return pd.DataFrame()
+    if not conn: return pd.DataFrame()
     query = "SELECT id, nome_menu, arquivo_view, ordem FROM josegomes.modulo ORDER BY ordem ASC"
     df = pd.read_sql(query, conn)
     conn.close()
     return df
 
-
 def carregar_todos_perfis():
     conn = obter_conexao()
-    if not conn:
-        return pd.DataFrame()
+    if not conn: return pd.DataFrame()
     query = "SELECT id, descricao FROM josegomes.perfil ORDER BY id ASC"
     df = pd.read_sql(query, conn)
     conn.close()
     return df
 
-
 def carregar_modulos_por_perfil_id(perfil_id):
     conn = obter_conexao()
-    if not conn:
-        return []
+    if not conn: return []
     query = "SELECT id_modulo FROM josegomes.perfil_modulo WHERE id_perfil = :perfil_id"
     cursor = conn.cursor()
     cursor.execute(query, {"perfil_id": perfil_id})
@@ -215,7 +226,6 @@ def carregar_modulos_por_perfil_id(perfil_id):
     cursor.close()
     conn.close()
     return [r[0] for r in rows]
-
 
 # ---------------------------------------------------------
 # TELA DE GESTÃO DE PERFIS E MÓDULOS (CRUD Real)
@@ -226,10 +236,8 @@ def render_gestao_perfil():
 
     tab1, tab2, tab3 = st.tabs(["📦 Cadastro de Módulos", "👤 Cadastro de Perfis", "🔗 Atribuição (Perfil x Módulos)"])
 
-    # --- ABA 1: MÓDULOS ---
     with tab1:
         col_cad, col_list = st.columns([1, 1.5])
-        
         with col_cad:
             st.subheader("Novo Módulo")
             with st.form("form_modulo"):
@@ -237,8 +245,7 @@ def render_gestao_perfil():
                 arquivo_view = st.text_input("Caminho View (ex: gestao_perfil)")
                 ordem = st.number_input("Ordem", min_value=1, value=10)
                 
-                submitted = st.form_submit_button("Salvar Módulo")
-                if submitted:
+                if st.form_submit_button("Salvar Módulo"):
                     if nome_menu and arquivo_view:
                         conn = obter_conexao()
                         if conn:
@@ -268,26 +275,19 @@ def render_gestao_perfil():
             else:
                 st.info("Nenhum módulo cadastrado.")
 
-    # --- ABA 2: PERFIS ---
     with tab2:
         col_cad_p, col_list_p = st.columns([1, 1.5])
-        
         with col_cad_p:
             st.subheader("Novo Perfil")
             with st.form("form_perfil"):
                 desc_perfil = st.text_input("Descrição (ex: Supervisor)")
-                
-                submitted_perfil = st.form_submit_button("Salvar Perfil")
-                if submitted_perfil:
+                if st.form_submit_button("Salvar Perfil"):
                     if desc_perfil:
                         conn = obter_conexao()
                         if conn:
                             try:
                                 cursor = conn.cursor()
-                                cursor.execute(
-                                    "INSERT INTO josegomes.perfil (descricao) VALUES (:1)",
-                                    (desc_perfil,)
-                                )
+                                cursor.execute("INSERT INTO josegomes.perfil (descricao) VALUES (:1)", (desc_perfil,))
                                 conn.commit()
                                 cursor.close()
                                 conn.close()
@@ -296,7 +296,7 @@ def render_gestao_perfil():
                             except Exception as e:
                                 st.error(f"Erro ao inserir perfil: {e}")
                         else:
-                            st.error("Falha na conexão com o banco.")
+                            st.error("Falha na conexão.")
                     else:
                         st.warning("Informe a descrição do perfil.")
 
@@ -308,7 +308,6 @@ def render_gestao_perfil():
             else:
                 st.info("Nenhum perfil cadastrado.")
 
-    # --- ABA 3: ATRIBUIÇÃO (PERFIL X MÓDULOS) ---
     with tab3:
         st.subheader("Vincular Módulos aos Perfis")
         df_perf = carregar_todos_perfis()
@@ -323,7 +322,6 @@ def render_gestao_perfil():
         id_perfil_sel = perfil_map[perfil_escolhido]
 
         modulos_atuais = carregar_modulos_por_perfil_id(id_perfil_sel)
-
         modulo_map = {f"{row['ID']} - {row['NOME_MENU']} ({row['ARQUIVO_VIEW']})": row['ID'] for _, row in df_mod.iterrows()}
         default_mod_labels = [k for k, v in modulo_map.items() if v in modulos_atuais]
 
@@ -339,14 +337,12 @@ def render_gestao_perfil():
                 try:
                     cursor = conn.cursor()
                     cursor.execute("DELETE FROM josegomes.perfil_modulo WHERE id_perfil = :1", (id_perfil_sel,))
-                    
                     for label in modulos_selecionados_labels:
                         id_mod = modulo_map[label]
                         cursor.execute(
                             "INSERT INTO josegomes.perfil_modulo (id_perfil, id_modulo) VALUES (:1, :2)",
                             (id_perfil_sel, id_mod)
                         )
-                    
                     conn.commit()
                     cursor.close()
                     conn.close()
@@ -355,48 +351,102 @@ def render_gestao_perfil():
                 except Exception as e:
                     st.error(f"Erro ao salvar permissões: {e}")
 
-
 # ---------------------------------------------------------
 # FLUXO PRINCIPAL DO APP MENU
 # ---------------------------------------------------------
 def main():
     usuario_atual = obter_usuario_logado()
 
-    st.sidebar.title("NTGD - Sandbox")
-    st.sidebar.markdown(f"**Usuário:** {usuario_atual['usuario']}")
-    st.sidebar.markdown(f"**Perfil:** {usuario_atual['perfil_nome']}")
-    st.sidebar.divider()
+    with st.sidebar:
+        st.markdown("""
+            <style>
+                [data-testid="stSidebar"] > div:first-child {
+                    padding-top: 0.5rem !important;
+                }
+                .titulo-ntgd {
+                    font-size: 2rem !important;
+                    margin-top: -1.5rem !important;
+                    margin-bottom: -0.5rem !important;
+                }
+                div[data-testid="stMarkdown"] hr {
+                    margin-top: 0.5rem !important;
+                    margin-bottom: 0.5rem !important;
+                }
+            </style>
+        """, unsafe_allow_html=True)
 
-    # --- SELETOR DE ANO E MÊS (Idêntico ao app.py) ---
-    hoje = datetime.date.today()
-    if hoje.day >= 21:
-        if hoje.month == 12:
-            mes_sugerido, ano_sugerido = 1, hoje.year + 1
+        st.markdown("<h1 class='titulo-ntgd' style='text-align: center; color: #d32f2f;'>NTGD</h1>", unsafe_allow_html=True)
+        st.divider()
+
+        st.markdown(f"### 👤 {usuario_atual.get('nome', 'Usuário')}")
+        
+        # --- INDICADOR DE STATUS DA SEFAZ E BOTÃO DE DESCONEXÃO ---
+        sefaz_autenticado = st.session_state.get("sefaz_auth", False)
+        if sefaz_autenticado:
+            st.markdown("🟢 **SEFAZ:** Conectado")
+            if st.button("Desconectar SEFAZ", key="btn_desconectar_sefaz"):
+                st.session_state["sefaz_auth"] = False
+                st.session_state["sefaz_cpf"] = ""
+                st.session_state["sefaz_pass"] = ""
+                st.rerun()
         else:
-            mes_sugerido, ano_sugerido = hoje.month + 1, hoje.year
-    else:
-        mes_sugerido, ano_sugerido = hoje.month, hoje.year
+            st.markdown("🔴 **SEFAZ:** Desconectado")
+        st.divider()
 
-    lista_anos = [2026, 2025, 2024, 2023]
-    if ano_sugerido not in lista_anos: 
-        lista_anos.insert(0, ano_sugerido)
-    
-    ano = st.sidebar.selectbox("Ano:", lista_anos, index=lista_anos.index(ano_sugerido))
-    meses_lista = {1: "Jan", 2: "Fev", 3: "Mar", 4: "Abr", 5: "Mai", 6: "Jun", 7: "Jul", 8: "Ago", 9: "Set", 10: "Out", 11: "Nov", 12: "Dez", 13: "13º"}
-    mes = st.sidebar.selectbox("Mês:", list(meses_lista.keys()), index=mes_sugerido - 1, format_func=lambda x: meses_lista[x])
-    st.sidebar.divider()
-    # -----------------------------------------------
+        # --- SELETOR DE ANO E MÊS (Idêntico ao app.py) ---
+        hoje = datetime.date.today()
+        if hoje.day >= 21:
+            if hoje.month == 12:
+                mes_sugerido, ano_sugerido = 1, hoje.year + 1
+            else:
+                mes_sugerido, ano_sugerido = hoje.month + 1, hoje.year
+        else:
+            mes_sugerido, ano_sugerido = hoje.month, hoje.year
 
-    # Carrega dinamicamente os módulos direto do banco
-    modulos = carregar_modulos_do_banco(usuario_atual["perfil_id"])
+        lista_anos = [2026, 2025, 2024, 2023]
+        if ano_sugerido not in lista_anos: 
+            lista_anos.insert(0, ano_sugerido)
+        
+        ano = st.selectbox("Ano:", lista_anos, index=lista_anos.index(ano_sugerido))
+        meses_lista = {1: "Jan", 2: "Fev", 3: "Mar", 4: "Abr", 5: "Mai", 6: "Jun", 7: "Jul", 8: "Ago", 9: "Set", 10: "Out", 11: "Nov", 12: "Dez", 13: "13º"}
+        mes = st.selectbox("Mês:", list(meses_lista.keys()), index=mes_sugerido - 1, format_func=lambda x: meses_lista[x])
+        st.divider()
 
-    if not modulos:
-        st.sidebar.warning("Nenhum módulo liberado para o seu perfil.")
-        return
+        # Carrega dinamicamente os módulos do banco
+        modulos = carregar_modulos_do_banco(usuario_atual["perfil_id"])
+        if not modulos:
+            st.sidebar.warning("Nenhum módulo liberado para o seu perfil.")
+            return
 
-    opcoes_menu = {m["NOME_MENU"] if "NOME_MENU" in m else m["nome_menu"]: m for m in modulos}
-    escolha_menu = st.sidebar.radio("Navegação", options=list(opcoes_menu.keys()))
+        opcoes_menu = {m["NOME_MENU"] if "NOME_MENU" in m else m["nome_menu"]: m for m in modulos}
+        
+        if "menu_atual" not in st.session_state or st.session_state.menu_atual not in opcoes_menu:
+            st.session_state.menu_atual = list(opcoes_menu.keys())[0]
 
+        escolha_menu = st.sidebar.radio("Menu:", options=list(opcoes_menu.keys()), index=list(opcoes_menu.keys()).index(st.session_state.menu_atual), key="menu_principal")
+        st.session_state.menu_atual = escolha_menu
+
+        # --- SUBOPÇÕES DINÂMICAS NA SIDEBAR (EXCLUSIVO PARA AUDITORIA FOLHA) ---
+        sub_opcao = None
+        # Verifica se o menu atual corresponde a Auditoria Folha
+        if "auditoria" in escolha_menu.lower() and "folha" in escolha_menu.lower():
+            st.markdown("---")
+            with st.container(border=True):
+                st.markdown("**Subopções de Auditoria:**")
+                sub_opcao = st.radio(
+                    "Selecione a subopção de auditoria:",
+                    ["Consistência Folha", "Dados Bancários", "Auditoria de Integridade"],
+                    label_visibility="collapsed"
+                )
+
+        st.markdown('<div class="botao-sair-container">', unsafe_allow_html=True)
+        if st.button("Sair"):
+            for key in list(st.session_state.keys()): del st.session_state[key]
+            st.query_params.clear()
+            st.rerun()
+        st.markdown('</div>', unsafe_allow_html=True)
+
+    # Execução e renderização da view selecionada
     modulo_selecionado = opcoes_menu[escolha_menu]
     caminho_view = modulo_selecionado.get("ARQUIVO_VIEW") or modulo_selecionado.get("arquivo_view")
 
@@ -409,7 +459,10 @@ def main():
             
             if hasattr(view_module, "render"):
                 try:
-                    view_module.render(obter_conexao(), ano, mes, meses_lista)
+                    if sub_opcao:
+                        view_module.render(obter_conexao(), ano, mes, sub_opcao)
+                    else:
+                        view_module.render(obter_conexao(), ano, mes, meses_lista)
                 except TypeError:
                     try:
                         view_module.render(obter_conexao(), ano, mes)
@@ -420,7 +473,6 @@ def main():
         except Exception as e:
             st.warning(f"Aviso ao carregar o arquivo físico ({caminho_view}): {e}")
             st.info(f"Acessando o módulo: **{escolha_menu}**.")
-
 
 if __name__ == "__main__":
     main()

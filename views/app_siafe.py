@@ -240,3 +240,7 @@ def main(conn, ano_selecionado, mes_chave, meses_lista, perfil_usuario):
             }
         )
 
+def render(conn, ano, mes, meses_lista=None):
+  perfil = st.session_state.get("perfil_usuario", "a")
+  main(conn, ano, mes, meses_lista, perfil)
+

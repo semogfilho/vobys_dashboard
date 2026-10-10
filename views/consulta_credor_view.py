@@ -85,4 +85,5 @@ def renderizar_consulta_credor(ano, mes):
                     st.error(f"⚠️ {data}")
                 else:
                     st.warning("⚠️ O serviço de consulta de credor está temporariamente indisponível. Por favor, contate o suporte técnico.")
-
+def render(conn, ano, mes, meses_lista=None):
+  renderizar_consulta_credor(ano, mes)

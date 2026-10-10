@@ -15,7 +15,9 @@ from auditoria import (
 )
 
 
-def render(conn, ano, mes, sub_opcao):
+def render(conn, ano, mes, sub_opcao="Consistência Folha", *args, **kwargs):
+    if isinstance(sub_opcao, dict):
+        sub_opcao = "Consistência Folha"
 
     # Opção 1: Consistência Folha
     if sub_opcao == "Consistência Folha":

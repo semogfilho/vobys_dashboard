@@ -103,7 +103,9 @@ def buscar_logs_usuario(conn, login):
     query = f"SELECT * FROM (SELECT TO_CHAR(DATA_ACESSO, 'DD/MM/YYYY HH24:MI:SS') AS DATA_HORA, IP_USUARIO FROM APP_LOG_ACESSO WHERE USUARIO = '{login}' ORDER BY DATA_ACESSO DESC) WHERE ROWNUM <= 10"
     return pd.read_sql(query, conn)
 
-def render(conn, perfil_logado):
+def render(conn, perfil_logado=None, *args, **kwargs):
+    if perfil_logado is None:
+        perfil_logado = st.session_state.get("perfil_usuario", "a")
 # DEBUG: Identificar o que está chegando
     #st.sidebar.info(f"DEBUG - Perfil Recebido: {perfil_logado}")
     #st.sidebar.info(f"DEBUG - Login Atual: {st.session_state.get('login_atual')}")

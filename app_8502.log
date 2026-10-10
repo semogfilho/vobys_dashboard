@@ -318,3 +318,569 @@ Traceback (most recent call last):
 ModuleNotFoundError: No module named 'auth_ui'
 /home/jose.gomes/vobys_dashboard/app_menu.py:177: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
   
+/home/jose.gomes/vobys_dashboard/app_menu.py:183: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  st.subheader("Novo Módulo")
+/home/jose.gomes/vobys_dashboard/app_menu.py:187: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  ordem = st.number_input("Ordem", min_value=1, value=10)
+/home/jose.gomes/vobys_dashboard/app_menu.py:187: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  ordem = st.number_input("Ordem", min_value=1, value=10)
+/home/jose.gomes/vobys_dashboard/app_menu.py:187: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  ordem = st.number_input("Ordem", min_value=1, value=10)
+Ignoring fixed x limits to fulfill fixed data aspect with adjustable data limits.
+/home/jose.gomes/vobys_dashboard/app_menu.py:187: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  ordem = st.number_input("Ordem", min_value=1, value=10)
+/home/jose.gomes/vobys_dashboard/app_menu.py:187: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  ordem = st.number_input("Ordem", min_value=1, value=10)
+/home/jose.gomes/vobys_dashboard/app_menu.py:187: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  ordem = st.number_input("Ordem", min_value=1, value=10)
+/home/jose.gomes/vobys_dashboard/app_menu.py:187: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  ordem = st.number_input("Ordem", min_value=1, value=10)
+/home/jose.gomes/vobys_dashboard/views/auditoria_integracao.py:17: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(query, conn)
+/home/jose.gomes/vobys_dashboard/app_menu.py:187: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  ordem = st.number_input("Ordem", min_value=1, value=10)
+/home/jose.gomes/vobys_dashboard/app_menu.py:187: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  ordem = st.number_input("Ordem", min_value=1, value=10)
+/home/jose.gomes/vobys_dashboard/app_menu.py:187: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  ordem = st.number_input("Ordem", min_value=1, value=10)
+/home/jose.gomes/vobys_dashboard/app_menu.py:187: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  ordem = st.number_input("Ordem", min_value=1, value=10)
+/home/jose.gomes/vobys_dashboard/app_menu.py:208: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  st.error("Falha na conexão com o banco.")
+2026-10-10 01:54:12.632 Please replace `use_container_width` with `width`.
+
+`use_container_width` will be removed after 2025-12-31.
+
+For `use_container_width=True`, use `width='stretch'`. For `use_container_width=False`, use `width='content'`.
+/home/jose.gomes/vobys_dashboard/app_menu.py:216: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  st.dataframe(df_mod, use_container_width=True, hide_index=True)
+2026-10-10 01:54:12.783 Please replace `use_container_width` with `width`.
+
+`use_container_width` will be removed after 2025-12-31.
+
+For `use_container_width=True`, use `width='stretch'`. For `use_container_width=False`, use `width='content'`.
+/home/jose.gomes/vobys_dashboard/app_menu.py:187: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  ordem = st.number_input("Ordem", min_value=1, value=10)
+/home/jose.gomes/vobys_dashboard/app_menu.py:187: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  ordem = st.number_input("Ordem", min_value=1, value=10)
+/home/jose.gomes/vobys_dashboard/app_menu.py:187: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  ordem = st.number_input("Ordem", min_value=1, value=10)
+/home/jose.gomes/vobys_dashboard/app_menu.py:187: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  ordem = st.number_input("Ordem", min_value=1, value=10)
+/home/jose.gomes/vobys_dashboard/app_menu.py:187: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  ordem = st.number_input("Ordem", min_value=1, value=10)
+/home/jose.gomes/vobys_dashboard/views/inicio.py:129: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df_detalhe = pd.read_sql(query, conn)
+/home/jose.gomes/vobys_dashboard/app_menu.py:187: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  ordem = st.number_input("Ordem", min_value=1, value=10)
+Ignoring fixed x limits to fulfill fixed data aspect with adjustable data limits.
+/home/jose.gomes/vobys_dashboard/app_menu.py:187: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  ordem = st.number_input("Ordem", min_value=1, value=10)
+/home/jose.gomes/vobys_dashboard/app_menu.py:187: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  ordem = st.number_input("Ordem", min_value=1, value=10)
+/home/jose.gomes/vobys_dashboard/app_menu.py:187: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  ordem = st.number_input("Ordem", min_value=1, value=10)
+/home/jose.gomes/vobys_dashboard/app_menu.py:187: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  ordem = st.number_input("Ordem", min_value=1, value=10)
+/home/jose.gomes/vobys_dashboard/views/auditoria_integracao.py:17: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(query, conn)
+/home/jose.gomes/vobys_dashboard/app_menu.py:187: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  ordem = st.number_input("Ordem", min_value=1, value=10)
+/home/jose.gomes/vobys_dashboard/app_menu.py:187: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  ordem = st.number_input("Ordem", min_value=1, value=10)
+/home/jose.gomes/vobys_dashboard/app_menu.py:187: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  ordem = st.number_input("Ordem", min_value=1, value=10)
+/home/jose.gomes/vobys_dashboard/app_menu.py:187: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  ordem = st.number_input("Ordem", min_value=1, value=10)
+/home/jose.gomes/vobys_dashboard/app_menu.py:208: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  st.error("Falha na conexão com o banco.")
+2026-10-10 01:55:45.284 Please replace `use_container_width` with `width`.
+
+`use_container_width` will be removed after 2025-12-31.
+
+For `use_container_width=True`, use `width='stretch'`. For `use_container_width=False`, use `width='content'`.
+/home/jose.gomes/vobys_dashboard/app_menu.py:216: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  st.dataframe(df_mod, use_container_width=True, hide_index=True)
+2026-10-10 01:55:45.394 Please replace `use_container_width` with `width`.
+
+`use_container_width` will be removed after 2025-12-31.
+
+For `use_container_width=True`, use `width='stretch'`. For `use_container_width=False`, use `width='content'`.
+/home/jose.gomes/vobys_dashboard/app_menu.py:187: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  ordem = st.number_input("Ordem", min_value=1, value=10)
+/home/jose.gomes/vobys_dashboard/app_menu.py:187: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  ordem = st.number_input("Ordem", min_value=1, value=10)
+/home/jose.gomes/vobys_dashboard/app_menu.py:187: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  ordem = st.number_input("Ordem", min_value=1, value=10)
+/home/jose.gomes/vobys_dashboard/app_menu.py:187: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  ordem = st.number_input("Ordem", min_value=1, value=10)
+/home/jose.gomes/vobys_dashboard/app_menu.py:208: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  st.error("Falha na conexão com o banco.")
+2026-10-10 02:03:08.206 Please replace `use_container_width` with `width`.
+
+`use_container_width` will be removed after 2025-12-31.
+
+For `use_container_width=True`, use `width='stretch'`. For `use_container_width=False`, use `width='content'`.
+/home/jose.gomes/vobys_dashboard/app_menu.py:216: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  st.dataframe(df_mod, use_container_width=True, hide_index=True)
+2026-10-10 02:03:08.375 Please replace `use_container_width` with `width`.
+
+`use_container_width` will be removed after 2025-12-31.
+
+For `use_container_width=True`, use `width='stretch'`. For `use_container_width=False`, use `width='content'`.
+/home/jose.gomes/vobys_dashboard/app_menu.py:187: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  ordem = st.number_input("Ordem", min_value=1, value=10)
+/home/jose.gomes/vobys_dashboard/app_menu.py:187: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  ordem = st.number_input("Ordem", min_value=1, value=10)
+/home/jose.gomes/vobys_dashboard/app_menu.py:187: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  ordem = st.number_input("Ordem", min_value=1, value=10)
+/home/jose.gomes/vobys_dashboard/app_menu.py:187: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  ordem = st.number_input("Ordem", min_value=1, value=10)
+/home/jose.gomes/vobys_dashboard/app_menu.py:187: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  ordem = st.number_input("Ordem", min_value=1, value=10)
+/home/jose.gomes/vobys_dashboard/app_menu.py:187: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  ordem = st.number_input("Ordem", min_value=1, value=10)
+/home/jose.gomes/vobys_dashboard/views/app_siafe.py:24: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  return pd.read_sql(GET_SIGLAS_EMPRESA, _conn)
+/home/jose.gomes/vobys_dashboard/app_menu.py:187: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  ordem = st.number_input("Ordem", min_value=1, value=10)
+/home/jose.gomes/vobys_dashboard/app_menu.py:187: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  ordem = st.number_input("Ordem", min_value=1, value=10)
+/home/jose.gomes/vobys_dashboard/app_menu.py:187: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  ordem = st.number_input("Ordem", min_value=1, value=10)
+/home/jose.gomes/vobys_dashboard/views/auditoria_integracao.py:17: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(query, conn)
+/home/jose.gomes/vobys_dashboard/app_menu.py:187: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  ordem = st.number_input("Ordem", min_value=1, value=10)
+/home/jose.gomes/vobys_dashboard/app_menu.py:187: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  ordem = st.number_input("Ordem", min_value=1, value=10)
+/home/jose.gomes/vobys_dashboard/views/auditoria_integracao.py:17: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(query, conn)
+/home/jose.gomes/vobys_dashboard/app_menu.py:187: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  ordem = st.number_input("Ordem", min_value=1, value=10)
+/home/jose.gomes/vobys_dashboard/app_menu.py:187: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  ordem = st.number_input("Ordem", min_value=1, value=10)
+/home/jose.gomes/vobys_dashboard/app_menu.py:187: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  ordem = st.number_input("Ordem", min_value=1, value=10)
+/home/jose.gomes/vobys_dashboard/app_menu.py:187: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  ordem = st.number_input("Ordem", min_value=1, value=10)
+/home/jose.gomes/vobys_dashboard/views/auditoria_integracao.py:17: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(query, conn)
+/home/jose.gomes/vobys_dashboard/app_menu.py:187: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  ordem = st.number_input("Ordem", min_value=1, value=10)
+/home/jose.gomes/vobys_dashboard/app_menu.py:187: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  ordem = st.number_input("Ordem", min_value=1, value=10)
+/home/jose.gomes/vobys_dashboard/app_menu.py:187: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  ordem = st.number_input("Ordem", min_value=1, value=10)
+/home/jose.gomes/vobys_dashboard/app_menu.py:187: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  ordem = st.number_input("Ordem", min_value=1, value=10)
+/home/jose.gomes/vobys_dashboard/app_menu.py:187: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  ordem = st.number_input("Ordem", min_value=1, value=10)
+/home/jose.gomes/vobys_dashboard/views/auditoria_integracao.py:17: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(query, conn)
+/home/jose.gomes/vobys_dashboard/app_menu.py:187: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  ordem = st.number_input("Ordem", min_value=1, value=10)
+/home/jose.gomes/vobys_dashboard/auditoria/tipo_folha_x_tipo_arquivo_sefaz.py:238: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(query_final, conn)
+/home/jose.gomes/vobys_dashboard/app_menu.py:187: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  ordem = st.number_input("Ordem", min_value=1, value=10)
+/home/jose.gomes/vobys_dashboard/app_menu.py:187: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  ordem = st.number_input("Ordem", min_value=1, value=10)
+/home/jose.gomes/vobys_dashboard/app_menu.py:208: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  st.error("Falha na conexão com o banco.")
+2026-10-10 02:20:45.095 Please replace `use_container_width` with `width`.
+
+`use_container_width` will be removed after 2025-12-31.
+
+For `use_container_width=True`, use `width='stretch'`. For `use_container_width=False`, use `width='content'`.
+/home/jose.gomes/vobys_dashboard/app_menu.py:216: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  st.dataframe(df_mod, use_container_width=True, hide_index=True)
+2026-10-10 02:20:45.361 Please replace `use_container_width` with `width`.
+
+`use_container_width` will be removed after 2025-12-31.
+
+For `use_container_width=True`, use `width='stretch'`. For `use_container_width=False`, use `width='content'`.
+/home/jose.gomes/vobys_dashboard/app_menu.py:187: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  ordem = st.number_input("Ordem", min_value=1, value=10)
+/home/jose.gomes/vobys_dashboard/app_menu.py:187: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  ordem = st.number_input("Ordem", min_value=1, value=10)
+/home/jose.gomes/vobys_dashboard/app_menu.py:187: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  ordem = st.number_input("Ordem", min_value=1, value=10)
+/home/jose.gomes/vobys_dashboard/app_menu.py:187: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  ordem = st.number_input("Ordem", min_value=1, value=10)
+/home/jose.gomes/vobys_dashboard/app_menu.py:187: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  ordem = st.number_input("Ordem", min_value=1, value=10)
+/home/jose.gomes/vobys_dashboard/app_menu.py:187: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  ordem = st.number_input("Ordem", min_value=1, value=10)
+/home/jose.gomes/vobys_dashboard/app_menu.py:187: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  ordem = st.number_input("Ordem", min_value=1, value=10)
+/home/jose.gomes/vobys_dashboard/app_menu.py:187: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  ordem = st.number_input("Ordem", min_value=1, value=10)
+/home/jose.gomes/vobys_dashboard/app_menu.py:208: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  st.error("Falha na conexão com o banco.")
+2026-10-10 02:26:43.086 Please replace `use_container_width` with `width`.
+
+`use_container_width` will be removed after 2025-12-31.
+
+For `use_container_width=True`, use `width='stretch'`. For `use_container_width=False`, use `width='content'`.
+/home/jose.gomes/vobys_dashboard/app_menu.py:216: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  st.dataframe(df_mod, use_container_width=True, hide_index=True)
+2026-10-10 02:26:43.233 Please replace `use_container_width` with `width`.
+
+`use_container_width` will be removed after 2025-12-31.
+
+For `use_container_width=True`, use `width='stretch'`. For `use_container_width=False`, use `width='content'`.
+/home/jose.gomes/vobys_dashboard/app_menu.py:187: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  ordem = st.number_input("Ordem", min_value=1, value=10)
+/home/jose.gomes/vobys_dashboard/app_menu.py:187: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  ordem = st.number_input("Ordem", min_value=1, value=10)
+/home/jose.gomes/vobys_dashboard/app_menu.py:187: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  ordem = st.number_input("Ordem", min_value=1, value=10)
+/home/jose.gomes/vobys_dashboard/app_menu.py:187: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  ordem = st.number_input("Ordem", min_value=1, value=10)
+/home/jose.gomes/vobys_dashboard/app_menu.py:187: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  ordem = st.number_input("Ordem", min_value=1, value=10)
+/home/jose.gomes/vobys_dashboard/app_menu.py:187: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  ordem = st.number_input("Ordem", min_value=1, value=10)
+/home/jose.gomes/vobys_dashboard/app_menu.py:187: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  ordem = st.number_input("Ordem", min_value=1, value=10)
+/home/jose.gomes/vobys_dashboard/app_menu.py:187: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  ordem = st.number_input("Ordem", min_value=1, value=10)
+/home/jose.gomes/vobys_dashboard/app_menu.py:187: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  ordem = st.number_input("Ordem", min_value=1, value=10)
+/home/jose.gomes/vobys_dashboard/app_menu.py:187: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  ordem = st.number_input("Ordem", min_value=1, value=10)
+/home/jose.gomes/vobys_dashboard/views/auditoria_integracao.py:17: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(query, conn)
+/home/jose.gomes/vobys_dashboard/app_menu.py:187: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  ordem = st.number_input("Ordem", min_value=1, value=10)
+/home/jose.gomes/vobys_dashboard/auditoria/tipo_folha_x_tipo_arquivo_sefaz.py:238: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(query_final, conn)
+/home/jose.gomes/vobys_dashboard/app_menu.py:187: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  ordem = st.number_input("Ordem", min_value=1, value=10)
+/home/jose.gomes/vobys_dashboard/app_menu.py:187: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  ordem = st.number_input("Ordem", min_value=1, value=10)
+/home/jose.gomes/vobys_dashboard/app_menu.py:187: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  ordem = st.number_input("Ordem", min_value=1, value=10)
+/home/jose.gomes/vobys_dashboard/app_menu.py:208: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  st.error("Falha na conexão com o banco.")
+2026-10-10 02:27:18.628 Please replace `use_container_width` with `width`.
+
+`use_container_width` will be removed after 2025-12-31.
+
+For `use_container_width=True`, use `width='stretch'`. For `use_container_width=False`, use `width='content'`.
+/home/jose.gomes/vobys_dashboard/app_menu.py:216: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  st.dataframe(df_mod, use_container_width=True, hide_index=True)
+2026-10-10 02:27:18.769 Please replace `use_container_width` with `width`.
+
+`use_container_width` will be removed after 2025-12-31.
+
+For `use_container_width=True`, use `width='stretch'`. For `use_container_width=False`, use `width='content'`.
+/home/jose.gomes/vobys_dashboard/app_menu.py:187: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  ordem = st.number_input("Ordem", min_value=1, value=10)
+/home/jose.gomes/vobys_dashboard/app_menu.py:187: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  ordem = st.number_input("Ordem", min_value=1, value=10)
+/home/jose.gomes/vobys_dashboard/auditoria/tipo_folha_x_tipo_arquivo_sefaz.py:238: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(query_final, conn)
+/home/jose.gomes/vobys_dashboard/app_menu.py:186: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  arquivo_view = st.text_input("Caminho View (ex: gestao_perfil)")
+/home/jose.gomes/vobys_dashboard/views/auditoria_integracao.py:17: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(query, conn)
+/home/jose.gomes/vobys_dashboard/app_menu.py:186: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  arquivo_view = st.text_input("Caminho View (ex: gestao_perfil)")
+/home/jose.gomes/vobys_dashboard/auditoria/tipo_folha_x_tipo_arquivo_sefaz.py:238: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(query_final, conn)
+/home/jose.gomes/vobys_dashboard/app_menu.py:186: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  arquivo_view = st.text_input("Caminho View (ex: gestao_perfil)")
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:52: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df_audit = pd.read_sql(sql, conn, params=params)
+/home/jose.gomes/vobys_dashboard/app_menu.py:186: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  arquivo_view = st.text_input("Caminho View (ex: gestao_perfil)")
+/home/jose.gomes/vobys_dashboard/views/auditoria_folha.py:149: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df_opcoes = pd.read_sql(query_ids, conn)
+/home/jose.gomes/vobys_dashboard/app_menu.py:186: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  arquivo_view = st.text_input("Caminho View (ex: gestao_perfil)")
+/home/jose.gomes/vobys_dashboard/views/auditoria_folha.py:149: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df_opcoes = pd.read_sql(query_ids, conn)
+/home/jose.gomes/vobys_dashboard/app_menu.py:186: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  arquivo_view = st.text_input("Caminho View (ex: gestao_perfil)")
+/home/jose.gomes/vobys_dashboard/views/auditoria_folha.py:149: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df_opcoes = pd.read_sql(query_ids, conn)
+/home/jose.gomes/vobys_dashboard/app_menu.py:186: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  arquivo_view = st.text_input("Caminho View (ex: gestao_perfil)")
+/home/jose.gomes/vobys_dashboard/views/auditoria_folha.py:149: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df_opcoes = pd.read_sql(query_ids, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/batimento_json.py:208: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df_payloads = pd.read_sql(query_meta, conn, params=tuple(lista_ids))
+2026-10-10 02:37:08.380 Please replace `use_container_width` with `width`.
+
+`use_container_width` will be removed after 2025-12-31.
+
+For `use_container_width=True`, use `width='stretch'`. For `use_container_width=False`, use `width='content'`.
+2026-10-10 02:37:08.387 Please replace `use_container_width` with `width`.
+
+`use_container_width` will be removed after 2025-12-31.
+
+For `use_container_width=True`, use `width='stretch'`. For `use_container_width=False`, use `width='content'`.
+/home/jose.gomes/vobys_dashboard/app_menu.py:186: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  arquivo_view = st.text_input("Caminho View (ex: gestao_perfil)")
+/home/jose.gomes/vobys_dashboard/views/auditoria_folha.py:149: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df_opcoes = pd.read_sql(query_ids, conn)
+/home/jose.gomes/vobys_dashboard/app_menu.py:186: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  arquivo_view = st.text_input("Caminho View (ex: gestao_perfil)")
+/home/jose.gomes/vobys_dashboard/views/auditoria_folha.py:149: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df_opcoes = pd.read_sql(query_ids, conn)
+/home/jose.gomes/vobys_dashboard/app_menu.py:186: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  arquivo_view = st.text_input("Caminho View (ex: gestao_perfil)")
+/home/jose.gomes/vobys_dashboard/views/auditoria_folha.py:149: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df_opcoes = pd.read_sql(query_ids, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/batimento_json.py:208: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df_payloads = pd.read_sql(query_meta, conn, params=tuple(lista_ids))
+/home/jose.gomes/vobys_dashboard/app_menu.py:186: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  arquivo_view = st.text_input("Caminho View (ex: gestao_perfil)")
+/home/jose.gomes/vobys_dashboard/views/auditoria_folha.py:149: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df_opcoes = pd.read_sql(query_ids, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/batimento_json.py:208: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df_payloads = pd.read_sql(query_meta, conn, params=tuple(lista_ids))
+/home/jose.gomes/vobys_dashboard/app_menu.py:186: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  arquivo_view = st.text_input("Caminho View (ex: gestao_perfil)")
+/home/jose.gomes/vobys_dashboard/views/auditoria_folha.py:149: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df_opcoes = pd.read_sql(query_ids, conn)
+/home/jose.gomes/vobys_dashboard/app_menu.py:186: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  arquivo_view = st.text_input("Caminho View (ex: gestao_perfil)")
+/home/jose.gomes/vobys_dashboard/views/auditoria_folha.py:149: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df_opcoes = pd.read_sql(query_ids, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/batimento_json.py:208: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df_payloads = pd.read_sql(query_meta, conn, params=tuple(lista_ids))
+/home/jose.gomes/vobys_dashboard/auditoria/batimento_json.py:208: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df_payloads = pd.read_sql(query_meta, conn, params=tuple(lista_ids))
+2026-10-10 02:37:59.758 Please replace `use_container_width` with `width`.
+
+`use_container_width` will be removed after 2025-12-31.
+
+For `use_container_width=True`, use `width='stretch'`. For `use_container_width=False`, use `width='content'`.
+2026-10-10 02:37:59.763 Please replace `use_container_width` with `width`.
+
+`use_container_width` will be removed after 2025-12-31.
+
+For `use_container_width=True`, use `width='stretch'`. For `use_container_width=False`, use `width='content'`.
+/home/jose.gomes/vobys_dashboard/app_menu.py:186: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  arquivo_view = st.text_input("Caminho View (ex: gestao_perfil)")
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/app_menu.py:186: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  arquivo_view = st.text_input("Caminho View (ex: gestao_perfil)")
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:52: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df_audit = pd.read_sql(sql, conn, params=params)
+/home/jose.gomes/vobys_dashboard/app_menu.py:186: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  arquivo_view = st.text_input("Caminho View (ex: gestao_perfil)")
+/home/jose.gomes/vobys_dashboard/app_menu.py:186: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  arquivo_view = st.text_input("Caminho View (ex: gestao_perfil)")
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:52: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df_audit = pd.read_sql(sql, conn, params=params)
+/home/jose.gomes/vobys_dashboard/app_menu.py:186: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  arquivo_view = st.text_input("Caminho View (ex: gestao_perfil)")
+/home/jose.gomes/vobys_dashboard/app_menu.py:186: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  arquivo_view = st.text_input("Caminho View (ex: gestao_perfil)")
+/home/jose.gomes/vobys_dashboard/app_menu.py:186: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  arquivo_view = st.text_input("Caminho View (ex: gestao_perfil)")
+/home/jose.gomes/vobys_dashboard/app_menu.py:186: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  arquivo_view = st.text_input("Caminho View (ex: gestao_perfil)")
+/home/jose.gomes/vobys_dashboard/app_menu.py:186: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  arquivo_view = st.text_input("Caminho View (ex: gestao_perfil)")
+/home/jose.gomes/vobys_dashboard/app_menu.py:186: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  arquivo_view = st.text_input("Caminho View (ex: gestao_perfil)")
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:279: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn, params={'cod': cod_institucional})
+/home/jose.gomes/vobys_dashboard/app_menu.py:186: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  arquivo_view = st.text_input("Caminho View (ex: gestao_perfil)")
+/home/jose.gomes/vobys_dashboard/app_menu.py:186: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  arquivo_view = st.text_input("Caminho View (ex: gestao_perfil)")
+/home/jose.gomes/vobys_dashboard/app_menu.py:207: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  else:
+2026-10-10 02:44:13.163 Please replace `use_container_width` with `width`.
+
+`use_container_width` will be removed after 2025-12-31.
+
+For `use_container_width=True`, use `width='stretch'`. For `use_container_width=False`, use `width='content'`.
+/home/jose.gomes/vobys_dashboard/app_menu.py:215: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  if not df_mod.empty:
+2026-10-10 02:44:13.287 Please replace `use_container_width` with `width`.
+
+`use_container_width` will be removed after 2025-12-31.
+
+For `use_container_width=True`, use `width='stretch'`. For `use_container_width=False`, use `width='content'`.

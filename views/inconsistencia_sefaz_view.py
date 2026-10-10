@@ -88,3 +88,7 @@ def renderizar_inconsistencia_sefaz(ano, mes, auth_ui):
                 else:
                     st.warning("⚠️ O serviço de integração SEFAZ está temporariamente indisponível. Por favor, contate o suporte técnico.")
 
+
+def render(conn, ano, mes, meses_lista=None, *args, **kwargs):
+    import auth_ui
+    renderizar_inconsistencia_sefaz(int(ano), int(mes), auth_ui)
