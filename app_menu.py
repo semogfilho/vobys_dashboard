@@ -17,16 +17,20 @@ import auth_ui
 if "autenticado" not in st.session_state:
     st.session_state["autenticado"] = False
 
-if "sub_menu_auditoria" not in st.session_state:
-    st.session_state["sub_menu_auditoria"] = "Consistência Folha"
-
-# 2. Se NÃO estiver autenticado, exibe a tela de login
+# 2. Se NÃO estiver autenticado, exibe a tela de login preservada e centralizada
 if not st.session_state.get("autenticado", False):
     st.markdown("""
         <style>
+            /* Oculta a barra lateral no login */
             [data-testid="stSidebar"] { display: none !important; }
             [data-testid="collapsedControl"] { display: none !important; }
-            .stApp { background-color: #f1f5f9 !important; }
+
+            /* Fundo da tela limpo e suave */
+            .stApp {
+                background-color: #f1f5f9 !important;
+            }
+
+            /* Container principal centralizado e compacto */
             .main .block-container, 
             [data-testid="stMainBlockContainer"],
             [data-testid="stAppViewBlockContainer"] {
@@ -37,6 +41,8 @@ if not st.session_state.get("autenticado", False):
                 padding-left: 1rem !important;
                 padding-right: 1rem !important;
             }
+
+            /* Retângulo central com tom suave */
             div[data-testid="stVerticalBlockBorderWrapper"] {
                 background-color: #f0f4f8 !important;
                 border: 1px solid #cbd5e1 !important;
@@ -44,19 +50,27 @@ if not st.session_state.get("autenticado", False):
                 box-shadow: 0 10px 20px rgba(0, 0, 0, 0.05) !important;
                 padding: 1.2rem 1rem !important;
             }
+
+            /* Cor e legibilidade dos textos internos do cartão */
             div[data-testid="stVerticalBlockBorderWrapper"] p,
             div[data-testid="stVerticalBlockBorderWrapper"] label,
             div[data-testid="stVerticalBlockBorderWrapper"] span {
                 color: #334155 !important;
             }
+
+            /* Título NTGD mantendo destaque */
             div[data-testid="stVerticalBlockBorderWrapper"] h1,
             div[data-testid="stVerticalBlockBorderWrapper"] h2,
             div[data-testid="stVerticalBlockBorderWrapper"] h3 {
                 color: #d32f2f !important;
             }
+
+            /* Espaçamentos verticais internos */
             div[data-testid="stVerticalBlock"] {
                 gap: 0.5rem !important;
             }
+
+            /* Inputs com fundo branco para contraste limpo */
             .stTextInput > div > div > input {
                 border-radius: 6px !important;
                 border: 1px solid #cbd5e1 !important;
@@ -65,12 +79,16 @@ if not st.session_state.get("autenticado", False):
                 color: #0f172a !important;
                 font-size: 0.88rem !important;
             }
+
+            /* Estilo dos Botões para ocuparem largura total e tom vermelho */
             div.stButton > button {
                 width: 100% !important;
                 border-radius: 6px !important;
                 font-size: 0.9rem !important;
                 padding: 0.45rem !important;
             }
+
+            /* Botão Entrar */
             div.stButton > button:first-of-type {
                 background-color: #d32f2f !important;
                 border: none !important;
@@ -153,9 +171,6 @@ def carregar_modulos_do_banco(perfil_id, login_usuario=""):
 
     p_str = str(perfil_id).lower()
     try:
-        cursor = conn.cursor()
-        
-        # Se for admin master ou perfil 'a'/'1', traz todos os módulos ativos
         if p_str in ["a", "administrador", "1", "jose.gomes"] or login_usuario == "jose.gomes":
             sql_simples = """
                 SELECT DISTINCT m.id, m.nome_menu, m.arquivo_view, m.icone, m.ordem
@@ -165,7 +180,6 @@ def carregar_modulos_do_banco(perfil_id, login_usuario=""):
             """
             df = pd.read_sql(sql_simples, conn)
         else:
-            # Consulta robusta que busca perfis vinculados na tabela perfil_modulo considerando id ou descrição
             query = """
                 SELECT DISTINCT m.id, m.nome_menu, m.arquivo_view, m.icone, m.ordem
                 FROM josegomes.modulo m
@@ -176,7 +190,6 @@ def carregar_modulos_do_banco(perfil_id, login_usuario=""):
             """
             df = pd.read_sql(query, conn, params={"p1": p_str, "p2": p_str})
             
-            # Se ainda vier vazio, busca diretamente pelo id_perfil cru da sessão na tabela perfil_modulo
             if df.empty:
                 query_alt = """
                     SELECT DISTINCT m.id, m.nome_menu, m.arquivo_view, m.icone, m.ordem
@@ -189,7 +202,7 @@ def carregar_modulos_do_banco(perfil_id, login_usuario=""):
 
         conn.close()
         return df.to_dict('records')
-    except Exception as e:
+    except Exception:
         if conn:
             conn.close()
         return []
@@ -218,7 +231,6 @@ def main():
                 .botao-sair-container {
                     margin-top: 0.5rem !important;
                 }
-                /* Botão Sair compacto, alinhado e com cantos sutis */
                 [data-testid="stSidebar"] div.stButton > button {
                     background-color: transparent !important;
                     border: 1px solid rgba(49, 51, 63, 0.2) !important;
@@ -274,29 +286,22 @@ def main():
         modulos = carregar_modulos_do_banco(usuario_atual["perfil_id"], usuario_atual["usuario"])
         
         opcoes_menu = {}
+        modulo_ativo = None
+        
         if modulos:
-            opcoes_menu = {m["NOME_MENU"] if "NOME_MENU" in m else m["nome_menu"]: m for m in modulos}
+            opcoes_menu = {str(m.get("NOME_MENU") or m.get("nome_menu")): m for m in modulos}
             
             if "menu_atual" not in st.session_state or st.session_state.menu_atual not in opcoes_menu:
                 st.session_state.menu_atual = list(opcoes_menu.keys())[0]
 
-            escolha_menu = st.sidebar.radio("Menu:", options=list(opcoes_menu.keys()), index=list(opcoes_menu.keys()).index(st.session_state.menu_atual), key="menu_principal")
+            escolha_menu = st.sidebar.radio(
+                "Menu:", 
+                options=list(opcoes_menu.keys()), 
+                index=list(opcoes_menu.keys()).index(st.session_state.menu_atual), 
+                key="menu_principal"
+            )
             st.session_state.menu_atual = escolha_menu
-
-            if "auditoria" in escolha_menu.lower() and "folha" in escolha_menu.lower():
-                with st.container(border=True):
-                    st.caption("Subopções de Auditoria:")
-                    st.radio(
-                        "Selecione a Auditoria:",
-                        [
-                           "Consistência Folha",
-                           "Dados Bancários",
-                           "Auditoria de Integridade"
-                        ],
-                        index=["Consistência Folha", "Dados Bancários", "Auditoria de Integridade"].index(st.session_state.get("sub_menu_auditoria", "Consistência Folha")),
-                        label_visibility="collapsed",
-                        key="sub_menu_auditoria"
-                    )
+            modulo_ativo = opcoes_menu[escolha_menu]
         else:
             st.warning("⚠️ Nenhum módulo liberado para o seu perfil.")
             escolha_menu = None
@@ -309,12 +314,12 @@ def main():
             st.rerun()
         st.markdown('</div>', unsafe_allow_html=True)
 
-    if not opcoes_menu or not escolha_menu:
+    if not opcoes_menu or not escolha_menu or not modulo_ativo:
         st.info("Por favor, contate o administrador para associar módulos ao seu perfil de acesso.")
         return
 
-    modulo_selecionado = opcoes_menu[escolha_menu]
-    caminho_view = modulo_selecionado.get("ARQUIVO_VIEW") or modulo_selecionado.get("arquivo_view")
+    caminho_view = modulo_ativo.get("ARQUIVO_VIEW") or modulo_ativo.get("arquivo_view")
+    nome_exibicao = modulo_ativo.get("NOME_MENU") or modulo_ativo.get("nome_menu")
 
     try:
         nome_modulo_import = str(caminho_view).replace("views.", "")
@@ -322,20 +327,33 @@ def main():
         
         if hasattr(view_module, "render"):
             try:
-                if "auditoria" in escolha_menu.lower() and "folha" in escolha_menu.lower():
-                    view_module.render(obter_conexao(), ano, mes, st.session_state.sub_menu_auditoria)
-                else:
-                    view_module.render(obter_conexao(), ano, mes, meses_lista)
+                # 1. Tenta passar com sub_opcao nomeado (para views unificadas)
+                view_module.render(obter_conexao(), ano, mes, sub_opcao=nome_exibicao)
             except TypeError:
                 try:
-                    view_module.render(obter_conexao(), ano, mes)
+                    # 2. Tenta a assinatura específica do módulo Responsável
+                    view_module.render(
+                        conn=obter_conexao(), 
+                        ano_selecionado=ano, 
+                        mes_chave=mes, 
+                        meses_disponiveis=meses_lista
+                    )
                 except TypeError:
-                    view_module.render(obter_conexao())
+                    try:
+                        # 3. Tenta a assinatura padrão com meses_lista
+                        view_module.render(obter_conexao(), ano, mes, meses_lista)
+                    except TypeError:
+                        try:
+                            # 4. Tenta (conn, ano, mes)
+                            view_module.render(obter_conexao(), ano, mes)
+                        except TypeError:
+                            # 5. Tenta apenas (conn)
+                            view_module.render(obter_conexao())
         else:
-            st.info(f"Módulo **{escolha_menu}** carregado com sucesso.")
+            st.info(f"Módulo **{nome_exibicao}** carregado com sucesso.")
     except Exception as e:
         st.warning(f"Aviso ao carregar o arquivo físico ({caminho_view}): {e}")
-        st.info(f"Acessando o módulo: **{escolha_menu}**.")
+        st.info(f"Acessando o módulo: **{nome_exibicao}**.")
 
 if __name__ == "__main__":
     main()

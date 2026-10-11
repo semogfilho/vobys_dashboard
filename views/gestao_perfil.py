@@ -30,7 +30,6 @@ def render(conn, *args, **kwargs):
         cursor.close()
         return [r[0] for r in rows]
 
-    # Mapeia os arquivos .py válidos da pasta views (ignorando __init__)
     pasta_views = BASE_DIR
     arquivos_views = []
     if os.path.exists(pasta_views):
@@ -44,23 +43,22 @@ def render(conn, *args, **kwargs):
         df_mod = carregar_todos_modulos()
 
         with col_form:
-            # Alternador entre Novo Módulo e Editar Módulo
             modo_acao = st.radio("Ação:", ["➕ Novo Módulo", "✏️ Editar Módulo"], horizontal=True, key="modo_acao_modulo")
 
             if modo_acao == "➕ Novo Módulo":
                 st.subheader("Novo Módulo")
                 with st.form("form_novo_modulo"):
-                    nome_menu = st.text_input("Nome no Menu (ex: ⚙️ Gestão de Perfis)")
+                    nome_menu = st.text_input("Nome no Menu (ex: Auditoria)")
                     
                     if arquivos_views:
                         arquivo_view = st.selectbox("Caminho View:", options=arquivos_views, key="new_view_sel")
                     else:
-                        arquivo_view = st.text_input("Caminho View (ex: gestao_perfil)")
+                        arquivo_view = st.text_input("Caminho View (ex: auditoria_folha)")
 
                     ordem = st.number_input("Ordem", min_value=1, value=10, key="new_ordem")
-                    
+
                     if st.form_submit_button("Salvar Módulo", type="primary"):
-                        if nome_menu and arquivo_view:
+                        if nome_menu:
                             if conn:
                                 try:
                                     cursor = conn.cursor()
@@ -77,13 +75,14 @@ def render(conn, *args, **kwargs):
                             else:
                                 st.error("Falha na conexão com o banco.")
                         else:
-                            st.warning("Preencha todos os campos obrigatórios.")
+                            st.warning("Preencha o nome do menu.")
 
             else:
                 st.subheader("Editar Módulo Existente")
                 if not df_mod.empty:
                     modulo_opcoes = {f"{row['ID']} - {row['NOME_MENU']} ({row['ARQUIVO_VIEW']})": row['ID'] for _, row in df_mod.iterrows()}
-                    mod_selecionado_label = st.selectbox("Selecione o Módulo para Editar:", options=list(modulo_opcoes.keys()))
+                    
+                    mod_selecionado_label = st.selectbox("Selecione o Módulo para Editar:", options=list(modulo_opcoes.keys()), key="select_modulo_edicao")
                     id_mod_edit = modulo_opcoes[mod_selecionado_label]
 
                     dados_atuais = df_mod[df_mod['ID'] == id_mod_edit].iloc[0]
@@ -93,17 +92,17 @@ def render(conn, *args, **kwargs):
                         
                         val_view = str(dados_atuais['ARQUIVO_VIEW']).replace("views.", "")
                         idx_view = arquivos_views.index(val_view) if val_view in arquivos_views else 0
-
+                        
                         if arquivos_views:
-                            edit_arquivo_view = st.selectbox("Caminho View:", options=arquivos_views, index=idx_view)
+                            edit_arquivo_view = st.selectbox("Caminho View:", options=arquivos_views, index=idx_view, key=f"edit_view_sel_{id_mod_edit}")
                         else:
-                            edit_arquivo_view = st.text_input("Caminho View", value=val_view)
+                            edit_arquivo_view = st.text_input("Caminho View", value=val_view, key=f"edit_view_txt_{id_mod_edit}")
 
-                        edit_ordem = st.number_input("Ordem", min_value=1, value=int(dados_atuais['ORDEM']))
-                        edit_ativo = st.checkbox("Módulo Ativo", value=bool(int(dados_atuais.get('ATIVO', 1)) == 1))
+                        edit_ordem = st.number_input("Ordem", min_value=1, value=int(dados_atuais['ORDEM']), key=f"edit_ordem_{id_mod_edit}")
+                        edit_ativo = st.checkbox("Módulo Ativo", value=bool(int(dados_atuais.get('ATIVO', 1)) == 1), key=f"edit_ativo_{id_mod_edit}")
 
                         if st.form_submit_button("Atualizar Módulo", type="primary"):
-                            if edit_nome_menu and edit_arquivo_view:
+                            if edit_nome_menu:
                                 if conn:
                                     try:
                                         cursor = conn.cursor()
@@ -121,7 +120,7 @@ def render(conn, *args, **kwargs):
                                 else:
                                     st.error("Falha na conexão.")
                             else:
-                                st.warning("Preencha todos os campos obrigatórios.")
+                                st.warning("Preencha o nome do menu.")
                 else:
                     st.info("Nenhum módulo cadastrado para editar.")
 
@@ -203,3 +202,4 @@ def render(conn, *args, **kwargs):
                     st.rerun()
                 except Exception as e:
                     st.error(f"Erro ao salvar permissões: {e}")
+

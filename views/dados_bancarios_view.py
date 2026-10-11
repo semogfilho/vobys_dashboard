@@ -2,17 +2,22 @@
 from datetime import datetime
 import re
 import time
-from auditoria.novos_dados_bancario import (
-    atualizar_status_auditoria,
-    listar_novatos_bancario,
-)
 import pandas as pd
 import requests
 import streamlit as st
 import urllib3
 
-urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+# Importações necessárias para o novo menu plano
+import auth_ui
+from auditoria import novos_dados_bancario
 
+# Importa as funções de auditoria diretamente para o escopo global
+from auditoria.novos_dados_bancario import (
+    listar_novatos_bancario,
+    atualizar_status_auditoria,
+)
+
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 def formatar_cpf(val_cpf):
     """Formata uma string de CPF para o padrão 000.000.000-00 para exibição"""
@@ -1221,4 +1226,12 @@ def renderizar_dados_bancarios(
             "❌ Ocorreu um erro crítico ao renderizar a tela de Dados Bancários:"
         )
         st.exception(e)
+
+def render(conn, ano, mes, meses_lista=None):
+    """
+    Ponto de entrada padrão chamado diretamente pelo app_menu.py
+    """
+    renderizar_dados_bancarios(
+        conn, ano, mes, auth_ui, novos_dados_bancario
+    )
 
