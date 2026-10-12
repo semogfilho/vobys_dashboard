@@ -74,8 +74,6 @@ def validar_formato_conta(valor):
         return False
     val_str = re.sub(r"^[⚠️🏛️🏦❌]\s*", "", str(valor)).strip()
 
-    #padrao = r"^001\s*/\s*Ag:\s*\d{4}-[\dX]\s*/\s*CC:\s*\d{1,12}-[\dX]$"
-    #padrao = r"^001\s*/\s*Op:\s*\d{1,4}\s*/\s*Ag:\s*\d{4}-[\dX]\s*/\s*CC:\s*\d{1,12}-[\dX]$"
     padrao = r"^001\s*/\s*Op:\s*001\s*/\s*Ag:\s*\d{4}-[\dX]\s*/\s*CC:\s*\d{1,12}-[\dX]$"
     return bool(re.match(padrao, val_str, re.IGNORECASE))
 
@@ -617,20 +615,20 @@ def renderizar_dados_bancarios(
                         formatar_exibicao_conta
                     )
 
-                # Formatação de Datas
+                # Formatação e Conversão Segura de Datas para o Pandas (com dayfirst=True)
                 if "DIGITACAO_FOLHA" in df_exibicao.columns:
                     df_exibicao["DIGITACAO_FOLHA"] = pd.to_datetime(
-                        df_exibicao["DIGITACAO_FOLHA"], errors="coerce"
+                        df_exibicao["DIGITACAO_FOLHA"], errors="coerce", dayfirst=True
                     )
 
                 if "DATA_CADASTRO" in df_exibicao.columns:
                     df_exibicao["DATA_CADASTRO"] = pd.to_datetime(
-                        df_exibicao["DATA_CADASTRO"], errors="coerce"
+                        df_exibicao["DATA_CADASTRO"], errors="coerce", dayfirst=True
                     )
 
                 if "Envio/Checagem" in df_exibicao.columns:
                     df_exibicao["Envio/Checagem"] = pd.to_datetime(
-                        df_exibicao["Envio/Checagem"], errors="coerce"
+                        df_exibicao["Envio/Checagem"], errors="coerce", dayfirst=True
                     )
 
                 df_exibicao["ENVIADO"] = (
@@ -681,12 +679,10 @@ def renderizar_dados_bancarios(
                             help="Clique no CPF para abrir o cadastro no SIAPE",
                             display_text=r"#(.+)$",
                         ),
-                        # --- ADICIONE ESTAS LINHAS AQUI ---
                         "DIGITACAO_FOLHA": st.column_config.DatetimeColumn(
                             "DIGITACAO_FOLHA",
                             format="DD/MM/YYYY HH:mm:ss",
                         ),
-                        # -----------------------------------
                         "CONTA_CORRENTE": st.column_config.TextColumn(
                             "CONTA_CORRENTE",
                             help=(

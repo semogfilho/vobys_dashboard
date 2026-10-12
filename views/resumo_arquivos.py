@@ -296,24 +296,28 @@ def render(conn, ano=None, mes=None, meses_lista=None, *args, **kwargs):
     if sel_status:
         df_filtrado = df_filtrado[df_filtrado["Status"].isin(sel_status)]
 
+    # --- EXCLUSÃO DE EXCLUIDO E VALIDADO DAS SOMATÓRIAS ---
+    # Mantemos os dados visíveis nos dataframes se necessário, mas filtramos para as métricas e somas globais
+    df_para_somatoria = df_filtrado[~df_filtrado["Status"].isin(["EXCLUIDO", "VALIDADO"])]
+
     # --- 4. MÉTRICAS COMPACTAS COM DISTRIBUIÇÃO OTIMIZADA ---
     m_col1, m_col2, m_col3, m_col4, m_col5, m_col6 = st.columns([1, 1.8, 1.8, 1.8, 1.8, 1.8])
 
     m_col1.metric("Arquivos", len(df_filtrado))
 
-    soma_bruto = df_filtrado["Valor Bruto"].sum() if not df_filtrado.empty else 0.0
+    soma_bruto = df_para_somatoria["Valor Bruto"].sum() if not df_para_somatoria.empty else 0.0
     m_col2.metric("Total Bruto", formatar_moeda_br(soma_bruto))
 
-    soma_liquido = df_filtrado["Valor Líquido"].sum() if not df_filtrado.empty else 0.0
+    soma_liquido = df_para_somatoria["Valor Líquido"].sum() if not df_para_somatoria.empty else 0.0
     m_col3.metric("Total Líquido", formatar_moeda_br(soma_liquido))
 
-    soma_provento = df_filtrado["Valor Provento"].sum() if not df_filtrado.empty else 0.0
+    soma_provento = df_para_somatoria["Valor Provento"].sum() if not df_para_somatoria.empty else 0.0
     m_col4.metric("Total Provento", formatar_moeda_br(soma_provento))
 
-    soma_desc_orc = df_filtrado["Desconto Orçamentário"].sum() if not df_filtrado.empty else 0.0
+    soma_desc_orc = df_para_somatoria["Desconto Orçamentário"].sum() if not df_para_somatoria.empty else 0.0
     m_col5.metric("Desc. Orçamentário", formatar_moeda_br(soma_desc_orc))
 
-    soma_desc_patr = df_filtrado["Desconto Patronal"].sum() if not df_filtrado.empty else 0.0
+    soma_desc_patr = df_para_somatoria["Desconto Patronal"].sum() if not df_para_somatoria.empty else 0.0
     m_col6.metric("Desc. Patronal", formatar_moeda_br(soma_desc_patr))
 
     # --- 4.1. ALERTA DE DIVERGÊNCIA MATEMÁTICA ---
@@ -439,7 +443,6 @@ def render(conn, ano=None, mes=None, meses_lista=None, *args, **kwargs):
                                         "Bruto Colaborador (R$)": formatar_moeda_br(val_bruto),
                                         "Provento Orçamentário (R$)": formatar_moeda_br(val_prov),
                                         "Diferença (R$)": formatar_moeda_br(diff_rec),
-                                        # Guardamos os valores numéricos brutos para uso na análise de causa
                                         "_val_bruto_num": val_bruto,
                                         "_val_prov_num": val_prov,
                                         "_diff_num": diff_rec,
@@ -450,7 +453,6 @@ def render(conn, ano=None, mes=None, meses_lista=None, *args, **kwargs):
             df_rec_prob = pd.DataFrame(recibos_problematicos).drop_duplicates()
             st.markdown("Foram isolados com precisão os pares de recibos que apresentam descompasso interno de valores:")
             
-            # Removemos colunas auxiliares numéricas da exibição na tabela
             df_exibicao = df_rec_prob.drop(columns=["_val_bruto_num", "_val_prov_num", "_diff_num"])
             
             st.dataframe(
@@ -476,7 +478,6 @@ def render(conn, ano=None, mes=None, meses_lista=None, *args, **kwargs):
                 unsafe_allow_html=True
             )
 
-            # --- DETALHAMENTO DINÂMICO: RAIZ DO DESCOMPASSO ---
             prim = df_rec_prob.iloc[0]
             rec_colab_top = prim["Recibo Colaborador"]
             rec_orc_top = prim["Recibo Orçamentário"]
