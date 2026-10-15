@@ -8,7 +8,7 @@ requer_reset = "nao"
 [usuario."pedro.mendes"]
 nome = "Pedro Mendes"
 email = "pedromendesfilho@gmail.com"
-senha_hash = "3d9cf8bbda12670cba72c47d1271127c549e41fd998116240978d5bc66dbb90d"
+senha_hash = "d77b7ece5e4b23f31d9847b7749886711178940153750a0811ac68bb6bc07585"
 tipo = "g"
 requer_reset = "nao"
 

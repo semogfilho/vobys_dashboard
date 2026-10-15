@@ -44,7 +44,7 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(BASE_DIR, "views"))
 sys.path.insert(0, os.path.join(BASE_DIR, ".streamlit"))
 
-import auth_ui, inicio, grafico, app_siafe, responsavel, arquivos, usuarios, auditoria_integracao, auditoria_folha, valida_bb, inconsistencia_sefaz_view, consulta_credor_view, extra, arquivos_extra, patronal_resumo
+import auth_ui, inicio, grafico, app_siafe, responsavel, arquivos, usuarios, auditoria_integracao, auditoria_folha, valida_bb, inconsistencia_sefaz_view, consulta_credor_view, extra, arquivos_extra, patronal_resumo, resumo_arquivos
 
 def reload_views():
     importlib.reload(auth_ui)
@@ -62,6 +62,7 @@ def reload_views():
     importlib.reload(extra)
     importlib.reload(arquivos_extra)
     importlib.reload(patronal_resumo)
+    importlib.reload(resumo_arquivos)
 
 reload_views()
 
@@ -74,7 +75,7 @@ def get_opcoes():
         "Pagto Pendente",
         "Responsavel",
         "Arquivos/ID",
-        "Totalização Patronal",
+        "Totalizador dos Arquivos",
         "Auditoria",
         "Auditoria Folha",
         "Consulta Credor SEFAZ",
@@ -342,7 +343,8 @@ try:
     elif menu_selecionado == "Pagto Pendente": app_siafe.main(conn, ano, mes, meses_lista, st.session_state.perfil_usuario)
     elif menu_selecionado == "Responsavel": responsavel.render(conn, ano, mes, meses_lista)
     elif menu_selecionado == "Arquivos/ID": arquivos.render(conn, ano, mes, meses_lista)
-    elif menu_selecionado == "Totalização Patronal": patronal_resumo.render(conn, ano, mes, meses_lista)
+    elif menu_selecionado == "Totalizador dos Arquivos": resumo_arquivos.render(conn, ano, mes, meses_lista)
+    #elif menu_selecionado == "Totalização Patronal": patronal_resumo.render(conn, ano, mes, meses_lista)
     elif menu_selecionado == "Auditoria": auditoria_integracao.render(conn, ano, mes)
     elif menu_selecionado == "Auditoria Folha": auditoria_folha.render(conn, ano, mes, st.session_state.sub_menu_auditoria)
     elif menu_selecionado == "Usuários": usuarios.render(conn, st.session_state.perfil_usuario)

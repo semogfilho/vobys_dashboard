@@ -130,6 +130,7 @@ def carregar_dados_arquivos(conn, ano, mes, requisicoes_selecionadas):
         cod_sefaz_json = None
         tp_arquivo_json = None
         cod_relatorio_json = None
+        id_tipo_folha_json = "-"
 
         ind_req = str(row.get("ind_tipo_requisicao") or "").upper()
 
@@ -139,6 +140,10 @@ def carregar_dados_arquivos(conn, ano, mes, requisicoes_selecionadas):
                 cod_sefaz_json = dados.get("codigoUnidadeSistemaExterno")
                 tp_arquivo_json = dados.get("codigoExterno")
                 cod_relatorio_json = dados.get("codigoRelatorioFolhaPagamento")
+                
+                id_tf = dados.get("idTipoFolha")
+                if id_tf is not None:
+                    id_tipo_folha_json = str(id_tf)
 
                 pagamentos = dados.get("pagamentos", [])
                 if isinstance(pagamentos, list):
@@ -172,8 +177,8 @@ def carregar_dados_arquivos(conn, ano, mes, requisicoes_selecionadas):
         except Exception:
             recibo = 0
 
-        cod_sefaz = row.get("codigo_sefaz") or cod_sefaz_json or "-"
-        tp_arquivo = row.get("tipo_arquivo") or tp_arquivo_json or "-"
+        cod_sefaz = str(row.get("codigo_sefaz") or cod_sefaz_json or "-")
+        tp_arquivo = str(row.get("tipo_arquivo") or tp_arquivo_json or "-")
 
         st_raw = str(row.get("status_vobys") or "").upper()
         status_desc = STATUS_MAP.get(st_raw, st_raw if st_raw else "ABERTO")
@@ -194,8 +199,9 @@ def carregar_dados_arquivos(conn, ano, mes, requisicoes_selecionadas):
                 "Recibo": recibo,
                 "Código Sefaz": cod_sefaz,
                 "Tipo Requisição": tipo_req_desc,
-                "Tipo de Arquivo": str(tp_arquivo),
+                "Tipo de Arquivo": tp_arquivo,
                 "Código de Relatório": cod_relatorio_json or "-",
+                "idTipoFolha": id_tipo_folha_json,
                 "Valor Bruto": float(valor_bruto),
                 "Valor Líquido": float(valor_liquido),
                 "Valor Provento": float(valor_provento),
@@ -270,37 +276,63 @@ def render(conn, ano=None, mes=None, meses_lista=None, *args, **kwargs):
         st.warning("Nenhum registro encontrado para os tipos de requisição selecionados no período.")
         return
 
+    # --- FILTROS DE PESQUISA ---
     with st.expander("🎯 Filtros de Pesquisa / Seleção de Valores", expanded=False):
-        f_col1, f_col2, f_col3, f_col4 = st.columns(4)
+        f_col1, f_col2, f_col3, f_col4, f_col5, f_col6 = st.columns(6)
 
-        empresas_disponiveis = sorted([x for x in df_dados["Empresa"].unique() if x != "-"])
+        empresas_unicas = [x for x in df_dados["Empresa"].unique() if x != "-"]
+        if any(str(x).startswith("EMGERPI") for x in empresas_unicas):
+            if "EMGERPI" not in empresas_unicas:
+                empresas_unicas.append("EMGERPI")
+        empresas_disponiveis = sorted(empresas_unicas)
+
         sel_empresa = f_col1.multiselect("Empresa:", options=empresas_disponiveis, placeholder="Todas")
 
         relatorios_disponiveis = sorted([x for x in df_dados["Código de Relatório"].unique() if x != "-"])
         sel_relatorio = f_col2.multiselect("Código de Relatório:", options=relatorios_disponiveis, placeholder="Todos")
 
+        tipos_folha_disp = sorted([x for x in df_dados["idTipoFolha"].unique() if x != "-"])
+        sel_tipo_folha = f_col3.multiselect("Tipo de Folha:", options=tipos_folha_disp, placeholder="Todas")
+
+        cod_sefaz_disp = sorted([x for x in df_dados["Código Sefaz"].unique() if x != "-"])
+        sel_cod_sefaz = f_col4.multiselect("Código Sefaz:", options=cod_sefaz_disp, placeholder="Todos")
+
         tipos_arq_disp = sorted([x for x in df_dados["Tipo de Arquivo"].unique() if x != "-"])
-        sel_tipo_arq = f_col3.multiselect("Tipo de Arquivo:", options=tipos_arq_disp, placeholder="Todos")
+        sel_tipo_arq = f_col5.multiselect("Tipo de Arquivo:", options=tipos_arq_disp, placeholder="Todos")
 
         status_disponiveis = sorted([x for x in df_dados["Status"].unique() if x != "-"])
-        sel_status = f_col4.multiselect("Status:", options=status_disponiveis, placeholder="Todos")
+        sel_status = f_col6.multiselect("Status:", options=status_disponiveis, placeholder="Todos")
 
     df_filtrado = df_dados.copy()
 
     if sel_empresa:
-        df_filtrado = df_filtrado[df_filtrado["Empresa"].isin(sel_empresa)]
+        empresas_efetivas = set()
+        for emp in sel_empresa:
+            if emp == "EMGERPI":
+                matches = [x for x in df_dados["Empresa"].unique() if str(x).startswith("EMGERPI")]
+                empresas_efetivas.update(matches)
+            else:
+                empresas_efetivas.add(emp)
+        df_filtrado = df_filtrado[df_filtrado["Empresa"].isin(list(empresas_efetivas))]
+
     if sel_relatorio:
         df_filtrado = df_filtrado[df_filtrado["Código de Relatório"].isin(sel_relatorio)]
+    if sel_tipo_folha:
+        df_filtrado = df_filtrado[df_filtrado["idTipoFolha"].isin(sel_tipo_folha)]
+    if sel_cod_sefaz:
+        df_filtrado = df_filtrado[df_filtrado["Código Sefaz"].isin(sel_cod_sefaz)]
     if sel_tipo_arq:
         df_filtrado = df_filtrado[df_filtrado["Tipo de Arquivo"].isin(sel_tipo_arq)]
     if sel_status:
         df_filtrado = df_filtrado[df_filtrado["Status"].isin(sel_status)]
 
     # --- EXCLUSÃO DE EXCLUIDO E VALIDADO DAS SOMATÓRIAS ---
-    # Mantemos os dados visíveis nos dataframes se necessário, mas filtramos para as métricas e somas globais
     df_para_somatoria = df_filtrado[~df_filtrado["Status"].isin(["EXCLUIDO", "VALIDADO"])]
+    
+    # Desconsiderar o líquido dos registros de CRÉDITO (V2) na somatória global e validação
+    df_somatoria_liquido = df_para_somatoria[df_para_somatoria["Tipo Requisição"] != "CREDITO"]
 
-    # --- 4. MÉTRICAS COMPACTAS COM DISTRIBUIÇÃO OTIMIZADA ---
+    # --- MÉTRICAS COMPACTAS COM DISTRIBUIÇÃO OTIMIZADA ---
     m_col1, m_col2, m_col3, m_col4, m_col5, m_col6 = st.columns([1, 1.8, 1.8, 1.8, 1.8, 1.8])
 
     m_col1.metric("Arquivos", len(df_filtrado))
@@ -308,7 +340,7 @@ def render(conn, ano=None, mes=None, meses_lista=None, *args, **kwargs):
     soma_bruto = df_para_somatoria["Valor Bruto"].sum() if not df_para_somatoria.empty else 0.0
     m_col2.metric("Total Bruto", formatar_moeda_br(soma_bruto))
 
-    soma_liquido = df_para_somatoria["Valor Líquido"].sum() if not df_para_somatoria.empty else 0.0
+    soma_liquido = df_somatoria_liquido["Valor Líquido"].sum() if not df_somatoria_liquido.empty else 0.0
     m_col3.metric("Total Líquido", formatar_moeda_br(soma_liquido))
 
     soma_provento = df_para_somatoria["Valor Provento"].sum() if not df_para_somatoria.empty else 0.0
@@ -320,15 +352,15 @@ def render(conn, ano=None, mes=None, meses_lista=None, *args, **kwargs):
     soma_desc_patr = df_para_somatoria["Desconto Patronal"].sum() if not df_para_somatoria.empty else 0.0
     m_col6.metric("Desc. Patronal", formatar_moeda_br(soma_desc_patr))
 
-    # --- 4.1. ALERTA DE DIVERGÊNCIA MATEMÁTICA ---
-    soma_esperada = soma_liquido + soma_desc_orc
-    diferenca = round(soma_bruto - soma_esperada, 2)
+    # --- ALERTA DE DIVERGÊNCIA MATEMÁTICA ---
+    liquido_esperado = soma_provento - soma_desc_orc
+    diferenca = round(soma_liquido - liquido_esperado, 2)
 
     if abs(diferenca) > 0.01:
         diff_fmt = formatar_moeda_br(abs(diferenca))
         st.warning(
             f"⚠️ **Atenção:** Existe uma divergência de **{diff_fmt}** entre o "
-            f"Valor Bruto = Líquido + Orçamentário"
+            f"Valor Líquido e a relação (Proventos - Descontos)."
         )
 
     st.divider()
@@ -337,11 +369,13 @@ def render(conn, ano=None, mes=None, meses_lista=None, *args, **kwargs):
         st.info("Nenhum registro encontrado para os filtros selecionados.")
         return
 
-    # --- 5. AGRUPAMENTO DINÂMICO (ENVELOPADO EM EXPANDER) ---
+    # --- AGRUPAMENTO DINÂMICO ---
     with st.expander("🔍 Agrupamento Dinâmico de Registros", expanded=False):
         opcoes_agrupamento = [
+            "Id",
             "Empresa",
             "Código de Relatório",
+            "idTipoFolha",
             "Código Sefaz",
             "Tipo Requisição",
             "Tipo de Arquivo",
@@ -352,7 +386,7 @@ def render(conn, ano=None, mes=None, meses_lista=None, *args, **kwargs):
         campos_agrupamento = st.multiselect(
             "Selecione os campos para agrupar e totalizar os valores:",
             options=opcoes_agrupamento,
-            default=["Empresa", "Código de Relatório", "Tipo de Arquivo", "Status", "Recibo"],
+            default=["Id", "Empresa", "Código de Relatório", "idTipoFolha", "Código Sefaz", "Tipo de Arquivo", "Status", "Recibo"],
             help="Marque os campos para agrupar e calcular os somatórios",
         )
 
@@ -376,6 +410,7 @@ def render(conn, ano=None, mes=None, meses_lista=None, *args, **kwargs):
                 use_container_width=True,
                 hide_index=True,
                 column_config={
+                    "Id": st.column_config.NumberColumn("Id", format="%d"),
                     "Recibo": st.column_config.NumberColumn("Recibo", format="%d"),
                     "Valor_Bruto": st.column_config.NumberColumn("Valor Bruto (R$)", format="R$ %.2f"),
                     "Valor_Liquido": st.column_config.NumberColumn("Valor Líquido (R$)", format="R$ %.2f"),
@@ -393,6 +428,7 @@ def render(conn, ano=None, mes=None, meses_lista=None, *args, **kwargs):
                 use_container_width=True,
                 hide_index=True,
                 column_config={
+                    "Id": st.column_config.NumberColumn("Id", format="%d"),
                     "Recibo": st.column_config.NumberColumn("Recibo", format="%d"),
                     "Valor Bruto": st.column_config.NumberColumn("Valor Bruto (R$)", format="R$ %.2f"),
                     "Valor Líquido": st.column_config.NumberColumn("Valor Líquido (R$)", format="R$ %.2f"),
@@ -402,61 +438,65 @@ def render(conn, ano=None, mes=None, meses_lista=None, *args, **kwargs):
                 },
             )
 
-    # --- 6. ISOLAMENTO, DETECÇÃO EXATA E RAIZ DO DESCOMPASSO DINÂMICA ---
+    # --- ISOLAMENTO E DETECÇÃO DE DESCOMPASSO (COM CÓDIGO SEFAZ) ---
     with st.expander("🚨 Recibos com Divergência Efetiva Detectados", expanded=True):
         df_v1 = df_filtrado[df_filtrado["Tipo Requisição"] == "COLABORADOR"].copy()
         df_v3 = df_filtrado[df_filtrado["Tipo Requisição"] == "ORÇAMENTARIO"].copy()
 
         recibos_problematicos = []
+        sugestao_recibos = ""
 
         if not df_v1.empty and not df_v3.empty:
             for empresa_g in df_filtrado["Empresa"].unique():
                 df_v1_emp = df_v1[df_v1["Empresa"] == empresa_g]
                 df_v3_emp = df_v3[df_v3["Empresa"] == empresa_g]
 
-                for cod_rel in df_filtrado["Código de Relatório"].unique():
-                    sub_v1 = df_v1_emp[df_v1_emp["Código de Relatório"] == cod_rel]
-                    sub_v3 = df_v3_emp[df_v3_emp["Código de Relatório"] == cod_rel]
+                for cod_sefaz in df_filtrado["Código Sefaz"].unique():
+                    df_v1_sef = df_v1_emp[df_v1_emp["Código Sefaz"] == cod_sefaz]
+                    df_v3_sef = df_v3_emp[df_v3_emp["Código Sefaz"] == cod_sefaz]
 
-                    if not sub_v1.empty and not sub_v3.empty:
-                        for _, r_v1 in sub_v1.iterrows():
-                            val_bruto = r_v1["Valor Bruto"]
-                            val_liq = r_v1["Valor Líquido"]
-                            rec_v1 = r_v1["Recibo"]
+                    for cod_rel in df_filtrado["Código de Relatório"].unique():
+                        sub_v1 = df_v1_sef[df_v1_sef["Código de Relatório"] == cod_rel]
+                        sub_v3 = df_v3_sef[df_v3_sef["Código de Relatório"] == cod_rel]
 
-                            sub_v3_work = sub_v3.copy()
-                            sub_v3_work["diff_prov"] = (sub_v3_work["Valor Provento"] - val_bruto).abs()
-                            best_match_idx = sub_v3_work["diff_prov"].idxmin()
-                            r_v3 = sub_v3_work.loc[best_match_idx]
+                        if not sub_v1.empty and not sub_v3.empty:
+                            for _, r_v1 in sub_v1.iterrows():
+                                val_liq_colab = r_v1["Valor Líquido"]
+                                rec_v1 = r_v1["Recibo"]
 
-                            val_prov = r_v3["Valor Provento"]
-                            rec_v3 = r_v3["Recibo"]
-                            diff_rec = round(val_bruto - val_prov, 2)
+                                sub_v3_work = sub_v3.copy()
+                                sub_v3_work["diff_prov"] = (sub_v3_work["Valor Provento"] - val_liq_colab).abs()
+                                best_match_idx = sub_v3_work["diff_prov"].idxmin()
+                                r_v3 = sub_v3_work.loc[best_match_idx]
 
-                            if abs(diff_rec) > 0.01:
-                                recibos_problematicos.append(
-                                    {
-                                        "Empresa": empresa_g,
-                                        "Código de Relatório": cod_rel,
-                                        "Recibo Colaborador": rec_v1,
-                                        "Recibo Orçamentário": rec_v3,
-                                        "Bruto Colaborador (R$)": formatar_moeda_br(val_bruto),
-                                        "Provento Orçamentário (R$)": formatar_moeda_br(val_prov),
-                                        "Diferença (R$)": formatar_moeda_br(diff_rec),
-                                        "_val_bruto_num": val_bruto,
-                                        "_val_prov_num": val_prov,
-                                        "_diff_num": diff_rec,
-                                    }
-                                )
+                                val_prov_orc = r_v3["Valor Provento"]
+                                desc_orc = r_v3["Desconto Orçamentário"]
+                                rec_v3 = r_v3["Recibo"]
+                                
+                                liquido_orc_esperado = val_prov_orc - desc_orc
+                                diff_rec = round(val_liq_colab - liquido_orc_esperado, 2)
+
+                                if abs(diff_rec) > 0.01:
+                                    recibos_problematicos.append(
+                                        {
+                                            "Empresa": empresa_g,
+                                            "Código Sefaz": cod_sefaz,
+                                            "Código de Relatório": cod_rel,
+                                            "Recibo Colaborador": rec_v1,
+                                            "Recibo Orçamentário": rec_v3,
+                                            "Líquido Colaborador (R$)": formatar_moeda_br(val_liq_colab),
+                                            "Provento Orçamentário (R$)": formatar_moeda_br(val_prov_orc),
+                                            "Desc. Orçamentário (R$)": formatar_moeda_br(desc_orc),
+                                            "Diferença (R$)": formatar_moeda_br(diff_rec),
+                                        }
+                                    )
 
         if recibos_problematicos:
             df_rec_prob = pd.DataFrame(recibos_problematicos).drop_duplicates()
             st.markdown("Foram isolados com precisão os pares de recibos que apresentam descompasso interno de valores:")
             
-            df_exibicao = df_rec_prob.drop(columns=["_val_bruto_num", "_val_prov_num", "_diff_num"])
-            
             st.dataframe(
-                df_exibicao,
+                df_rec_prob,
                 use_container_width=True,
                 hide_index=True,
                 column_config={
@@ -477,32 +517,10 @@ def render(conn, ano=None, mes=None, meses_lista=None, *args, **kwargs):
                 f"<span style='color: #ff4b4b; font-weight: bold; font-size: 1.1rem;'>{str_orc}</span>",
                 unsafe_allow_html=True
             )
-
-            prim = df_rec_prob.iloc[0]
-            rec_colab_top = prim["Recibo Colaborador"]
-            rec_orc_top = prim["Recibo Orçamentário"]
-            bruto_top_fmt = prim["Bruto Colaborador (R$)"]
-            prov_top_fmt = prim["Provento Orçamentário (R$)"]
-            diff_top_fmt = prim["Diferença (R$)"]
-
-            st.markdown(
-                f"""
-                <div style="background-color: #f0f2f6; padding: 16px; border-radius: 8px; border-left: 5px solid #ff4b4b; margin-top: 15px;">
-                    <h4 style="margin-top: 0; color: #1f1f1f; font-size: 1.15rem;">🧩 Raiz do Descompasso (Análise de Causa)</h4>
-                    <ul style="margin-bottom: 0; font-size: 1.05rem; line-height: 1.6; color: #31333f;">
-                        <li><b>Recibos Envolvidos:</b> Colaborador <span style="color: #ff4b4b; font-weight: bold;">{rec_colab_top}</span> | Orçamentário <span style="color: #ff4b4b; font-weight: bold;">{rec_orc_top}</span></li>
-                        <li><b>Diferença Apurada:</b> <span style="color: #ff4b4b; font-weight: bold;">{diff_top_fmt}</span> (Proventos Orçamentários: {prov_top_fmt} - Bruto Colaborador: {bruto_top_fmt})</li>
-                        <li><b>Diagnóstico:</b> O total cadastrado no lote orçamentário ({prov_top_fmt}) difere do somatório dos colaboradores no arquivo de folha ({bruto_top_fmt}).</li>
-                        <li><b>Causa Provável:</b> Desalinhamento na quantidade de registros ou rubricas processadas entre o arquivo de colaboradores e a contabilização orçamentária para esta entidade.</li>
-                    </ul>
-                </div>
-                """,
-                unsafe_allow_html=True
-            )
         else:
             st.success("Nenhum par de recibos com divergência individual encontrado para os filtros aplicados!")
 
-    # --- 7. MÓDULO DE INSPEÇÃO / AUDITORIA DE RECIBOS ESPECÍFICOS ---
+    # --- MÓDULO DE INSPEÇÃO / AUDITORIA DE RECIBOS ESPECÍFICOS ---
     with st.expander("🔎 Auditoria de Recibos Específicos (Payload JSON)", expanded=False):
         st.markdown("Digite os números dos recibos que deseja inspecionar detalhadamente para comparar o conteúdo dos payloads:")
         
