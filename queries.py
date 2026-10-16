@@ -293,3 +293,4 @@ def get_query_json_patronal_emgerpi(ano, mes):
         FROM cabecalho_principal c
     """
 
+

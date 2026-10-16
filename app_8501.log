@@ -4343,3 +4343,680 @@ DEBUG: Tentando recriar 1 registros no Oracle.../home/jose.gomes/vobys_dashboard
   df = pd.read_sql(sql, conn)
 /home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:52: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
   df_audit = pd.read_sql(sql, conn, params=params)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:52: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df_audit = pd.read_sql(sql, conn, params=params)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:52: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df_audit = pd.read_sql(sql, conn, params=params)
+2026-10-15 11:21:23.652 Uncaught app execution
+Traceback (most recent call last):
+  File "/home/jose.gomes/miniconda3/envs/vobys_env/lib/python3.11/site-packages/streamlit/runtime/scriptrunner/exec_code.py", line 129, in exec_func_with_error_handling
+    result = func()
+             ^^^^^^
+  File "/home/jose.gomes/miniconda3/envs/vobys_env/lib/python3.11/site-packages/streamlit/runtime/scriptrunner/script_runner.py", line 689, in code_to_exec
+    exec(code, module.__dict__)  # noqa: S102
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/jose.gomes/vobys_dashboard/app.py", line 47, in <module>
+    import auth_ui, inicio, grafico, app_siafe, responsavel, arquivos, usuarios, auditoria_integracao, auditoria_folha, valida_bb, inconsistencia_sefaz_view, consulta_credor_view, extra, arquivos_extra, patronal_resumo, resumo_arquivos
+  File "/home/jose.gomes/vobys_dashboard/views/inicio.py", line 6, in <module>
+    from queries import get_query_detalhe_erros
+ImportError: cannot import name 'get_query_detalhe_erros' from 'queries' (/home/jose.gomes/vobys_dashboard/queries.py)
+2026-10-15 11:21:27.254 Uncaught app execution
+Traceback (most recent call last):
+  File "/home/jose.gomes/miniconda3/envs/vobys_env/lib/python3.11/site-packages/streamlit/runtime/scriptrunner/exec_code.py", line 129, in exec_func_with_error_handling
+    result = func()
+             ^^^^^^
+  File "/home/jose.gomes/miniconda3/envs/vobys_env/lib/python3.11/site-packages/streamlit/runtime/scriptrunner/script_runner.py", line 689, in code_to_exec
+    exec(code, module.__dict__)  # noqa: S102
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/jose.gomes/vobys_dashboard/app.py", line 47, in <module>
+    import auth_ui, inicio, grafico, app_siafe, responsavel, arquivos, usuarios, auditoria_integracao, auditoria_folha, valida_bb, inconsistencia_sefaz_view, consulta_credor_view, extra, arquivos_extra, patronal_resumo, resumo_arquivos
+  File "/home/jose.gomes/vobys_dashboard/views/inicio.py", line 6, in <module>
+    from queries import get_query_detalhe_erros
+ImportError: cannot import name 'get_query_detalhe_erros' from 'queries' (/home/jose.gomes/vobys_dashboard/queries.py)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:279: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn, params={'cod': cod_institucional})
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:279: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn, params={'cod': cod_institucional})
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:279: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn, params={'cod': cod_institucional})
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:279: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn, params={'cod': cod_institucional})
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:279: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn, params={'cod': cod_institucional})
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:279: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn, params={'cod': cod_institucional})
+
+DEBUG: DELETE + INSERT (COMMIT) realizado com sucesso!
+DEBUG: Headers enviados: {'User-Agent': 'python-requests/2.34.2', 'Accept-Encoding': 'gzip, deflate, br', 'Accept': '*/*', 'Connection': 'keep-alive', 'Authorization': 'Bearer eyJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJBUEkgZGUgSW50ZWdyYcOnw6NvIExvZ3VzIiwic3ViIjoiMzc0NDU3NTgzNzIiLCJpYXQiOjE3OTIwNjc1OTgsImV4cCI6MTc5MjE1Mzk5OH0.wOlRzL2YzV0gUPoVHTlbRgasNUpqL764qDt1P0rHxYE'}
+DEBUG: Payload enviado: {'cpf': '46286527320', 'nome': 'MARLON DO VALE LOPES DE ARAUJO', 'dataNascimento': '1972-10-31', 'numeroPisPasepNit': None, 'uf': 'PI', 'codigoMunicipio': 2211001, 'cep': '64000000', 'endereco': 'CONJUNTO CONJUNTO BELA VISTA 3, 28 - QD C', 'bairro': 'BELA VISTA', 'telefone': None, 'telefone2': '8699250867', 'celular': '8699250867', 'fax': None, 'email': 'marlonvaraujo@yahoo.com', 'dadosBancarios': [{'codigoBanco': '001', 'codigoAgencia': '0044', 'numeroConta': '0000000272183', 'flgContaPoupanca': False, 'status': 'ATIVO', 'idFuncional': '4623029'}]}
+DEBUG: Tentando recriar 1 registros no Oracle...
+DEBUG: DELETE + INSERT (COMMIT) realizado com sucesso!
+DEBUG: Headers enviados: {'User-Agent': 'python-requests/2.34.2', 'Accept-Encoding': 'gzip, deflate, br', 'Accept': '*/*', 'Connection': 'keep-alive', 'Authorization': 'Bearer eyJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJBUEkgZGUgSW50ZWdyYcOnw6NvIExvZ3VzIiwic3ViIjoiMzc0NDU3NTgzNzIiLCJpYXQiOjE3OTIwNjc2MDAsImV4cCI6MTc5MjE1NDAwMH0.FxtXEXbmijaVj3t07WUxbw3XiZF2vQ1IkNhW9P_05OU'}
+DEBUG: Payload enviado: {'cpf': '06292722120', 'nome': 'VINICIUS DE FRANCA', 'dataNascimento': '1997-08-20', 'numeroPisPasepNit': None, 'uf': 'PI', 'codigoMunicipio': 5300108, 'cep': '72155819', 'endereco': 'QNL 08 BLOCO I, 11 - SC', 'bairro': 'SN', 'telefone': None, 'telefone2': '61982611259', 'celular': '61982611259', 'fax': None, 'email': 'viniciuslkjl@gmail.com', 'dadosBancarios': [{'codigoBanco': '001', 'codigoAgencia': '2911', 'numeroConta': '0000001034723', 'flgContaPoupanca': False, 'status': 'ATIVO', 'idFuncional': '4623495'}]}
+DEBUG: Tentando recriar 1 registros no Oracle...
+DEBUG: DELETE + INSERT (COMMIT) realizado com sucesso!
+DEBUG: Headers enviados: {'User-Agent': 'python-requests/2.34.2', 'Accept-Encoding': 'gzip, deflate, br', 'Accept': '*/*', 'Connection': 'keep-alive', 'Authorization': 'Bearer eyJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJBUEkgZGUgSW50ZWdyYcOnw6NvIExvZ3VzIiwic3ViIjoiMzc0NDU3NTgzNzIiLCJpYXQiOjE3OTIwNzYwMjksImV4cCI6MTc5MjE2MjQyOX0.j5GtPDFgMenXNzp3qquUoa1VzvR8_Z1uWBOyTKRkFKU'}
+DEBUG: Payload enviado: {'cpf': '00415899397', 'nome': 'EDINA VELOSO DA SILVA', 'dataNascimento': '1984-12-09', 'numeroPisPasepNit': None, 'uf': 'PI', 'codigoMunicipio': 2208809, 'cep': '64490000', 'endereco': 'RUA RUA ALAGOAS, SEM - S/C', 'bairro': 'BELA VISTA', 'telefone': '86995784743', 'telefone2': None, 'celular': None, 'fax': None, 'email': 'edina999608015@gmail.com', 'dadosBancarios': [{'codigoBanco': '001', 'codigoAgencia': '1122', 'numeroConta': '0000000228818', 'flgContaPoupanca': False, 'status': 'ATIVO', 'idFuncional': '4619153'}]}
+DEBUG: Tentando recriar 1 registros no Oracle...
+DEBUG: DELETE + INSERT (COMMIT) realizado com sucesso!
+DEBUG: Headers enviados: {'User-Agent': 'python-requests/2.34.2', 'Accept-Encoding': 'gzip, deflate, br', 'Accept': '*/*', 'Connection': 'keep-alive', 'Authorization': 'Bearer eyJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJBUEkgZGUgSW50ZWdyYcOnw6NvIExvZ3VzIiwic3ViIjoiMzc0NDU3NTgzNzIiLCJpYXQiOjE3OTIwNzYwMzAsImV4cCI6MTc5MjE2MjQzMH0.VeukIUlDshPYflvPDUdMKS9liNX3YKusfGIVap4-j0k'}
+DEBUG: Payload enviado: {'cpf': '01400434386', 'nome': 'MARCELO SILVA DE ARAUJO', 'dataNascimento': '1987-03-09', 'numeroPisPasepNit': '16369024970', 'uf': None, 'codigoMunicipio': None, 'cep': '64018900', 'endereco': ',', 'bairro': None, 'telefone': None, 'telefone2': None, 'celular': None, 'fax': None, 'email': None, 'dadosBancarios': [{'codigoBanco': '001', 'codigoAgencia': '0044', 'numeroConta': '0000004174895', 'flgContaPoupanca': False, 'status': 'ATIVO', 'idFuncional': '462072X'}]}
+DEBUG: Tentando recriar 1 registros no Oracle...
+DEBUG: DELETE + INSERT (COMMIT) realizado com sucesso!
+DEBUG: Headers enviados: {'User-Agent': 'python-requests/2.34.2', 'Accept-Encoding': 'gzip, deflate, br', 'Accept': '*/*', 'Connection': 'keep-alive', 'Authorization': 'Bearer eyJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJBUEkgZGUgSW50ZWdyYcOnw6NvIExvZ3VzIiwic3ViIjoiMzc0NDU3NTgzNzIiLCJpYXQiOjE3OTIwNzYwMzAsImV4cCI6MTc5MjE2MjQzMH0.VeukIUlDshPYflvPDUdMKS9liNX3YKusfGIVap4-j0k'}
+DEBUG: Payload enviado: {'cpf': '03286373354', 'nome': 'AURISLANDIA GOMES DE FREITAS', 'dataNascimento': '1986-04-27', 'numeroPisPasepNit': None, 'uf': 'PI', 'codigoMunicipio': 2211001, 'cep': '64078604', 'endereco': 'ENTRE QUADRA QUADRA 337 CASA 11, 11 - NAN', 'bairro': 'DIRCEU ARCOVERDE II', 'telefone': '86998305163', 'telefone2': '8699835160', 'celular': '8699835160', 'fax': None, 'email': 'aurislandia21@gmail.com', 'dadosBancarios': [{'codigoBanco': '001', 'codigoAgencia': '3285', 'numeroConta': '0000000428183', 'flgContaPoupanca': False, 'status': 'ATIVO', 'idFuncional': '4622049'}]}
+DEBUG: Tentando recriar 1 registros no Oracle...
+DEBUG: DELETE + INSERT (COMMIT) realizado com sucesso!
+DEBUG: Headers enviados: {'User-Agent': 'python-requests/2.34.2', 'Accept-Encoding': 'gzip, deflate, br', 'Accept': '*/*', 'Connection': 'keep-alive', 'Authorization': 'Bearer eyJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJBUEkgZGUgSW50ZWdyYcOnw6NvIExvZ3VzIiwic3ViIjoiMzc0NDU3NTgzNzIiLCJpYXQiOjE3OTIwNzYwMzEsImV4cCI6MTc5MjE2MjQzMX0.N5CNujXjm5VHzoIcJmp1buxlN4xHkwInHgyqaLlus30'}
+DEBUG: Payload enviado: {'cpf': '04591362329', 'nome': 'ROBERTO DOS SANTOS MENDES', 'dataNascimento': '1997-04-16', 'numeroPisPasepNit': None, 'uf': 'PI', 'codigoMunicipio': 2211001, 'cep': '64032480', 'endereco': 'RUA RUA DO CONTORNO,3954, 3954 - S/C', 'bairro': 'SANTO ANTONIO', 'telefone': '86995406432', 'telefone2': None, 'celular': None, 'fax': None, 'email': 'robertosantos@ufpi.edu.br', 'dadosBancarios': [{'codigoBanco': '001', 'codigoAgencia': '4404', 'numeroConta': '0000000286206', 'flgContaPoupanca': False, 'status': 'ATIVO', 'idFuncional': '4619099'}]}
+DEBUG: Tentando recriar 1 registros no Oracle...
+DEBUG: DELETE + INSERT (COMMIT) realizado com sucesso!
+DEBUG: Headers enviados: {'User-Agent': 'python-requests/2.34.2', 'Accept-Encoding': 'gzip, deflate, br', 'Accept': '*/*', 'Connection': 'keep-alive', 'Authorization': 'Bearer eyJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJBUEkgZGUgSW50ZWdyYcOnw6NvIExvZ3VzIiwic3ViIjoiMzc0NDU3NTgzNzIiLCJpYXQiOjE3OTIwNzYwMzIsImV4cCI6MTc5MjE2MjQzMn0.8kFcUyz7jAYgPZEXGW-PK6pzIcTOXwezOBtTo9t6AyI'}
+DEBUG: Payload enviado: {'cpf': '07289727355', 'nome': 'GABRIELA LIMA DE ANDRADE FERREIRA', 'dataNascimento': '1999-11-13', 'numeroPisPasepNit': None, 'uf': 'PI', 'codigoMunicipio': 2211001, 'cep': '64079100', 'endereco': 'RUA RUA OITO, 4571, LOTEAMENTO CIDADE VERDE, S/N - SEM NÚMERO', 'bairro': 'NOVO HORIZONTE', 'telefone': '86988921468', 'telefone2': '8698891462', 'celular': '8698891462', 'fax': None, 'email': 'gabiiandrades13@gmail.com', 'dadosBancarios': [{'codigoBanco': '001', 'codigoAgencia': '3285', 'numeroConta': '0000000519642', 'flgContaPoupanca': False, 'status': 'ATIVO', 'idFuncional': '4621654'}]}
+DEBUG: Tentando recriar 1 registros no Oracle...
+DEBUG: DELETE + INSERT (COMMIT) realizado com sucesso!
+DEBUG: Headers enviados: {'User-Agent': 'python-requests/2.34.2', 'Accept-Encoding': 'gzip, deflate, br', 'Accept': '*/*', 'Connection': 'keep-alive', 'Authorization': 'Bearer eyJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJBUEkgZGUgSW50ZWdyYcOnw6NvIExvZ3VzIiwic3ViIjoiMzc0NDU3NTgzNzIiLCJpYXQiOjE3OTIwNzc0OTcsImV4cCI6MTc5MjE2Mzg5N30.-cpS0dr9eSTerPcJAtEVVbPAW-buD5JmauDjSs-Dy8c'}
+DEBUG: Payload enviado: {'cpf': '01400434386', 'nome': 'MARCELO SILVA DE ARAUJO', 'dataNascimento': '1987-03-09', 'numeroPisPasepNit': '16369024970', 'uf': 'PI', 'codigoMunicipio': 2211001, 'cep': '64000000', 'endereco': 'RUA NÃO INFORMADO, 1', 'bairro': None, 'telefone': None, 'telefone2': None, 'celular': None, 'fax': None, 'email': None, 'dadosBancarios': [{'codigoBanco': '001', 'codigoAgencia': '0044', 'numeroConta': '0000004174895', 'flgContaPoupanca': False, 'status': 'ATIVO', 'idFuncional': '462072X'}]}
+DEBUG: Tentando recriar 1 registros no Oracle...2026-10-15 12:39:13.973 Please replace `st.components.v1.html` with `st.iframe`.
+
+`st.components.v1.html` will be removed after 2026-06-01.
+2026-10-15 12:39:20.594 Please replace `st.components.v1.html` with `st.iframe`.
+
+`st.components.v1.html` will be removed after 2026-06-01.
+2026-10-15 12:40:29.927 Please replace `st.components.v1.html` with `st.iframe`.
+
+`st.components.v1.html` will be removed after 2026-06-01.
+2026-10-15 12:40:37.430 Please replace `st.components.v1.html` with `st.iframe`.
+
+`st.components.v1.html` will be removed after 2026-06-01.
+2026-10-15 12:40:47.456 Please replace `st.components.v1.html` with `st.iframe`.
+
+`st.components.v1.html` will be removed after 2026-06-01.
+2026-10-15 12:40:56.250 Please replace `st.components.v1.html` with `st.iframe`.
+
+`st.components.v1.html` will be removed after 2026-06-01.
+2026-10-15 12:40:59.188 Please replace `st.components.v1.html` with `st.iframe`.
+
+`st.components.v1.html` will be removed after 2026-06-01.
+2026-10-15 12:41:05.044 Please replace `st.components.v1.html` with `st.iframe`.
+
+`st.components.v1.html` will be removed after 2026-06-01.
+2026-10-15 12:41:05.389 Please replace `st.components.v1.html` with `st.iframe`.
+
+`st.components.v1.html` will be removed after 2026-06-01.
+2026-10-15 12:41:06.223 Please replace `st.components.v1.html` with `st.iframe`.
+
+`st.components.v1.html` will be removed after 2026-06-01.
+2026-10-15 12:41:06.238 Please replace `st.components.v1.html` with `st.iframe`.
+
+`st.components.v1.html` will be removed after 2026-06-01.
+2026-10-15 12:41:09.837 Please replace `st.components.v1.html` with `st.iframe`.
+
+`st.components.v1.html` will be removed after 2026-06-01.
+2026-10-15 12:41:10.192 Please replace `st.components.v1.html` with `st.iframe`.
+
+`st.components.v1.html` will be removed after 2026-06-01.
+2026-10-15 12:41:10.793 Please replace `st.components.v1.html` with `st.iframe`.
+
+`st.components.v1.html` will be removed after 2026-06-01.
+2026-10-15 12:41:10.802 Please replace `st.components.v1.html` with `st.iframe`.
+
+`st.components.v1.html` will be removed after 2026-06-01.
+2026-10-15 12:41:15.286 Please replace `st.components.v1.html` with `st.iframe`.
+
+`st.components.v1.html` will be removed after 2026-06-01.
+2026-10-15 12:41:15.300 Please replace `st.components.v1.html` with `st.iframe`.
+
+`st.components.v1.html` will be removed after 2026-06-01.
+2026-10-15 12:41:24.909 Please replace `st.components.v1.html` with `st.iframe`.
+
+`st.components.v1.html` will be removed after 2026-06-01.
+2026-10-15 12:41:28.790 Please replace `st.components.v1.html` with `st.iframe`.
+
+`st.components.v1.html` will be removed after 2026-06-01.
+2026-10-15 12:41:28.805 Please replace `st.components.v1.html` with `st.iframe`.
+
+`st.components.v1.html` will be removed after 2026-06-01.
+2026-10-15 12:41:29.144 Please replace `st.components.v1.html` with `st.iframe`.
+
+`st.components.v1.html` will be removed after 2026-06-01.
+2026-10-15 12:41:29.156 Please replace `st.components.v1.html` with `st.iframe`.
+
+`st.components.v1.html` will be removed after 2026-06-01.
+2026-10-15 12:41:29.805 Please replace `st.components.v1.html` with `st.iframe`.
+
+`st.components.v1.html` will be removed after 2026-06-01.
+2026-10-15 12:41:29.816 Please replace `st.components.v1.html` with `st.iframe`.
+
+`st.components.v1.html` will be removed after 2026-06-01.
+2026-10-15 12:41:29.828 Please replace `st.components.v1.html` with `st.iframe`.
+
+`st.components.v1.html` will be removed after 2026-06-01.
+2026-10-15 12:41:32.023 Please replace `st.components.v1.html` with `st.iframe`.
+
+`st.components.v1.html` will be removed after 2026-06-01.
+2026-10-15 12:41:32.037 Please replace `st.components.v1.html` with `st.iframe`.
+
+`st.components.v1.html` will be removed after 2026-06-01.
+2026-10-15 12:41:32.468 Please replace `st.components.v1.html` with `st.iframe`.
+
+`st.components.v1.html` will be removed after 2026-06-01.
+2026-10-15 12:41:32.479 Please replace `st.components.v1.html` with `st.iframe`.
+
+`st.components.v1.html` will be removed after 2026-06-01.
+2026-10-15 12:41:33.090 Please replace `st.components.v1.html` with `st.iframe`.
+
+`st.components.v1.html` will be removed after 2026-06-01.
+2026-10-15 12:41:33.101 Please replace `st.components.v1.html` with `st.iframe`.
+
+`st.components.v1.html` will be removed after 2026-06-01.
+2026-10-15 12:41:33.117 Please replace `st.components.v1.html` with `st.iframe`.
+
+`st.components.v1.html` will be removed after 2026-06-01.
+2026-10-15 12:41:37.295 Please replace `st.components.v1.html` with `st.iframe`.
+
+`st.components.v1.html` will be removed after 2026-06-01.
+2026-10-15 12:41:37.305 Please replace `st.components.v1.html` with `st.iframe`.
+
+`st.components.v1.html` will be removed after 2026-06-01.
+2026-10-15 12:41:37.318 Please replace `st.components.v1.html` with `st.iframe`.
+
+`st.components.v1.html` will be removed after 2026-06-01.
+2026-10-15 12:41:38.888 Please replace `st.components.v1.html` with `st.iframe`.
+
+`st.components.v1.html` will be removed after 2026-06-01.
+2026-10-15 12:41:42.941 Please replace `st.components.v1.html` with `st.iframe`.
+
+`st.components.v1.html` will be removed after 2026-06-01.
+2026-10-15 12:41:42.955 Please replace `st.components.v1.html` with `st.iframe`.
+
+`st.components.v1.html` will be removed after 2026-06-01.
+2026-10-15 12:41:42.967 Please replace `st.components.v1.html` with `st.iframe`.
+
+`st.components.v1.html` will be removed after 2026-06-01.
+2026-10-15 12:41:43.371 Please replace `st.components.v1.html` with `st.iframe`.
+
+`st.components.v1.html` will be removed after 2026-06-01.
+2026-10-15 12:41:43.384 Please replace `st.components.v1.html` with `st.iframe`.
+
+`st.components.v1.html` will be removed after 2026-06-01.
+2026-10-15 12:41:43.400 Please replace `st.components.v1.html` with `st.iframe`.
+
+`st.components.v1.html` will be removed after 2026-06-01.
+2026-10-15 12:41:44.116 Please replace `st.components.v1.html` with `st.iframe`.
+
+`st.components.v1.html` will be removed after 2026-06-01.
+2026-10-15 12:41:44.126 Please replace `st.components.v1.html` with `st.iframe`.
+
+`st.components.v1.html` will be removed after 2026-06-01.
+2026-10-15 12:41:44.140 Please replace `st.components.v1.html` with `st.iframe`.
+
+`st.components.v1.html` will be removed after 2026-06-01.
+2026-10-15 12:41:44.153 Please replace `st.components.v1.html` with `st.iframe`.
+
+`st.components.v1.html` will be removed after 2026-06-01.
+2026-10-15 12:41:46.727 Please replace `st.components.v1.html` with `st.iframe`.
+
+`st.components.v1.html` will be removed after 2026-06-01.
+2026-10-15 12:41:46.739 Please replace `st.components.v1.html` with `st.iframe`.
+
+`st.components.v1.html` will be removed after 2026-06-01.
+2026-10-15 12:41:46.753 Please replace `st.components.v1.html` with `st.iframe`.
+
+`st.components.v1.html` will be removed after 2026-06-01.
+2026-10-15 12:41:47.148 Please replace `st.components.v1.html` with `st.iframe`.
+
+`st.components.v1.html` will be removed after 2026-06-01.
+2026-10-15 12:41:47.163 Please replace `st.components.v1.html` with `st.iframe`.
+
+`st.components.v1.html` will be removed after 2026-06-01.
+2026-10-15 12:41:47.178 Please replace `st.components.v1.html` with `st.iframe`.
+
+`st.components.v1.html` will be removed after 2026-06-01.
+2026-10-15 12:41:47.739 Please replace `st.components.v1.html` with `st.iframe`.
+
+`st.components.v1.html` will be removed after 2026-06-01.
+2026-10-15 12:41:47.748 Please replace `st.components.v1.html` with `st.iframe`.
+
+`st.components.v1.html` will be removed after 2026-06-01.
+2026-10-15 12:41:47.758 Please replace `st.components.v1.html` with `st.iframe`.
+
+`st.components.v1.html` will be removed after 2026-06-01.
+2026-10-15 12:41:47.773 Please replace `st.components.v1.html` with `st.iframe`.
+
+`st.components.v1.html` will be removed after 2026-06-01.
+2026-10-15 12:41:51.334 Please replace `st.components.v1.html` with `st.iframe`.
+
+`st.components.v1.html` will be removed after 2026-06-01.
+2026-10-15 12:41:51.346 Please replace `st.components.v1.html` with `st.iframe`.
+
+`st.components.v1.html` will be removed after 2026-06-01.
+2026-10-15 12:41:51.358 Please replace `st.components.v1.html` with `st.iframe`.
+
+`st.components.v1.html` will be removed after 2026-06-01.
+2026-10-15 12:41:51.371 Please replace `st.components.v1.html` with `st.iframe`.
+
+`st.components.v1.html` will be removed after 2026-06-01.
+2026-10-15 12:41:53.903 Please replace `st.components.v1.html` with `st.iframe`.
+
+`st.components.v1.html` will be removed after 2026-06-01.
+2026-10-15 12:42:00.893 Please replace `st.components.v1.html` with `st.iframe`.
+
+`st.components.v1.html` will be removed after 2026-06-01.
+2026-10-15 12:42:00.904 Please replace `st.components.v1.html` with `st.iframe`.
+
+`st.components.v1.html` will be removed after 2026-06-01.
+2026-10-15 12:42:00.917 Please replace `st.components.v1.html` with `st.iframe`.
+
+`st.components.v1.html` will be removed after 2026-06-01.
+2026-10-15 12:42:00.927 Please replace `st.components.v1.html` with `st.iframe`.
+
+`st.components.v1.html` will be removed after 2026-06-01.
+2026-10-15 12:42:01.325 Please replace `st.components.v1.html` with `st.iframe`.
+
+`st.components.v1.html` will be removed after 2026-06-01.
+2026-10-15 12:42:01.343 Please replace `st.components.v1.html` with `st.iframe`.
+
+`st.components.v1.html` will be removed after 2026-06-01.
+2026-10-15 12:42:01.359 Please replace `st.components.v1.html` with `st.iframe`.
+
+`st.components.v1.html` will be removed after 2026-06-01.
+2026-10-15 12:42:01.376 Please replace `st.components.v1.html` with `st.iframe`.
+
+`st.components.v1.html` will be removed after 2026-06-01.
+2026-10-15 12:42:02.132 Please replace `st.components.v1.html` with `st.iframe`.
+
+`st.components.v1.html` will be removed after 2026-06-01.
+2026-10-15 12:42:02.150 Please replace `st.components.v1.html` with `st.iframe`.
+
+`st.components.v1.html` will be removed after 2026-06-01.
+2026-10-15 12:42:02.167 Please replace `st.components.v1.html` with `st.iframe`.
+
+`st.components.v1.html` will be removed after 2026-06-01.
+2026-10-15 12:42:02.180 Please replace `st.components.v1.html` with `st.iframe`.
+
+`st.components.v1.html` will be removed after 2026-06-01.
+2026-10-15 12:42:02.196 Please replace `st.components.v1.html` with `st.iframe`.
+
+`st.components.v1.html` will be removed after 2026-06-01.
+2026-10-15 12:42:04.274 Please replace `st.components.v1.html` with `st.iframe`.
+
+`st.components.v1.html` will be removed after 2026-06-01.
+2026-10-15 12:42:04.286 Please replace `st.components.v1.html` with `st.iframe`.
+
+`st.components.v1.html` will be removed after 2026-06-01.
+2026-10-15 12:42:04.301 Please replace `st.components.v1.html` with `st.iframe`.
+
+`st.components.v1.html` will be removed after 2026-06-01.
+2026-10-15 12:42:04.317 Please replace `st.components.v1.html` with `st.iframe`.
+
+`st.components.v1.html` will be removed after 2026-06-01.
+2026-10-15 12:42:04.694 Please replace `st.components.v1.html` with `st.iframe`.
+
+`st.components.v1.html` will be removed after 2026-06-01.
+2026-10-15 12:42:04.707 Please replace `st.components.v1.html` with `st.iframe`.
+
+`st.components.v1.html` will be removed after 2026-06-01.
+2026-10-15 12:42:04.715 Please replace `st.components.v1.html` with `st.iframe`.
+
+`st.components.v1.html` will be removed after 2026-06-01.
+2026-10-15 12:42:04.723 Please replace `st.components.v1.html` with `st.iframe`.
+
+`st.components.v1.html` will be removed after 2026-06-01.
+2026-10-15 12:42:05.295 Please replace `st.components.v1.html` with `st.iframe`.
+
+`st.components.v1.html` will be removed after 2026-06-01.
+2026-10-15 12:42:05.304 Please replace `st.components.v1.html` with `st.iframe`.
+
+`st.components.v1.html` will be removed after 2026-06-01.
+2026-10-15 12:42:05.312 Please replace `st.components.v1.html` with `st.iframe`.
+
+`st.components.v1.html` will be removed after 2026-06-01.
+2026-10-15 12:42:05.323 Please replace `st.components.v1.html` with `st.iframe`.
+
+`st.components.v1.html` will be removed after 2026-06-01.
+2026-10-15 12:42:05.335 Please replace `st.components.v1.html` with `st.iframe`.
+
+`st.components.v1.html` will be removed after 2026-06-01.
+/home/jose.gomes/vobys_dashboard/auditoria/tipo_folha_x_tipo_arquivo_sefaz.py:238: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(query_final, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:52: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df_audit = pd.read_sql(sql, conn, params=params)
+/home/jose.gomes/vobys_dashboard/auditoria/tipo_folha_x_tipo_arquivo_sefaz.py:238: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(query_final, conn)
+/home/jose.gomes/vobys_dashboard/views/auditoria_integracao.py:17: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(query, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/tipo_folha_x_tipo_arquivo_sefaz.py:238: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(query_final, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:574: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/novos_dados_bancario.py:52: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df_audit = pd.read_sql(sql, conn, params=params)
+/home/jose.gomes/vobys_dashboard/views/inicio.py:129: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df_detalhe = pd.read_sql(query, conn)
+/home/jose.gomes/vobys_dashboard/views/inicio.py:129: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df_detalhe = pd.read_sql(query, conn)
+2026-10-15 18:27:14.029 Please replace `use_container_width` with `width`.
+
+`use_container_width` will be removed after 2025-12-31.
+
+For `use_container_width=True`, use `width='stretch'`. For `use_container_width=False`, use `width='content'`.
+/home/jose.gomes/vobys_dashboard/views/inicio.py:129: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df_detalhe = pd.read_sql(query, conn)
+Ignoring fixed x limits to fulfill fixed data aspect with adjustable data limits.
+/home/jose.gomes/vobys_dashboard/views/inicio.py:129: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df_detalhe = pd.read_sql(query, conn)
+2026-10-15 18:31:06.230 Please replace `use_container_width` with `width`.
+
+`use_container_width` will be removed after 2025-12-31.
+
+For `use_container_width=True`, use `width='stretch'`. For `use_container_width=False`, use `width='content'`.
+/home/jose.gomes/vobys_dashboard/views/inicio.py:129: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df_detalhe = pd.read_sql(query, conn)
+Ignoring fixed x limits to fulfill fixed data aspect with adjustable data limits.
+/home/jose.gomes/vobys_dashboard/views/inicio.py:129: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df_detalhe = pd.read_sql(query, conn)
+/home/jose.gomes/vobys_dashboard/views/inicio.py:129: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df_detalhe = pd.read_sql(query, conn)
+/home/jose.gomes/vobys_dashboard/views/inicio.py:129: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df_detalhe = pd.read_sql(query, conn)
+/home/jose.gomes/vobys_dashboard/auditoria/tipo_folha_x_tipo_arquivo_sefaz.py:238: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(query_final, conn)
+/home/jose.gomes/vobys_dashboard/views/inicio.py:129: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df_detalhe = pd.read_sql(query, conn)
+2026-10-15 18:48:32.919 Please replace `use_container_width` with `width`.
+
+`use_container_width` will be removed after 2025-12-31.
+
+For `use_container_width=True`, use `width='stretch'`. For `use_container_width=False`, use `width='content'`.
+/home/jose.gomes/vobys_dashboard/views/inicio.py:129: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df_detalhe = pd.read_sql(query, conn)
+2026-10-15 18:49:04.569 Please replace `use_container_width` with `width`.
+
+`use_container_width` will be removed after 2025-12-31.
+
+For `use_container_width=True`, use `width='stretch'`. For `use_container_width=False`, use `width='content'`.
+2026-10-15 18:54:17.470 Please replace `use_container_width` with `width`.
+
+`use_container_width` will be removed after 2025-12-31.
+
+For `use_container_width=True`, use `width='stretch'`. For `use_container_width=False`, use `width='content'`.
+2026-10-15 18:54:20.582 Please replace `use_container_width` with `width`.
+
+`use_container_width` will be removed after 2025-12-31.
+
+For `use_container_width=True`, use `width='stretch'`. For `use_container_width=False`, use `width='content'`.
+2026-10-15 18:54:30.622 Please replace `use_container_width` with `width`.
+
+`use_container_width` will be removed after 2025-12-31.
+
+For `use_container_width=True`, use `width='stretch'`. For `use_container_width=False`, use `width='content'`.
+/home/jose.gomes/vobys_dashboard/views/inicio.py:129: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df_detalhe = pd.read_sql(query, conn)
+/home/jose.gomes/vobys_dashboard/views/inicio.py:129: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df_detalhe = pd.read_sql(query, conn)
+/home/jose.gomes/vobys_dashboard/views/resumo_arquivos.py:109: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df_raw = pd.read_sql(query, conn, params=params)
+2026-10-15 19:10:54.739 Please replace `use_container_width` with `width`.
+
+`use_container_width` will be removed after 2025-12-31.
+
+For `use_container_width=True`, use `width='stretch'`. For `use_container_width=False`, use `width='content'`.
