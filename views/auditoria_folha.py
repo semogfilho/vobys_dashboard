@@ -219,9 +219,18 @@ def _renderizar_auditoria_integridade(conn, ano, mes):
             df_folha_total = pd.concat(df_folha_total_list, ignore_index=True) if df_folha_total_list else pd.DataFrame()
             df_json_total = pd.concat(df_json_total_list, ignore_index=True) if df_json_total_list else pd.DataFrame()
 
-            cpfs_faltantes_na_folha = df_json_total[~df_json_total['CPF_LIMPO'].isin(df_folha_total['CPF_LIMPO'])] if not df_folha_total.empty else pd.DataFrame()
-            cpfs_faltantes_no_json = df_folha_total[~df_folha_total['CPF_LIMPO'].isin(df_json_total['CPF_LIMPO'])] if not df_json_total.empty else pd.DataFrame()
+            # CPFs que estão na folha mas não estão no JSON
+            if not df_folha_total.empty:
+                if not df_json_total.empty:
+                    cpfs_faltantes_no_json = df_folha_total[~df_folha_total['CPF_LIMPO'].isin(df_json_total['CPF_LIMPO'])].copy()
+                else:
+                    cpfs_faltantes_no_json = df_folha_total.copy()
+            else:
+                cpfs_faltantes_no_json = pd.DataFrame()
 
+            cpfs_faltantes_na_folha = df_json_total[~df_json_total['CPF_LIMPO'].isin(df_folha_total['CPF_LIMPO'])].copy() if (not df_json_total.empty and not df_folha_total.empty) else pd.DataFrame()
+
+            # Tenta buscar os saldos para enriquecer a informação, mas NÃO descarta quem não tiver saldo retornado
             resultados_finais = []
             if not cpfs_faltantes_no_json.empty:
                 with st.status("Buscando saldos na folha...", expanded=True) as status:
@@ -232,19 +241,21 @@ def _renderizar_auditoria_integridade(conn, ano, mes):
                         prog_saldos.progress((i + 1) / len(grupos))
                         lista_busca = [m.replace('X', '') for m in grupo['COD_LIMPO'].astype(str).unique()]
 
-                        df_saldos = batimento_json.buscar_saldos_folha(conn, orgao, lista_busca, chave, ano, mes)
-
-                        if not df_saldos.empty:
-                            df_saldos.columns = [c.lower() for c in df_saldos.columns]
-                            grupo = grupo.merge(df_saldos[['cod_limpo', 'saldo_liquido']], left_on='COD_LIMPO', right_on='cod_limpo', how='left')
-                            grupo['SALDO_LIQUIDO'] = pd.to_numeric(grupo['saldo_liquido'].fillna(0.00))
-                        else:
+                        try:
+                            df_saldos = batimento_json.buscar_saldos_folha(conn, orgao, lista_busca, chave, ano, mes)
+                            if not df_saldos.empty:
+                                df_saldos.columns = [c.lower() for c in df_saldos.columns]
+                                grupo = grupo.merge(df_saldos[['cod_limpo', 'saldo_liquido']], left_on='COD_LIMPO', right_on='cod_limpo', how='left')
+                                grupo['SALDO_LIQUIDO'] = pd.to_numeric(grupo['saldo_liquido'].fillna(0.00))
+                            else:
+                                grupo['SALDO_LIQUIDO'] = 0.00
+                        except Exception:
                             grupo['SALDO_LIQUIDO'] = 0.00
+
                         resultados_finais.append(grupo)
                     status.update(label="Busca finalizada!", state="complete", expanded=False)
 
-            df_exibir_aba4 = pd.concat(resultados_finais, ignore_index=True) if resultados_finais else pd.DataFrame()
-            df_filtrado_aba4 = df_exibir_aba4[df_exibir_aba4['SALDO_LIQUIDO'] > 0] if not df_exibir_aba4.empty else pd.DataFrame()
+            df_exibir_aba4 = pd.concat(resultados_finais, ignore_index=True) if resultados_finais else cpfs_faltantes_no_json
 
             total_registros = len(df_folha_total) if not df_folha_total.empty else 1
 
@@ -252,7 +263,7 @@ def _renderizar_auditoria_integridade(conn, ano, mes):
             cols[0].metric("Divergências na Folha", len(dif_folha), f"{(len(dif_folha)/total_registros)*100:.2f}%")
             cols[1].metric("Divergências no JSON", len(dif_json), f"{(len(dif_json)/total_registros)*100:.2f}%")
             cols[2].metric("Faltam na Folha", len(cpfs_faltantes_na_folha), f"{(len(cpfs_faltantes_na_folha)/total_registros)*100:.2f}%")
-            cols[3].metric("Faltam no JSON", len(df_filtrado_aba4), f"{(len(df_filtrado_aba4)/total_registros)*100:.2f}%")
+            cols[3].metric("Faltam no JSON", len(df_exibir_aba4), f"{(len(df_exibir_aba4)/total_registros)*100:.2f}%")
 
             aba1, aba2, aba3, aba4 = st.tabs([
                 "❌ Divergências na Folha",
@@ -280,12 +291,30 @@ def _renderizar_auditoria_integridade(conn, ano, mes):
                     st.success("Nenhum CPF faltando na folha.")
 
             with aba4:
-                if not df_filtrado_aba4.empty:
+                if not df_exibir_aba4.empty:
+                    if 'SALDO_LIQUIDO' not in df_exibir_aba4.columns:
+                        df_exibir_aba4['SALDO_LIQUIDO'] = 0.00
+
+                    # Agrupa os registos consolidados por CPF e Nome
+                    df_agrupado_cpf = df_exibir_aba4.groupby(['CPF_PESSOA', 'NOME'], as_index=False).agg({
+                        'SALDO_LIQUIDO': 'sum',
+                        'ORGAO': lambda x: ", ".join(x.dropna().astype(str).unique()),
+                        'CHAVE_FOLHA': lambda x: ", ".join(x.dropna().astype(str).unique()),
+                        'COD_INSTITUCIONAL': lambda x: ", ".join(x.dropna().astype(str).unique())
+                    })
+                    
                     st.dataframe(
-                        df_filtrado_aba4[['NOME', 'CPF_PESSOA', 'COD_INSTITUCIONAL', 'ORGAO', 'CHAVE_FOLHA', 'SALDO_LIQUIDO']],
+                        df_agrupado_cpf[['NOME', 'CPF_PESSOA', 'COD_INSTITUCIONAL', 'ORGAO', 'CHAVE_FOLHA', 'SALDO_LIQUIDO']],
                         use_container_width=True,
                         hide_index=True,
-                        column_config={"SALDO_LIQUIDO": st.column_config.NumberColumn("Saldo Líquido", format="R$ %.2f")}
+                        column_config={
+                            "NOME": "Nome",
+                            "CPF_PESSOA": "CPF",
+                            "COD_INSTITUCIONAL": "Matrícula(s)",
+                            "ORGAO": "Órgão(s)",
+                            "CHAVE_FOLHA": "Chave(s) da Folha",
+                            "SALDO_LIQUIDO": st.column_config.NumberColumn("Saldo Líquido", format="R$ %.2f")
+                        }
                     )
                 else:
                     st.success("Tudo sincronizado!")

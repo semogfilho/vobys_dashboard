@@ -184,9 +184,17 @@ def renderizar_dados_bancarios(
 
         @st.cache_data(ttl=600, show_spinner=False)
         def carregar_dados_bancarios(ano, mes):
-            return novos_dados_bancario_mod.listar_novatos_bancario_com_status(
+            df = novos_dados_bancario_mod.listar_novatos_bancario_com_status(
                 conn, ano, mes
             )
+            
+            # Remove duplicados com base no conjunto de colunas identificadas
+            if df is not None and not df.empty:
+                colunas_chave = [c for c in ["ORGAO", "COD_INSTITUCIONAL", "CPF", "CHAVE_FOLHA"] if c in df.columns]
+                if colunas_chave:
+                    df = df.drop_duplicates(subset=colunas_chave, keep="first")
+                    
+            return df
 
         # =========================================================
         # 1. CARREGAR OS DADOS PRIMEIRO

@@ -1,10 +1,14 @@
 # -*- coding: utf-8 -*-
 import json
+import time
 import requests
 import streamlit as st
 import streamlit.components.v1 as components
 import pandas as pd
 import urllib3
+
+# Importações necessárias para o auth_ui
+import auth_ui
 
 # Desativa alertas de certificado SSL não verificado (verify=False)
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
@@ -46,7 +50,6 @@ def construir_payload_json(df, mes, ano, cod_unidade, cod_relatorio, codigo_exte
             "valorDesconto": round(valor_desc, 2)
         })
 
-    # Ajuste dinâmico do tipo de folha: 8 para EMGERPI (120), 9 para as restantes
     id_tipo_folha = 8 if str(cod_unidade) == "120" else 9
 
     payload = {
@@ -99,14 +102,12 @@ def executar_query_emgerpi(conn, ano, mes):
 # --- INTEGRAÇÃO COM A API SEFAZ-PI ---
 
 def transmitir_para_sefaz(payload_dados, ano):
-    """Função que exige estritamente credenciais presentes na sessão para autenticação e envio."""
     try:
-        usuario = st.session_state.get("sefaz_cpf")
-        senha = st.session_state.get("sefaz_pass")
-        is_autenticado = st.session_state.get("sefaz_auth", False)
+        usuario = st.session_state.get("sefaz_cpf") or st.secrets.get("sefaz", {}).get("SIAFE_CPF")
+        senha = st.session_state.get("sefaz_pass") or st.secrets.get("sefaz", {}).get("SIAFE_SENHA")
 
-        if not is_autenticado or not usuario or not senha:
-            return False, None, "Erro: Credenciais não informadas ou utilizador desconectado da SEFAZ. Por favor, autentique-se novamente."
+        if not usuario or not senha:
+            return False, None, "Erro: Credenciais da SEFAZ não informadas. Por favor, autentique-se novamente."
 
         sefaz_sec = st.secrets.get("sefaz", {})
         base_url = sefaz_sec.get("BASE_URL") or sefaz_sec.get("base_url", "https://tesouro.sefaz.pi.gov.br/api")
@@ -162,10 +163,9 @@ def transmitir_para_sefaz(payload_dados, ano):
 
 
 def consultar_recibo_sefaz(ano, mes, cod_unidade, cod_relatorio, codigo_externo):
-    """Função para consultar o recibo na SEFAZ com o tipo de folha ajustado para a EMGERPI."""
     try:
-        usuario = st.session_state.get("sefaz_cpf", st.secrets["sefaz"]["SIAFE_CPF"])
-        senha = st.session_state.get("sefaz_pass", st.secrets["sefaz"]["SIAFE_SENHA"])
+        usuario = st.session_state.get("sefaz_cpf") or st.secrets.get("sefaz", {}).get("SIAFE_CPF")
+        senha = st.session_state.get("sefaz_pass") or st.secrets.get("sefaz", {}).get("SIAFE_SENHA")
 
         sefaz_sec = st.secrets.get("sefaz", {})
         base_url = sefaz_sec.get("BASE_URL") or sefaz_sec.get("base_url", "https://tesouro.sefaz.pi.gov.br/api")
@@ -187,8 +187,6 @@ def consultar_recibo_sefaz(ano, mes, cod_unidade, cod_relatorio, codigo_externo)
         session.headers.update({"Authorization": f"Bearer {token}"})
 
         url_final = f"{base_url}/folha-pagamento/contabilizacao/{ano}"
-        
-        # Ajuste dinâmico do tipoFolha: 8 para EMGERPI (unidade 120 / RGPS), 9 para as demais
         tipo_folha_val = 8 if str(cod_unidade) == "120" else 9
         
         payload_consulta = {
@@ -313,40 +311,40 @@ def render_bloco_processamento(conn, titulo, id_chave, sql, mes, ano, cod_unidad
         )
 
         if col_enviar.button(f"🚀 Enviar Arquivo", key=f"btn_enviar_{id_chave}_{codigo_externo}", type="primary"):
-            if not st.session_state.get("sefaz_auth", False):
-                st.session_state["tentando_enviar_sefaz"] = True
-                if auth_ui and hasattr(auth_ui, "garantir_autenticacao_sefaz"):
-                    auth_ui.garantir_autenticacao_sefaz(servico_nome=f"Transmissão - {titulo}")
+            # Validação idêntica ao módulo de dados bancários, invocando o popup nativo do auth_ui
+            if auth_ui and hasattr(auth_ui, "verificar_credenciais_sefaz"):
+                if not auth_ui.verificar_credenciais_sefaz():
+                    st.stop()
             else:
-                st.session_state[flag_envio_key] = True
-                st.rerun()
+                if not st.session_state.get("sefaz_auth", False):
+                    st.warning("⚠️ Credenciais da SEFAZ não válidas. Por favor, autentique-se.")
+                    st.stop()
+
+            st.session_state[flag_envio_key] = True
+            st.rerun()
 
         if st.session_state.get(flag_envio_key):
-            if not st.session_state.get("sefaz_auth", False):
-                st.warning("⚠ É necessário autenticar-se na SEFAZ para realizar o envio.")
+            payload_para_envio = json_raw if json_raw else df_gerado
+            if payload_para_envio is None:
+                st.error("Nenhum dado válido para envio.")
                 st.session_state[flag_envio_key] = False
             else:
-                payload_para_envio = json_raw if json_raw else df_gerado
-                if payload_para_envio is None:
-                    st.error("Nenhum dado válido para envio.")
+                with st.spinner("A transmitir lote para a SEFAZ..."):
+                    sucesso, json_str, retorno = transmitir_para_sefaz(payload_para_envio, ano)
                     st.session_state[flag_envio_key] = False
-                else:
-                    with st.spinner("A transmitir lote para a SEFAZ..."):
-                        sucesso, json_str, retorno = transmitir_para_sefaz(payload_para_envio, ano)
-                        st.session_state[flag_envio_key] = False
-                        st.session_state[retorno_key] = retorno
+                    st.session_state[retorno_key] = retorno
 
-                        if sucesso:
-                            st.success("Transmissão efetuada com sucesso!")
-                            st.rerun()
+                    if sucesso:
+                        st.success("Transmissão efetuada com sucesso!")
+                        st.rerun()
+                    else:
+                        if any(err in str(retorno) for err in ["401", "403", "Unauthorized"]):
+                            st.session_state["sefaz_auth"] = False
+                            st.session_state.pop("sefaz_cpf", None)
+                            st.session_state.pop("sefaz_pass", None)
+                            st.error("Sessão expirada ou credenciais inválidas. Por favor, autentique-se novamente.")
                         else:
-                            if any(err in str(retorno) for err in ["401", "403", "Unauthorized"]):
-                                st.session_state["sefaz_auth"] = False
-                                st.session_state.pop("sefaz_cpf", None)
-                                st.session_state.pop("sefaz_pass", None)
-                                st.error("Sessão expirada ou credenciais inválidas. Por favor, autentique-se novamente.")
-                            else:
-                                st.error(f"Erro na transmissão: {retorno}")
+                            st.error(f"Erro na transmissão: {retorno}")
 
     if st.session_state.get(flag_consulta_key):
         with st.spinner("A consultar recibo na SEFAZ..."):
@@ -584,7 +582,7 @@ def render_bloco_processamento(conn, titulo, id_chave, sql, mes, ano, cod_unidad
             components.html(html_completo, height=altura_componente, scrolling=True)
 
 
-def render(conn, ano, mes, meses_lista=None, auth_ui=None):
+def render(conn, ano, mes, meses_lista=None):
     if meses_lista is None:
         meses_lista = {
             1: "Janeiro", 2: "Fevereiro", 3: "Março", 4: "Abril",
@@ -595,7 +593,6 @@ def render(conn, ano, mes, meses_lista=None, auth_ui=None):
     st.title("📁 Gerador e Transmissor de Arquivos Extras")
     mes_nome = meses_lista.get(int(mes), str(mes))
     
-    # Cabeçalho unificado global: competência e seletor geral do tipo de folha lado a lado
     col_comp, col_tipo_folha = st.columns([1.5, 2.5])
     
     with col_comp:
@@ -626,56 +623,61 @@ def render(conn, ano, mes, meses_lista=None, auth_ui=None):
 
     st.divider()
 
-    sql_seduc_extra = """
-    SELECT 
-        CASE 
-            WHEN S.COD_RUBRICA IN (714401, 714406) THEN '963' 
-            WHEN S.COD_RUBRICA IN (714451, 714456) THEN '944' 
-        END AS RUBRICA, 
-        S.NOME_RUBRICA AS DESCRIMINACAO, 
-        CASE 
-            WHEN S.ID_REGIME IN (2, 9, 1000003) THEN 'RPPS' 
-            ELSE 'RGPS' 
-        END AS TIPO_REGIME, 
-        CASE 
-            WHEN S.ID_REGIME IN (9, 1000003) THEN 'MILITAR' 
-            ELSE 'CIVIL' 
-        END AS TIPO_VINCULO, 
-        0 AS VANTAGENS, 
-        REPLACE(TO_CHAR(SUM(S.VALOR_CALCULADO)), ',', '.') AS DESCONTOS 
-    FROM ( 
+    def get_sql_seduc_extra(tipo):
+        tipo_arquivo_val = "002" if tipo == "suplementar" else "001"
+        condicao_tipo_folha = "S.ID_TIPO_FOLHA IN (1000000)" if tipo == "ordinaria" else "S.ID_TIPO_FOLHA NOT IN (1000000)"
+        
+        return f"""
         SELECT 
-            'SEDUC' AS ORGAO, 
-            FR.NOME_RUBRICA, 
-            FR.TIPO, 
-            FF.VALOR_CALCULADO, 
-            FR.COD_RUBRICA, 
-            FI.ID_REGIME, 
-            FC.MES, 
-            FC.ANO, 
-            FO.ID_TIPO_FOLHA, 
-            FO.TIPO_ARQUIVO, 
-            FO.ID_FONTE 
-        FROM SW_SEDUC.FOLHA_CONTRACHEQUE FC 
-        JOIN SW_SEDUC.FOLHA FO ON FO.ID_FOLHA = FC.ID_FOLHA 
-        JOIN SW_SEDUC.FUNCIONARIO_INGRESSO FI ON FI.ID_FUNCIONARIO = FC.ID_FUNCIONARIO 
-        JOIN SW_SEDUC.FOLHA_FICHA_FINANCEIRA FF ON FF.ID_FOLHA_FUNCIONARIO = FC.ID_FOLHA_FUNCIONARIO 
-        JOIN SW_PUBLICO.FOLHA_RUBRICA FR ON FR.ID_RUBRICA = FF.ID_RUBRICA 
-    ) S 
-    WHERE S.MES = :mes 
-      AND S.ANO = :ano 
-      AND S.ID_TIPO_FOLHA IN (1000000) 
-      AND S.TIPO_ARQUIVO = '001' 
-      AND S.COD_RUBRICA IN (714401, 714406, 714451, 714456) 
-      AND S.ID_FONTE IN (1000003, 1000020, 1000021, 1000040, 1000041, 1000060, 1, 2, 3) 
-    GROUP BY S.ORGAO, S.COD_RUBRICA, S.NOME_RUBRICA, S.ID_REGIME 
-    ORDER BY S.ORGAO, S.COD_RUBRICA, S.NOME_RUBRICA, S.ID_REGIME
-    """
+            CASE 
+                WHEN S.COD_RUBRICA IN (714401, 714406) THEN '963' 
+                WHEN S.COD_RUBRICA IN (714451, 714456) THEN '944' 
+            END AS RUBRICA, 
+            S.NOME_RUBRICA AS DESCRIMINACAO, 
+            CASE 
+                WHEN S.ID_REGIME IN (2, 9, 1000003) THEN 'RPPS' 
+                ELSE 'RGPS' 
+            END AS TIPO_REGIME, 
+            CASE 
+                WHEN S.ID_REGIME IN (9, 1000003) THEN 'MILITAR' 
+                ELSE 'CIVIL' 
+            END AS TIPO_VINCULO, 
+            0 AS VANTAGENS, 
+            REPLACE(TO_CHAR(SUM(S.VALOR_CALCULADO)), ',', '.') AS DESCONTOS 
+        FROM ( 
+            SELECT 
+                'SEDUC' AS ORGAO, 
+                FR.NOME_RUBRICA, 
+                FR.TIPO, 
+                FF.VALOR_CALCULADO, 
+                FR.COD_RUBRICA, 
+                FI.ID_REGIME, 
+                FC.MES, 
+                FC.ANO, 
+                FO.ID_TIPO_FOLHA, 
+                FO.TIPO_ARQUIVO, 
+                FO.ID_FONTE 
+            FROM SW_SEDUC.FOLHA_CONTRACHEQUE FC 
+            JOIN SW_SEDUC.FOLHA FO ON FO.ID_FOLHA = FC.ID_FOLHA 
+            JOIN SW_SEDUC.FUNCIONARIO_INGRESSO FI ON FI.ID_FUNCIONARIO = FC.ID_FUNCIONARIO 
+            JOIN SW_SEDUC.FOLHA_FICHA_FINANCEIRA FF ON FF.ID_FOLHA_FUNCIONARIO = FC.ID_FOLHA_FUNCIONARIO 
+            JOIN SW_PUBLICO.FOLHA_RUBRICA FR ON FR.ID_RUBRICA = FF.ID_RUBRICA 
+        ) S 
+        WHERE S.MES = :mes 
+          AND S.ANO = :ano 
+          AND {condicao_tipo_folha} 
+          AND S.TIPO_ARQUIVO = '{tipo_arquivo_val}' 
+          AND S.COD_RUBRICA IN (714401, 714406, 714451, 714456) 
+          AND S.ID_FONTE IN (1000003, 1000020, 1000021, 1000040, 1000041, 1000060, 1, 2, 3) 
+        GROUP BY S.ORGAO, S.COD_RUBRICA, S.NOME_RUBRICA, S.ID_REGIME 
+        ORDER BY S.ORGAO, S.COD_RUBRICA, S.NOME_RUBRICA, S.ID_REGIME
+        """
+
     render_bloco_processamento(
         conn=conn,
         titulo="2. PATRONAL EXTRA SEDUC",
         id_chave="seduc_extra",
-        sql=sql_seduc_extra,
+        sql=get_sql_seduc_extra,
         mes=mes,
         ano=ano,
         cod_unidade="011",
@@ -770,56 +772,61 @@ def render(conn, ano, mes, meses_lista=None, auth_ui=None):
 
     st.divider()
 
-    sql_seduc_011 = """
-    SELECT 
-        CASE 
-            WHEN S.COD_RUBRICA IN (714400, 714403, 714405, 714410) THEN '901' 
-            WHEN S.COD_RUBRICA IN (714436, 714450, 714455, 714460) THEN '900' 
-        END AS RUBRICA, 
-        S.NOME_RUBRICA AS DESCRIMINACAO, 
-        CASE 
-            WHEN S.ID_REGIME IN (2, 9, 1000003) THEN 'RPPS' 
-            ELSE 'RGPS' 
-        END AS TIPO_REGIME, 
-        CASE 
-            WHEN S.ID_REGIME IN (9, 1000003) THEN 'MILITAR' 
-            ELSE 'CIVIL' 
-        END AS TIPO_VINCULO, 
-        0 AS VANTAGENS, 
-        REPLACE(TO_CHAR(SUM(S.VALOR_CALCULADO)), ',', '.') AS DESCONTOS 
-    FROM ( 
+    def get_sql_seduc_011(tipo):
+        tipo_arquivo_val = "002" if tipo == "suplementar" else "001"
+        condicao_tipo_folha = "S.ID_TIPO_FOLHA IN (1000000)" if tipo == "ordinaria" else "S.ID_TIPO_FOLHA NOT IN (1000000)"
+        
+        return f"""
         SELECT 
-            'SEDUC' AS ORGAO, 
-            FR.NOME_RUBRICA, 
-            FR.TIPO, 
-            FF.VALOR_CALCULADO, 
-            FR.COD_RUBRICA, 
-            FI.ID_REGIME, 
-            FC.MES, 
-            FC.ANO, 
-            FO.ID_TIPO_FOLHA, 
-            FO.TIPO_ARQUIVO, 
-            FO.ID_FONTE 
-        FROM SW_SEDUC.FOLHA_CONTRACHEQUE FC 
-        JOIN SW_SEDUC.FOLHA FO ON FO.ID_FOLHA = FC.ID_FOLHA 
-        JOIN SW_SEDUC.FUNCIONARIO_INGRESSO FI ON FI.ID_FUNCIONARIO = FC.ID_FUNCIONARIO 
-        JOIN SW_SEDUC.FOLHA_FICHA_FINANCEIRA FF ON FF.ID_FOLHA_FUNCIONARIO = FC.ID_FOLHA_FUNCIONARIO 
-        JOIN SW_PUBLICO.FOLHA_RUBRICA FR ON FR.ID_RUBRICA = FF.ID_RUBRICA 
-    ) S 
-    WHERE S.MES = :mes 
-      AND S.ANO = :ano 
-      AND S.ID_TIPO_FOLHA IN (1000000) 
-      AND S.TIPO_ARQUIVO = '001' 
-      AND S.COD_RUBRICA IN (714400, 714403, 714405, 714410, 714436, 714450, 714455, 714460) 
-      AND S.ID_FONTE IN (4, 5, 6, 7, 8, 9, 1000000, 1000001, 1000002, 1000004, 1000022, 1000023, 1000024, 1000090, 1000100, 1000101, 1000120, 1000121, 1000122, 1000140) 
-    GROUP BY S.ORGAO, S.COD_RUBRICA, S.NOME_RUBRICA, S.ID_REGIME 
-    ORDER BY S.ORGAO, S.COD_RUBRICA, S.NOME_RUBRICA, S.ID_REGIME
-    """
+            CASE 
+                WHEN S.COD_RUBRICA IN (714400, 714403, 714405, 714410) THEN '901' 
+                WHEN S.COD_RUBRICA IN (714436, 714450, 714455, 714460) THEN '900' 
+            END AS RUBRICA, 
+            S.NOME_RUBRICA AS DESCRIMINACAO, 
+            CASE 
+                WHEN S.ID_REGIME IN (2, 9, 1000003) THEN 'RPPS' 
+                ELSE 'RGPS' 
+            END AS TIPO_REGIME, 
+            CASE 
+                WHEN S.ID_REGIME IN (9, 1000003) THEN 'MILITAR' 
+                ELSE 'CIVIL' 
+            END AS TIPO_VINCULO, 
+            0 AS VANTAGENS, 
+            REPLACE(TO_CHAR(SUM(S.VALOR_CALCULADO)), ',', '.') AS DESCONTOS 
+        FROM ( 
+            SELECT 
+                'SEDUC' AS ORGAO, 
+                FR.NOME_RUBRICA, 
+                FR.TIPO, 
+                FF.VALOR_CALCULADO, 
+                FR.COD_RUBRICA, 
+                FI.ID_REGIME, 
+                FC.MES, 
+                FC.ANO, 
+                FO.ID_TIPO_FOLHA, 
+                FO.TIPO_ARQUIVO, 
+                FO.ID_FONTE 
+            FROM SW_SEDUC.FOLHA_CONTRACHEQUE FC 
+            JOIN SW_SEDUC.FOLHA FO ON FO.ID_FOLHA = FC.ID_FOLHA 
+            JOIN SW_SEDUC.FUNCIONARIO_INGRESSO FI ON FI.ID_FUNCIONARIO = FC.ID_FUNCIONARIO 
+            JOIN SW_SEDUC.FOLHA_FICHA_FINANCEIRA FF ON FF.ID_FOLHA_FUNCIONARIO = FC.ID_FOLHA_FUNCIONARIO 
+            JOIN SW_PUBLICO.FOLHA_RUBRICA FR ON FR.ID_RUBRICA = FF.ID_RUBRICA 
+        ) S 
+        WHERE S.MES = :mes 
+          AND S.ANO = :ano 
+          AND {condicao_tipo_folha} 
+          AND S.TIPO_ARQUIVO = '{tipo_arquivo_val}' 
+          AND S.COD_RUBRICA IN (714400, 714403, 714405, 714410, 714436, 714450, 714455, 714460) 
+          AND S.ID_FONTE IN (4, 5, 6, 7, 8, 9, 1000000, 1000001, 1000002, 1000004, 1000022, 1000023, 1000024, 1000090, 1000100, 1000101, 1000120, 1000121, 1000122, 1000140) 
+        GROUP BY S.ORGAO, S.COD_RUBRICA, S.NOME_RUBRICA, S.ID_REGIME 
+        ORDER BY S.ORGAO, S.COD_RUBRICA, S.NOME_RUBRICA, S.ID_REGIME
+        """
+
     render_bloco_processamento(
         conn=conn,
         titulo="4. PATRONAL SEDUC 011",
         id_chave="seduc_011",
-        sql=sql_seduc_011,
+        sql=get_sql_seduc_011,
         mes=mes,
         ano=ano,
         cod_unidade="011",
@@ -830,56 +837,61 @@ def render(conn, ano, mes, meses_lista=None, auth_ui=None):
 
     st.divider()
 
-    sql_seduc_914 = """
-    SELECT 
-        CASE 
-            WHEN S.COD_RUBRICA IN (714400, 714403, 714405, 714410) THEN '901' 
-            WHEN S.COD_RUBRICA IN (714436, 714450, 714455, 714460) THEN '900' 
-        END AS RUBRICA, 
-        S.NOME_RUBRICA AS DESCRIMINACAO, 
-        CASE 
-            WHEN S.ID_REGIME IN (2, 9, 1000003) THEN 'RPPS' 
-            ELSE 'RGPS' 
-        END AS TIPO_REGIME, 
-        CASE 
-            WHEN S.ID_REGIME IN (9, 1000003) THEN 'MILITAR' 
-            ELSE 'CIVIL' 
-        END AS TIPO_VINCULO, 
-        0 AS VANTAGENS, 
-        REPLACE(TO_CHAR(SUM(S.VALOR_CALCULADO)), ',', '.') AS DESCONTOS 
-    FROM ( 
+    def get_sql_seduc_914(tipo):
+        tipo_arquivo_val = "002" if tipo == "suplementar" else "001"
+        condicao_tipo_folha = "S.ID_TIPO_FOLHA IN (1000000)" if tipo == "ordinaria" else "S.ID_TIPO_FOLHA NOT IN (1000000)"
+        
+        return f"""
         SELECT 
-            'SEDUC' AS ORGAO, 
-            FR.NOME_RUBRICA, 
-            FR.TIPO, 
-            FF.VALOR_CALCULADO, 
-            FR.COD_RUBRICA, 
-            FI.ID_REGIME, 
-            FC.MES, 
-            FC.ANO, 
-            FO.ID_TIPO_FOLHA, 
-            FO.TIPO_ARQUIVO, 
-            FO.ID_FONTE 
-        FROM SW_SEDUC.FOLHA_CONTRACHEQUE FC 
-        JOIN SW_SEDUC.FOLHA FO ON FO.ID_FOLHA = FC.ID_FOLHA 
-        JOIN SW_SEDUC.FUNCIONARIO_INGRESSO FI ON FI.ID_FUNCIONARIO = FC.ID_FUNCIONARIO 
-        JOIN SW_SEDUC.FOLHA_FICHA_FINANCEIRA FF ON FF.ID_FOLHA_FUNCIONARIO = FC.ID_FOLHA_FUNCIONARIO 
-        JOIN SW_PUBLICO.FOLHA_RUBRICA FR ON FR.ID_RUBRICA = FF.ID_RUBRICA 
-    ) S 
-    WHERE S.MES = :mes 
-      AND S.ANO = :ano 
-      AND S.ID_TIPO_FOLHA IN (1000000) 
-      AND S.TIPO_ARQUIVO = '001' 
-      AND S.COD_RUBRICA IN (714400, 714403, 714405, 714410, 714436, 714450, 714455, 714460) 
-      AND S.ID_FONTE IN (1000003, 1000020, 1000021, 1000040, 1000041, 1000060, 1, 2, 3) 
-    GROUP BY S.ORGAO, S.COD_RUBRICA, S.NOME_RUBRICA, S.ID_REGIME 
-    ORDER BY S.ORGAO, S.COD_RUBRICA, S.NOME_RUBRICA, S.ID_REGIME
-    """
+            CASE 
+                WHEN S.COD_RUBRICA IN (714400, 714403, 714405, 714410) THEN '901' 
+                WHEN S.COD_RUBRICA IN (714436, 714450, 714455, 714460) THEN '900' 
+            END AS RUBRICA, 
+            S.NOME_RUBRICA AS DESCRIMINACAO, 
+            CASE 
+                WHEN S.ID_REGIME IN (2, 9, 1000003) THEN 'RPPS' 
+                ELSE 'RGPS' 
+            END AS TIPO_REGIME, 
+            CASE 
+                WHEN S.ID_REGIME IN (9, 1000003) THEN 'MILITAR' 
+                ELSE 'CIVIL' 
+            END AS TIPO_VINCULO, 
+            0 AS VANTAGENS, 
+            REPLACE(TO_CHAR(SUM(S.VALOR_CALCULADO)), ',', '.') AS DESCONTOS 
+        FROM ( 
+            SELECT 
+                'SEDUC' AS ORGAO, 
+                FR.NOME_RUBRICA, 
+                FR.TIPO, 
+                FF.VALOR_CALCULADO, 
+                FR.COD_RUBRICA, 
+                FI.ID_REGIME, 
+                FC.MES, 
+                FC.ANO, 
+                FO.ID_TIPO_FOLHA, 
+                FO.TIPO_ARQUIVO, 
+                FO.ID_FONTE 
+            FROM SW_SEDUC.FOLHA_CONTRACHEQUE FC 
+            JOIN SW_SEDUC.FOLHA FO ON FO.ID_FOLHA = FC.ID_FOLHA 
+            JOIN SW_SEDUC.FUNCIONARIO_INGRESSO FI ON FI.ID_FUNCIONARIO = FC.ID_FUNCIONARIO 
+            JOIN SW_SEDUC.FOLHA_FICHA_FINANCEIRA FF ON FF.ID_FOLHA_FUNCIONARIO = FC.ID_FOLHA_FUNCIONARIO 
+            JOIN SW_PUBLICO.FOLHA_RUBRICA FR ON FR.ID_RUBRICA = FF.ID_RUBRICA 
+        ) S 
+        WHERE S.MES = :mes 
+          AND S.ANO = :ano 
+          AND {condicao_tipo_folha} 
+          AND S.TIPO_ARQUIVO = '{tipo_arquivo_val}' 
+          AND S.COD_RUBRICA IN (714400, 714403, 714405, 714410, 714436, 714450, 714455, 714460) 
+          AND S.ID_FONTE IN (1000003, 1000020, 1000021, 1000040, 1000041, 1000060, 1, 2, 3) 
+        GROUP BY S.ORGAO, S.COD_RUBRICA, S.NOME_RUBRICA, S.ID_REGIME 
+        ORDER BY S.ORGAO, S.COD_RUBRICA, S.NOME_RUBRICA, S.ID_REGIME
+        """
+
     render_bloco_processamento(
         conn=conn,
         titulo="5. PATRONAL SEDUC 914",
         id_chave="seduc_914",
-        sql=sql_seduc_914,
+        sql=get_sql_seduc_914,
         mes=mes,
         ano=ano,
         cod_unidade="914",

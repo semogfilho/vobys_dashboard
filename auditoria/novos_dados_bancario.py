@@ -479,6 +479,7 @@ def listar_novatos_bancario(conn, ano, mes):
         FROM all_tables 
         WHERE table_name = 'FOLHA_FUNC' 
         AND owner LIKE 'SW_%'
+        -- AND owner LIKE 'SW_PMPI'
         AND owner NOT IN ('SW_FUNPREV', 'SW_REENVIO')
     """)
     todos_schemas = [row[0] for row in cursor.fetchall()]
@@ -515,7 +516,7 @@ def listar_novatos_bancario(conn, ano, mes):
         INNER JOIN {schema}.folha f_tab ON f_tab.id_folha = ff.id_folha
         INNER JOIN sw_publico.pessoa p ON p.id_pessoa = FF.ID_PESSOA_FUNCIONARIO
         INNER JOIN sw_publico.pessoa_historico_nomes phn ON phn.id_pessoa = p.id_pessoa and phn.data_fim is null
-        LEFT JOIN sw_publico.pessoa_doc_cpf doc ON doc.id_pessoa = p.id_pessoa
+        LEFT JOIN sw_publico.pessoa_doc_cpf doc ON doc.id_pessoa = p.id_pessoa AND doc.data_baixa IS NULL
         LEFT JOIN SW_PUBLICO.Pessoa_Banco pb ON pb.id_pessoa = p.id_pessoa AND pb.data_fim IS NULL
         LEFT JOIN SW_PUBLICO.RHB_BANCO_AGENCIA pba ON pba.id_agencia = pb.id_agencia
         LEFT JOIN SW_PUBLICO.RHB_BANCO pbb ON pbb.id_banco = pba.id_banco
@@ -557,7 +558,7 @@ def listar_novatos_bancario(conn, ano, mes):
         INNER JOIN {schema}.PESSOA_VINCULO pv ON pv.id_pessoa_vinculo = e.id_pessoa_vinculo
         INNER JOIN sw_publico.pessoa p ON p.id_pessoa = pv.ID_PESSOA
         INNER JOIN sw_publico.pessoa_historico_nomes phn ON phn.id_pessoa = p.id_pessoa and phn.data_fim is null
-        LEFT JOIN sw_publico.pessoa_doc_cpf doc ON doc.id_pessoa = p.id_pessoa
+        LEFT JOIN sw_publico.pessoa_doc_cpf doc ON doc.id_pessoa = p.id_pessoa AND doc.data_baixa IS NULL
         LEFT JOIN SW_PUBLICO.Pessoa_Banco pb ON pb.id_pessoa = p.id_pessoa AND pb.data_fim IS NULL
         LEFT JOIN SW_PUBLICO.RHB_BANCO_AGENCIA pba ON pba.id_agencia = pb.id_agencia
         LEFT JOIN SW_PUBLICO.RHB_BANCO pbb ON pbb.id_banco = pba.id_banco
@@ -569,6 +570,47 @@ def listar_novatos_bancario(conn, ano, mes):
               WHERE e_ant.id_estagiario = e.id_estagiario
                     and ff_ant.id_folha              < ff.id_folha
           )
+        UNION ALL
+
+        SELECT '{schema.replace('SW_', '')}' AS ORGAO, 
+               pv.cod_institucional, 
+               phn.nome AS NOME_ATUAL, 
+               doc.cpf_pessoa AS CPF, 
+               f_tab.chave_folha AS CHAVE_FOLHA,
+               CASE 
+                   WHEN hist.retorno_api IS NULL THEN 'NÃO'
+                   WHEN INSTR(hist.retorno_api, 'sucesso') > 0 THEN 'SIM'
+                   ELSE 'ERRO'
+               END AS ENVIADO,
+               TO_CHAR(hist.DATA_ENVIO, 'DD/MM/YYYY HH24:MI:SS') AS DATA_ENVIO,
+               hist.STATUS_SEFAZ AS SEFAZ,
+               ffr.data_cadastro AS DIGITACAO_FOLHA,
+               CASE 
+                   WHEN pbb.cod_banco IS NULL OR pb.conta_corrente IS NULL THEN 'SEM CONTA CADASTRADA'
+                   ELSE pbb.cod_banco || ' / Op: ' || NVL(pb.operacao, '-') || ' / Ag: ' || NVL(pba.cod_agencia, '-') || ' / CC: ' || pb.conta_corrente
+               END AS CONTA_CORRENTE,
+               p.id_pessoa
+        FROM {schema}.folha_func_rubrica ffr
+        INNER JOIN {schema}.folha f_tab ON f_tab.id_folha = ffr.id_folha
+        INNER JOIN {schema}.FUNC_PEN_ALIM_PENSIONISTA fpap ON fpap.id_pensionista_pa = ffr.id_pensionista_pa
+        INNER JOIN {schema}.pessoa_vinculo pv ON pv.id_pessoa_vinculo = fpap.id_pessoa_vinculo
+        INNER JOIN sw_publico.pessoa p ON p.id_pessoa = pv.id_pessoa
+        INNER JOIN sw_publico.pessoa_historico_nomes phn ON phn.id_pessoa = p.id_pessoa AND phn.data_fim IS NULL
+        LEFT JOIN sw_publico.pessoa_doc_cpf doc ON doc.id_pessoa = p.id_pessoa AND doc.data_baixa IS NULL
+        LEFT JOIN SW_PUBLICO.Pessoa_Banco pb ON pb.id_pessoa = p.id_pessoa AND pb.data_fim IS NULL
+        LEFT JOIN SW_PUBLICO.RHB_BANCO_AGENCIA pba ON pba.id_agencia = pb.id_agencia
+        LEFT JOIN SW_PUBLICO.RHB_BANCO pbb ON pbb.id_banco = pba.id_banco
+        LEFT JOIN AUDITORIA_ENVIOS_SEFAZ hist ON hist.cpf = doc.cpf_pessoa AND hist.matricula = pv.cod_institucional
+        WHERE f_tab.mes = {mes_int} AND f_tab.ano = {ano_int}
+          AND ffr.id_pensionista_pa IS NOT NULL 
+          AND ffr.ind_tipo = 'D'
+          AND NOT EXISTS (
+          SELECT 1 FROM {schema}.folha_func_rubrica        ffr_ant
+          INNER JOIN    {schema}.FUNC_PEN_ALIM_PENSIONISTA fpap_ant ON fpap_ant.id_pensionista_pa = ffr_ant.id_pensionista_pa
+          WHERE fpap_ant.id_pessoa_vinculo = fpap.id_pessoa_vinculo
+                and ffr_ant.id_folha              < ffr.id_folha
+          )
+
         """
         try:
             df = pd.read_sql(sql, conn)

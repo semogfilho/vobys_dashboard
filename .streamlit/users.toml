@@ -8,7 +8,7 @@ requer_reset = "nao"
 [usuario."pedro.mendes"]
 nome = "Pedro Mendes"
 email = "pedromendesfilho@gmail.com"
-senha_hash = "d77b7ece5e4b23f31d9847b7749886711178940153750a0811ac68bb6bc07585"
+senha_hash = "7d770e862996c88e4bc6e2bcf7f2372bcc88dae2b4799a32ea465b7564c3ba95"
 tipo = "g"
 requer_reset = "nao"
 
@@ -23,7 +23,7 @@ requer_reset = "nao"
 nome = "Evandro Macedo Santana"
 email = "evandromsantana@hotmail.com"
 tipo = "c"
-senha_hash = "e115d2e8691f9dcb0e7a5b29a71ff442b51f89439dc5d324a03f7403eac1d67e"
+senha_hash = "02bcd3cf2f10737727c69f64e236679af904361fd4a9e3babf91a4e05377d1d0"
 requer_reset = "sim"
 
 [usuario.valdiano]
