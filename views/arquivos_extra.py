@@ -81,9 +81,24 @@ def executar_query(conn, query, params):
         else:
             params_clean[k] = v
 
-    cursor.execute(query, params_clean)
-    columns = [col[0] for col in cursor.description]
-    data = cursor.fetchall()
+    try:
+        cursor.execute(query, params_clean)
+    except Exception as e:
+        if "DPY-4008" in str(e) or "bind placeholder" in str(e):
+            try:
+                query_formatada = query
+                for k, v in params_clean.items():
+                    query_formatada = query_formatada.replace(f":{k}", str(v))
+                cursor.execute(query_formatada)
+            except Exception as ex:
+                cursor.close()
+                raise ex
+        else:
+            cursor.close()
+            raise e
+
+    columns = [col[0] for col in cursor.description] if cursor.description else []
+    data = cursor.fetchall() if cursor.description else []
     cursor.close()
     return pd.DataFrame(data, columns=columns)
 
@@ -246,8 +261,8 @@ def render_bloco_processamento(conn, titulo, id_chave, sql, mes, ano, cod_unidad
         nome_arquivo_base = f"FP_{cod_unidade}_{tipo_folha_val}_{ano}{int(mes):02d}_{codigo_externo}_{cod_relatorio}"
         titulo_exibicao = f"{titulo} - {nome_arquivo_base}"
     else:
-        nome_arquivo_base = f"PATRONAL_{id_chave.upper()}_{ano}{int(mes):02d}"
-        titulo_exibicao = titulo
+        nome_arquivo_base = f"PATRONAL_{id_chave.upper()}_{ano}{int(mes):02d}_{codigo_externo}"
+        titulo_exibicao = f"{titulo} - {nome_arquivo_base}"
 
     st.subheader(titulo_exibicao)
     
@@ -265,10 +280,33 @@ def render_bloco_processamento(conn, titulo, id_chave, sql, mes, ano, cod_unidad
                 if id_chave == "emgerpi":
                     json_str = executar_query_emgerpi(conn, ano, mes)
                     if json_str:
-                        st.session_state[json_raw_key] = json_str
-                        dados = json.loads(json_str)
-                        pagamentos = dados.get("pagamentos", dados) if isinstance(dados, dict) else dados
-                        st.session_state[data_key] = pd.json_normalize(pagamentos)
+                        try:
+                            if isinstance(json_str, str):
+                                dados_json_obj = json.loads(json_str)
+                            else:
+                                dados_json_obj = json_str
+                            
+                            if isinstance(dados_json_obj, dict):
+                                json_codigo_externo = str(dados_json_obj.get("codigoExterno", "001"))
+                                
+                                # VALIDAÇÃO RIGOROSA: Se o tipo selecionado for suplementar (002)
+                                # e o JSON do banco for ordinária (001) sem dados suplementares, descartamos.
+                                if codigo_externo == "002" and json_codigo_externo != "002":
+                                    dados_json_obj = None
+                                else:
+                                    dados_json_obj["codigoExterno"] = str(codigo_externo)
+                        except Exception:
+                            dados_json_obj = None
+
+                        if dados_json_obj:
+                            json_str = json.dumps(dados_json_obj, ensure_ascii=False, indent=2)
+                            st.session_state[json_raw_key] = json_str
+                            dados = dados_json_obj
+                            pagamentos = dados.get("pagamentos", dados) if isinstance(dados, dict) else dados
+                            st.session_state[data_key] = pd.json_normalize(pagamentos)
+                        else:
+                            st.session_state[json_raw_key] = None
+                            st.session_state[data_key] = pd.DataFrame()
                     else:
                         st.session_state[json_raw_key] = None
                         st.session_state[data_key] = pd.DataFrame()
@@ -311,7 +349,6 @@ def render_bloco_processamento(conn, titulo, id_chave, sql, mes, ano, cod_unidad
         )
 
         if col_enviar.button(f"🚀 Enviar Arquivo", key=f"btn_enviar_{id_chave}_{codigo_externo}", type="primary"):
-            # Validação idêntica ao módulo de dados bancários, invocando o popup nativo do auth_ui
             if auth_ui and hasattr(auth_ui, "verificar_credenciais_sefaz"):
                 if not auth_ui.verificar_credenciais_sefaz():
                     st.stop()

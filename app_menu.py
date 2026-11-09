@@ -56,6 +56,7 @@ if not st.session_state.get("autenticado", False):
             div[data-testid="stVerticalBlockBorderWrapper"] label,
             div[data-testid="stVerticalBlockBorderWrapper"] span {
                 color: #334155 !important;
+                font-size: 1rem !important;
             }
 
             /* Título NTGD mantendo destaque */
@@ -77,14 +78,14 @@ if not st.session_state.get("autenticado", False):
                 padding: 8px 10px !important;
                 background-color: #ffffff !important;
                 color: #0f172a !important;
-                font-size: 0.88rem !important;
+                font-size: 1rem !important;
             }
 
             /* Estilo dos Botões para ocuparem largura total e tom vermelho */
             div.stButton > button {
                 width: 100% !important;
                 border-radius: 6px !important;
-                font-size: 0.9rem !important;
+                font-size: 1rem !important;
                 padding: 0.45rem !important;
             }
 
@@ -105,7 +106,7 @@ if not st.session_state.get("autenticado", False):
     """, unsafe_allow_html=True)
 
     st.markdown(
-        "<div style='text-align: center; color: #64748b; font-size: 0.82rem; font-weight: 600; margin-bottom: 0.5rem; letter-spacing: 0.5px;'>"
+        "<div style='text-align: center; color: #64748b; font-size: 0.875rem; font-weight: 600; margin-bottom: 0.5rem; letter-spacing: 0.5px;'>"
         "🔒 SISTEMA NTGD"
         "</div>",
         unsafe_allow_html=True
@@ -216,34 +217,53 @@ def main():
     with st.sidebar:
         st.markdown("""
             <style>
+                /* Padronização moderna e espaçamento limpo da sidebar */
                 [data-testid="stSidebar"] > div:first-child {
-                    padding-top: 0.5rem !important;
+                    padding-top: 1rem !important;
+                    padding-left: 1rem !important;
+                    padding-right: 1rem !important;
                 }
                 .titulo-ntgd {
-                    font-size: 2rem !important;
-                    margin-top: -1.5rem !important;
-                    margin-bottom: -0.5rem !important;
+                    font-size: 2.2rem !important;
+                    font-weight: 700 !important;
+                    margin-top: -0.5rem !important;
+                    margin-bottom: -0.2rem !important;
+                    letter-spacing: 1px;
+                }
+                div[data-testid="stSidebar"] p, 
+                div[data-testid="stSidebar"] span, 
+                div[data-testid="stSidebar"] label {
+                    font-size: 1rem !important;
                 }
                 div[data-testid="stMarkdown"] hr {
-                    margin-top: 0.5rem !important;
-                    margin-bottom: 0.5rem !important;
+                    margin-top: 0.8rem !important;
+                    margin-bottom: 0.8rem !important;
                 }
                 .botao-sair-container {
-                    margin-top: 0.5rem !important;
+                    margin-top: 1rem !important;
+                    margin-bottom: 2rem !important;
                 }
+                /* Estilização suave para os botões e selects da barra lateral */
                 [data-testid="stSidebar"] div.stButton > button {
                     background-color: transparent !important;
                     border: 1px solid rgba(49, 51, 63, 0.2) !important;
                     color: rgb(49, 51, 63) !important;
                     border-radius: 8px !important;
                     box-shadow: none !important;
-                    width: auto !important;
-                    padding: 0.35rem 1.25rem !important;
+                    width: 100% !important;
+                    padding: 0.5rem 1rem !important;
+                    font-size: 1rem !important;
+                    font-weight: 500 !important;
                 }
                 [data-testid="stSidebar"] div.stButton > button:hover {
-                    border-color: rgb(49, 51, 63) !important;
-                    color: rgb(49, 51, 63) !important;
-                    background-color: rgba(49, 51, 63, 0.02) !important;
+                    border-color: #d32f2f !important;
+                    color: #d32f2f !important;
+                    background-color: rgba(211, 47, 47, 0.04) !important;
+                }
+                /* Ajuste de fonte do menu radio lateral */
+                [data-testid="stSidebar"] [data-testid="stRadio"] label p {
+                    font-size: 1rem !important;
+                    font-weight: 500 !important;
                 }
             </style>
         """, unsafe_allow_html=True)
