@@ -1,17 +1,18 @@
 # -*- coding: utf-8 -*-
 import json
 import time
-import requests
 import streamlit as st
 import streamlit.components.v1 as components
 import pandas as pd
-import urllib3
+import sys
+import os
 
-# Importações necessárias para o auth_ui
+# Adiciona a raiz do projeto ao path para garantir a importação correta do sefaz_client
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
+# Importações necessárias para o auth_ui e cliente SEFAZ
 import auth_ui
-
-# Desativa alertas de certificado SSL não verificado (verify=False)
-urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+from sefaz_client import requisitar_sefaz
 
 # Importação da query específica do EMGERPI
 try:
@@ -114,22 +115,10 @@ def executar_query_emgerpi(conn, ano, mes):
     return None
 
 
-# --- INTEGRAÇÃO COM A API SEFAZ-PI ---
+# --- INTEGRAÇÃO COM A API SEFAZ-PI (VIA sefaz_client) ---
 
 def transmitir_para_sefaz(payload_dados, ano):
     try:
-        usuario = st.session_state.get("sefaz_cpf") or st.secrets.get("sefaz", {}).get("SIAFE_CPF")
-        senha = st.session_state.get("sefaz_pass") or st.secrets.get("sefaz", {}).get("SIAFE_SENHA")
-
-        if not usuario or not senha:
-            return False, None, "Erro: Credenciais da SEFAZ não informadas. Por favor, autentique-se novamente."
-
-        sefaz_sec = st.secrets.get("sefaz", {})
-        base_url = sefaz_sec.get("BASE_URL") or sefaz_sec.get("base_url", "https://tesouro.sefaz.pi.gov.br/api")
-
-        if not base_url:
-            return False, None, "Erro: BASE_URL da SEFAZ não configurada nos secrets."
-
         if payload_dados is None:
             return False, None, "Erro: O payload de dados está vazio ou nulo."
 
@@ -141,67 +130,25 @@ def transmitir_para_sefaz(payload_dados, ano):
         else:
             payload_obj = payload_dados
 
-        session = requests.Session()
-        session.verify = False
+        endpoint = f"folha-pagamento/contabilizacao-folha-pagamento/{ano}"
+        resultado = requisitar_sefaz("POST", endpoint, payload=payload_obj)
 
-        payload_auth = {"usuario": usuario, "senha": senha}
-        r_auth = session.post(f"{base_url}/auth", json=payload_auth, timeout=10)
-        r_auth.raise_for_status()
+        if isinstance(resultado, dict) and resultado.get("erro"):
+            err_msg = resultado.get("mensagem", "Erro desconhecido na API")
+            if "HTTP 401" in err_msg or "HTTP 403" in err_msg:
+                st.session_state["sefaz_auth"] = False
+                st.session_state.pop("sefaz_cpf", None)
+                st.session_state.pop("sefaz_pass", None)
+            return False, json.dumps(payload_obj, ensure_ascii=False), err_msg
 
-        token = r_auth.json().get("token")
-        if not token:
-            return False, None, "Erro: Token de autenticação não retornado pela API /auth."
+        return True, json.dumps(payload_obj, ensure_ascii=False), resultado
 
-        session.headers.update({"Authorization": f"Bearer {token}"})
-
-        url_final = f"{base_url}/folha-pagamento/contabilizacao-folha-pagamento/{ano}"
-        response = session.post(url_final, json=payload_obj, timeout=15)
-        sucesso = response.status_code in [200, 201]
-
-        try:
-            retorno_json = response.json()
-        except Exception:
-            retorno_json = response.text
-
-        return sucesso, json.dumps(payload_obj, ensure_ascii=False), retorno_json
-
-    except requests.exceptions.HTTPError as he:
-        status = he.response.status_code if he.response else "Desconhecido"
-        texto = he.response.text if he.response else str(he)
-        if status in (401, 403):
-            st.session_state["sefaz_auth"] = False
-            st.session_state.pop("sefaz_cpf", None)
-            st.session_state.pop("sefaz_pass", None)
-        return False, None, f"Erro HTTP {status}: {texto}"
     except Exception as e:
         return False, None, str(e)
 
 
 def consultar_recibo_sefaz(ano, mes, cod_unidade, cod_relatorio, codigo_externo):
     try:
-        usuario = st.session_state.get("sefaz_cpf") or st.secrets.get("sefaz", {}).get("SIAFE_CPF")
-        senha = st.session_state.get("sefaz_pass") or st.secrets.get("sefaz", {}).get("SIAFE_SENHA")
-
-        sefaz_sec = st.secrets.get("sefaz", {})
-        base_url = sefaz_sec.get("BASE_URL") or sefaz_sec.get("base_url", "https://tesouro.sefaz.pi.gov.br/api")
-
-        if not base_url:
-            return False, "Erro: BASE_URL da SEFAZ não configurada nos secrets."
-
-        session = requests.Session()
-        session.verify = False
-
-        payload_auth = {"usuario": usuario, "senha": senha}
-        r_auth = session.post(f"{base_url}/auth", json=payload_auth, timeout=10)
-        r_auth.raise_for_status()
-
-        token = r_auth.json().get("token")
-        if not token:
-            return False, "Erro: Token de autenticação não retornado pela API /auth."
-
-        session.headers.update({"Authorization": f"Bearer {token}"})
-
-        url_final = f"{base_url}/folha-pagamento/contabilizacao/{ano}"
         tipo_folha_val = 8 if str(cod_unidade) == "120" else 9
         
         payload_consulta = {
@@ -213,31 +160,19 @@ def consultar_recibo_sefaz(ano, mes, cod_unidade, cod_relatorio, codigo_externo)
             "codigoRelatorio": str(cod_relatorio)
         }
 
-        response = session.post(url_final, json=payload_consulta, timeout=15)
-        
-        try:
-            retorno_json = response.json()
-        except Exception:
-            retorno_json = response.text
+        endpoint = f"folha-pagamento/contabilizacao/{ano}"
+        resultado = requisitar_sefaz("POST", endpoint, payload=payload_consulta)
 
-        if response.status_code in [200, 201]:
-            return True, retorno_json
-        elif response.status_code == 401:
-            st.session_state["sefaz_auth"] = False
-            st.session_state.pop("sefaz_cpf", None)
-            st.session_state.pop("sefaz_pass", None)
-            return False, "Erro HTTP 401: Sessão expirada. Por favor, autentique-se novamente."
-        else:
-            return False, f"Erro HTTP {response.status_code}: {retorno_json}"
+        if isinstance(resultado, dict) and resultado.get("erro"):
+            err_msg = resultado.get("mensagem", "Erro desconhecido na API")
+            if "HTTP 401" in err_msg or "HTTP 403" in err_msg:
+                st.session_state["sefaz_auth"] = False
+                st.session_state.pop("sefaz_cpf", None)
+                st.session_state.pop("sefaz_pass", None)
+            return False, err_msg
 
-    except requests.exceptions.HTTPError as he:
-        status = he.response.status_code if he.response else "Desconhecido"
-        texto = he.response.text if he.response else str(he)
-        if status == 401:
-            st.session_state["sefaz_auth"] = False
-            st.session_state.pop("sefaz_cpf", None)
-            st.session_state.pop("sefaz_pass", None)
-        return False, f"Erro HTTP {status}: {texto}"
+        return True, resultado
+
     except Exception as e:
         return False, str(e)
 

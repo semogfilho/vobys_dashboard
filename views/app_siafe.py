@@ -1,14 +1,16 @@
 # -*- coding: utf-8 -*-
 import streamlit as st
-import requests
-import urllib3
 import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
-from queries import GET_SIGLAS_EMPRESA
+import sys
+import os
 
-# Desabilita avisos de SSL
-urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+# Adiciona a raiz do projeto ao path para garantir a importação correta do sefaz_client
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
+from queries import GET_SIGLAS_EMPRESA
+from sefaz_client import requisitar_sefaz
 
 MAPA_MESES_ROBUSTO = {
     "Jan": "01", "Fev": "02", "Mar": "03", "Abr": "04", "Mai": "05", "Jun": "06",
@@ -31,30 +33,21 @@ def formatar_moeda_br(valor):
 
 @st.cache_data(show_spinner="Sincronizando com a API...")
 def buscar_dados_siafe(ano, perfil_usuario):
-    usuario = st.session_state.get("sefaz_cpf", st.secrets["sefaz"]["SIAFE_CPF"])
-    senha = st.session_state.get("sefaz_pass", st.secrets["sefaz"]["SIAFE_SENHA"])
-    BASE_URL = st.secrets["sefaz"]["BASE_URL"]
-
     try:
-        session = requests.Session()
-        session.verify = False
-        session.headers.update({"Content-Type": "application/json"})
+        # Utiliza o cliente centralizado sefaz_client (requisitar_sefaz)
+        endpoint = f"folha-pagamento/pendente/{ano}"
+        data = requisitar_sefaz("POST", endpoint, payload={})
 
-        payload_auth = {"usuario": usuario, "senha": senha}
-        r_auth = session.post(f"{BASE_URL}/auth", json=payload_auth, timeout=10)
-        r_auth.raise_for_status()
+        if isinstance(data, dict) and data.get("erro"):
+            raise Exception(data.get("mensagem", "Erro desconhecido na API"))
 
-        token = r_auth.json().get("token")
-        session.headers.update({"Authorization": f"Bearer {token}"})
-
-        r = session.post(f"{BASE_URL}/folha-pagamento/pendente/{ano}", json={}, timeout=15)
-        r.raise_for_status()
-
-        data = r.json()
         if not data:
             return pd.DataFrame()
 
         df = pd.DataFrame(data)
+        if 'itens' not in df.columns:
+            return pd.DataFrame()
+
         df_explode = df.explode('itens').reset_index(drop=True)
         itens_norm = pd.json_normalize(df_explode['itens']).add_prefix('item_')
         df_final = pd.concat([df_explode.drop(columns=['itens']), itens_norm], axis=1)
