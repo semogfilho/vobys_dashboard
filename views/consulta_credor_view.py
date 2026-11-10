@@ -6,50 +6,62 @@ import urllib3
 import re
 from datetime import datetime
 
-# Desabilita avisos de SSL (mesmo padrão do SIAFE)
+# Desabilita avisos de SSL
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 def consultar_credor_sefaz(ano, cpf_ou_credor):
-    # Recupera credenciais e URL base do secrets
     usuario = st.secrets["sefaz"]["SIAFE_CPF"]
     senha = st.secrets["sefaz"]["SIAFE_SENHA"]
     BASE_URL = st.secrets["sefaz"]["BASE_URL"]
 
-    # Limpa a string, removendo pontos, traços e barras, mantendo apenas os dígitos
     identificador_limpo = re.sub(r'\D', '', cpf_ou_credor)
 
     try:
+        # Criamos a sessão mantendo o comportamento idêntico ao curl que funcionou
         session = requests.Session()
         session.verify = False
-        session.headers.update({"Content-Type": "application/json"})
+        
+        session.headers.update({
+            "Content-Type": "application/json",
+            "Accept": "application/json, text/plain, */*",
+            "User-Agent": "curl/7.29.0"  # Usando o mesmo user-agent do curl validado
+        })
 
-        # 1. Autenticação na API
+        # 1. Autenticação na API (armazena automaticamente os cookies do WAF e da aplicação)
         payload_auth = {"usuario": usuario, "senha": senha}
-        r_auth = session.post(f"{BASE_URL}/auth", json=payload_auth, timeout=10)
+        r_auth = session.post(f"{BASE_URL}/auth", json=payload_auth, timeout=(10, 20))
         r_auth.raise_for_status()
 
-        token = r_auth.json().get("token")
+        res_json = r_auth.json()
+        token = res_json.get("token")
+        
+        if not token:
+            return f"Erro: Token não retornado pela API. Resposta: {res_json}"
+
+        # Atualiza o header com o Bearer token mantendo os cookies da sessão anterior
         session.headers.update({"Authorization": f"Bearer {token}"})
 
-        # 2. Chamada ao endpoint correto mapeado no Swagger (/apoio-geral/credor/{exercicio}/{codigo})
+        # 2. Chamada ao endpoint de credor
         url = f"{BASE_URL}/apoio-geral/credor/{ano}/{identificador_limpo}"
-        r = session.get(url, timeout=15)
+        r = session.get(url, timeout=(10, 30))
         r.raise_for_status()
 
         return r.json()
 
+    except requests.exceptions.ConnectionError as ce:
+        return f"Erro de Conexão (RemoteDisconnected/WAF): O proxy da SEFAZ fechou a conexão. Detalhes: {str(ce)}"
+    except requests.exceptions.Timeout:
+        return "Erro: O tempo limite (timeout) de resposta da SEFAZ foi excedido."
     except Exception as e:
         return f"Erro na API (Status/Falha): {str(e)}"
 
 def renderizar_consulta_credor(ano, mes):
     st.subheader(f"🔍 Consulta de Credor na SEFAZ (Exercício: {ano})")
 
-    # Exibição transparente do contexto de busca
     with st.expander("ℹ️ Detalhes da Consulta", expanded=False):
         st.caption(f"**Endpoint:** `/apoio-geral/credor/{ano}/{{codigo}}`")
         st.caption(f"**Última tentativa:** {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}")
 
-    # Campo de entrada para o CPF ou código do credor
     cpf_input = st.text_input("Informe o CPF ou Código do Credor:", max_chars=20)
 
     if st.button("Consultar Credor", type="primary"):
@@ -61,7 +73,6 @@ def renderizar_consulta_credor(ano, mes):
             data = consultar_credor_sefaz(ano, cpf_input.strip())
 
             if isinstance(data, (dict, list)) and not isinstance(data, str):
-                # Valida se o dicionário possui conteúdo real (evita exibir tela vazia/nula)
                 tem_conteudo = False
                 if isinstance(data, dict):
                     if data.get("codigo") or data.get("cpfCnpj") or data.get("nome"):
@@ -79,11 +90,12 @@ def renderizar_consulta_credor(ano, mes):
                 else:
                     st.warning("⚠️ Nenhum registro encontrado para o identificador informado neste exercício.")
             else:
-                # Tratamento diferenciado de erro para Administradores vs Usuários comuns
                 perfil_usuario = st.session_state.get("perfil_usuario")
                 if perfil_usuario in ['a', 'g']:
                     st.error(f"⚠️ {data}")
                 else:
                     st.warning("⚠️ O serviço de consulta de credor está temporariamente indisponível. Por favor, contate o suporte técnico.")
+
 def render(conn, ano, mes, meses_lista=None):
-  renderizar_consulta_credor(ano, mes)
+    renderizar_consulta_credor(ano, mes)
+

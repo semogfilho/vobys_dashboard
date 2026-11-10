@@ -124,19 +124,30 @@ def consultar_credor_sefaz_individual(ano, cpf_ou_credor, matricula_para_conferi
 
         session = requests.Session()
         session.verify = False
-        session.headers.update({"Content-Type": "application/json"})
+        
+        # Adicionando os mesmos headers validados no curl e no consulta_credor_view
+        session.headers.update({
+            "Content-Type": "application/json",
+            "Accept": "application/json, text/plain, */*",
+            "User-Agent": "curl/7.29.0"
+        })
 
         payload_auth = {"usuario": usuario, "senha": senha}
-        r_auth = session.post(f"{BASE_URL}/auth", json=payload_auth, timeout=15)
+        r_auth = session.post(f"{BASE_URL}/auth", json=payload_auth, timeout=(10, 20))
         r_auth.raise_for_status()
 
-        token = r_auth.json().get("token")
+        res_json = r_auth.json()
+        token = res_json.get("token")
+        
+        if not token:
+            return "ERRO API (Token Nulo)"
+
         session.headers.update({"Authorization": f"Bearer {token}"})
 
         url = f"{BASE_URL}/apoio-geral/credor/{ano}/{cpf_limpo}"
 
         try:
-            r = session.get(url, timeout=30)
+            r = session.get(url, timeout=(10, 30))
         except requests.exceptions.Timeout:
             return "ERRO TIMEOUT"
         except requests.exceptions.ConnectionError:

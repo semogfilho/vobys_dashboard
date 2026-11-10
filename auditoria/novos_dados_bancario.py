@@ -223,7 +223,9 @@ def buscar_dados_completos(conn, schema, cod_institucional):
         LEFT JOIN SW_PUBLICO.RHB_BANCO_AGENCIA pba ON pba.id_agencia = pb.id_agencia
         LEFT JOIN SW_PUBLICO.RHB_BANCO pbb ON pbb.id_banco = pba.id_banco
         WHERE ff.cod_institucional = :cod
+
         UNION ALL
+
         SELECT 
             doc.cpf_pessoa AS CPF,
             phn.nome AS NOME,
@@ -273,6 +275,68 @@ def buscar_dados_completos(conn, schema, cod_institucional):
         LEFT JOIN SW_PUBLICO.Pessoa_Banco pb ON pb.id_pessoa = p.id_pessoa AND pb.data_fim IS NULL
         LEFT JOIN SW_PUBLICO.RHB_BANCO_AGENCIA pba ON pba.id_agencia = pb.id_agencia
         LEFT JOIN SW_PUBLICO.RHB_BANCO pbb ON pbb.id_banco = pba.id_banco
+        WHERE pv.cod_institucional = :cod
+
+        UNION ALL
+
+        SELECT 
+            doc.cpf_pessoa AS CPF,
+            phn.nome AS NOME,
+            p.data_nascimento AS DATANASCIMENTO,
+            pis.PISPASEP AS NUMEROPISPASEPNIT,
+            upe.cod_unidade_federacao AS UF,
+            mpe.cod_municipio_ibge AS CODIGOMUNICIPIO,
+            pe.cep AS CEP,
+            tl.descricao ||' '||
+            pe.logradouro || ', ' || pe.numero_endereco ||
+            CASE
+                WHEN pe.complemento_endereco IS NOT NULL THEN ' - ' || pe.complemento_endereco
+                ELSE ''
+            END AS ENDERECO,
+            pe.bairro_endereco AS BAIRRO,
+            pe.ddd        ||pe.telefone_residencia  TELEFONE,
+            pe.ddd_celular||pe.celular  TELEFONE2,
+            pe.ddd_celular||pe.celular AS CELULAR,
+            NULL AS FAX,
+            p.email AS EMAIL,
+            pbb.cod_banco AS CODIGOBANCO,
+            pba.cod_agencia AS CODIGOAGENCIA,
+            pb.conta_corrente AS NUMEROCONTA,
+            0 AS FLGCONTAPOUPANCA,
+            'ATIVO' AS STATUS,
+            pv.cod_institucional AS IDFUNCIONAL
+        FROM (
+            SELECT * FROM (
+                SELECT 
+                    ffr_sub.*, 
+                    ROW_NUMBER() OVER (PARTITION BY ffr_sub.id_pensionista_pa ORDER BY ffr_sub.id_folha DESC) as rn
+                FROM {schema}.folha_func_rubrica ffr_sub
+                WHERE ffr_sub.id_pensionista_pa IS NOT NULL 
+                  AND ffr_sub.ind_tipo = 'D'
+            ) WHERE rn = 1
+        ) ffr
+        INNER JOIN {schema}.folha f_tab ON f_tab.id_folha = ffr.id_folha
+        INNER JOIN {schema}.FUNC_PEN_ALIM_PENSIONISTA fpap ON fpap.id_pensionista_pa = ffr.id_pensionista_pa
+        INNER JOIN {schema}.pessoa_vinculo pv ON pv.id_pessoa_vinculo = fpap.id_pessoa_vinculo
+        INNER JOIN sw_publico.pessoa p ON p.id_pessoa = pv.id_pessoa
+        INNER JOIN sw_publico.pessoa_historico_nomes phn ON phn.id_pessoa = p.id_pessoa AND phn.data_fim IS NULL
+        LEFT JOIN sw_publico.pessoa_doc_cpf doc ON doc.id_pessoa = p.id_pessoa AND doc.data_baixa IS NULL
+        LEFT JOIN SW_PUBLICO.Pessoa_Banco pb ON pb.id_pessoa = p.id_pessoa AND pb.data_fim IS NULL
+        LEFT JOIN SW_PUBLICO.RHB_BANCO_AGENCIA pba ON pba.id_agencia = pb.id_agencia
+        LEFT JOIN SW_PUBLICO.RHB_BANCO pbb ON pbb.id_banco = pba.id_banco
+        LEFT JOIN (
+            SELECT * FROM (
+                SELECT 
+                    pis_sub.*, 
+                    ROW_NUMBER() OVER (PARTITION BY pis_sub.id_pessoa ORDER BY pis_sub.data_cadastro DESC) as rn
+                FROM sw_publico.PESSOA_DOC_PISPASEP pis_sub
+                WHERE pis_sub.data_baixa IS NULL
+            ) WHERE rn = 1
+        ) pis ON pis.id_pessoa = p.id_pessoa
+        LEFT JOIN SW_PUBLICO.pessoa_endereco pe ON pe.id_pessoa = p.id_pessoa AND pe.data_fim IS NULL
+        LEFT JOIN SW_PUBLICO.ESB_TIPOS_DE_LOGRADOURO tl on tl.id_esb_tipos_de_logradouro = pe.id_esb_tipos_de_logradouro 
+        LEFT JOIN SW_PUBLICO.RHB_CEP_UNIDADE_FEDERACAO upe ON upe.id_unidade_federacao = pe.id_unidade_federacao
+        LEFT JOIN SW_PUBLICO.RHB_CEP_MUNICIPIO_IBGE mpe ON mpe.id_municipio = pe.id_municipio
         WHERE pv.cod_institucional = :cod
     """
     try:
@@ -339,8 +403,15 @@ def enviar_para_sefaz(payload):
         session = requests.Session()
         session.verify = False
 
+        # Inserindo os headers de navegador que evitam o bloqueio do WAF/Proxy
+        session.headers.update({
+            "Content-Type": "application/json",
+            "Accept": "application/json, text/plain, */*",
+            "User-Agent": "curl/7.29.0"
+        })
+
         payload_auth = {"usuario": usuario, "senha": senha}
-        r_auth = session.post(f"{BASE_URL}/auth", json=payload_auth, timeout=10)
+        r_auth = session.post(f"{BASE_URL}/auth", json=payload_auth, timeout=(10, 20))
         r_auth.raise_for_status()
 
         token = r_auth.json().get("token")
@@ -349,14 +420,15 @@ def enviar_para_sefaz(payload):
         print("DEBUG: Headers enviados:", session.headers)
         print("DEBUG: Payload enviado:", payload)
 
-        response = session.post(URL_FINAL, json=payload, timeout=10)
-        sucesso = response.status_code in [200, 201]
+        # Tenta o envio. Se a SEFAZ retornar 403 por conflito de registro existente, 
+        # o endpoint pode exigir PUT em vez de POST dependendo da regra da API.
+        response = session.post(URL_FINAL, json=payload, timeout=(10, 30))
         
+        sucesso = response.status_code in [200, 201]
         return sucesso, json.dumps(payload), response.text
 
     except Exception as e:
         return False, None, str(e)
-
 
 def obter_schemas_dinamicos(conn):
     if conn is None:

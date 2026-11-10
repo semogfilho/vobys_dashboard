@@ -76,23 +76,38 @@ def modal_autenticacao_sefaz(servico_nome=None):
         st.session_state["tentando_enviar_sefaz"] = False
 
 def testar_conexao_sefaz(cpf, senha):
-    """
-    Testa se as credenciais fornecidas são válidas tentando autenticar na API.
-    """
-    # Acessa o BASE_URL do seu secrets
     BASE_URL = st.secrets["sefaz"]["BASE_URL"]
     try:
         session = requests.Session()
-        session.verify = False # Conforme seu padrão de conexão
+        session.verify = False
+        session.headers.update({
+            "Content-Type": "application/json",
+            "Accept": "application/json, text/plain, */*",
+            "User-Agent": "curl/7.29.0"
+        })
 
-        # Tenta a autenticação real
         payload = {"usuario": cpf, "senha": senha}
-        r_auth = session.post(f"{BASE_URL}/auth", json=payload, timeout=5)
+        r_auth = session.post(f"{BASE_URL}/auth", json=payload, timeout=(10, 20))
 
-        # Retorna True se o status for 200 (OK)
-        return r_auth.status_code == 200
-    except Exception as e:
-        st.error(f"Erro ao conectar com SEFAZ: {e}")
+        # Dispara uma exceção automaticamente para status codes 4xx ou 5xx
+        r_auth.raise_for_status()
+
+        return True
+
+    except requests.exceptions.HTTPError as e:
+        # O servidor da SEFAZ respondeu, mas com um código de erro HTTP
+        status_code = e.response.status_code
+        resposta_corpo = e.response.text
+        st.error(f"Erro HTTP da SEFAZ [Status {status_code}]: {resposta_corpo}")
+        return False
+
+    except requests.exceptions.RequestException as e:
+        # Erros de rede, timeout ou conexão encerrada abruptamente (RemoteDisconnected)
+        if hasattr(e, 'response') and e.response is not None:
+            status_code = e.response.status_code
+            st.error(f"Erro na requisição [Status {status_code}]: {e.response.text}")
+        else:
+            st.error(f"Falha de conexão/infraestrutura com a SEFAZ: {e}")
         return False
 
 
