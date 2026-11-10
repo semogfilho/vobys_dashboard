@@ -3,8 +3,13 @@ import streamlit as st
 import unicodedata
 import pandas as pd
 import re
-import requests
 import json
+import sys
+import os
+
+# Adiciona a raiz do projeto ao path para garantir a importação correta do sefaz_client
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+from sefaz_client import requisitar_sefaz
 
 def atualizar_status_sefaz(conn, id_envio, novo_status):
     """
@@ -394,38 +399,21 @@ def montar_json_sefaz(row):
 
 
 def enviar_para_sefaz(payload):
-    usuario = st.session_state.get("sefaz_cpf", st.secrets["sefaz"]["SIAFE_CPF"])
-    senha = st.session_state.get("sefaz_pass", st.secrets["sefaz"]["SIAFE_SENHA"])
-    BASE_URL = st.secrets["sefaz"]["BASE_URL"]
-    URL_FINAL = f"{BASE_URL}/apoio-geral/pessoa-fisica/2026"
- 
+    """
+    Envia os dados bancários da pessoa física utilizando o cliente centralizado sefaz_client (requisitar_sefaz).
+    """
+    endpoint = "apoio-geral/pessoa-fisica/2026"
+    
     try:
-        session = requests.Session()
-        session.verify = False
+        # Utiliza o cliente centralizado para realizar a requisição POST com tratamento de erro nativo
+        resposta = requisitar_sefaz("POST", endpoint, payload=payload)
 
-        # Inserindo os headers de navegador que evitam o bloqueio do WAF/Proxy
-        session.headers.update({
-            "Content-Type": "application/json",
-            "Accept": "application/json, text/plain, */*",
-            "User-Agent": "curl/7.29.0"
-        })
+        # Se a resposta contiver a chave de erro gerada pelo sefaz_client
+        if isinstance(resposta, dict) and resposta.get("erro"):
+            return False, json.dumps(payload), resposta.get("mensagem", "Erro desconhecido na API")
 
-        payload_auth = {"usuario": usuario, "senha": senha}
-        r_auth = session.post(f"{BASE_URL}/auth", json=payload_auth, timeout=(10, 20))
-        r_auth.raise_for_status()
-
-        token = r_auth.json().get("token")
-        session.headers.update({"Authorization": f"Bearer {token}"})
-
-        print("DEBUG: Headers enviados:", session.headers)
-        print("DEBUG: Payload enviado:", payload)
-
-        # Tenta o envio. Se a SEFAZ retornar 403 por conflito de registro existente, 
-        # o endpoint pode exigir PUT em vez de POST dependendo da regra da API.
-        response = session.post(URL_FINAL, json=payload, timeout=(10, 30))
-        
-        sucesso = response.status_code in [200, 201]
-        return sucesso, json.dumps(payload), response.text
+        # Se retornou com sucesso
+        return True, json.dumps(payload), json.dumps(resposta) if isinstance(resposta, (dict, list)) else str(resposta)
 
     except Exception as e:
         return False, None, str(e)

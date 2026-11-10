@@ -1,7 +1,12 @@
+# -*- coding: utf-8 -*-
 import streamlit as st
 import requests
+import urllib3
 
-# 1. Constantes de Autenticação
+# Desabilita avisos de SSL se necessário
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
+# 1. Constantes de Autenticação (Banco do Brasil)
 BASIC_AUTH = "ZXlKcFpDSTZJakJpT0dWa05EQXROVEJsWXkwMFpERmlMVGxsWkdZdFpUWmxNaUlzSW1OdlpHbG5iMUIxWW14cFkyRmtiM0lpT2pBc0ltTnZaR2xuYjFOdlpuUjNZWEpsSWpveE9UZzROVFVzSW5ObGNYVmxibU5wWVd4SmJuTjBZV3hoWTJGdklqb3hmUTpleUpwWkNJNklqZzVOalpqTlRNdE1EZzFNeTAwTXpReExUa3lZMlF0WVdJMk16Z3lNMlJoWkdReE1ERXhPR0psT0NJc0ltTnZaR2xuYjFCMVlteHBZMkZrYjNJaU9qQXNJbU52WkdsbmIxTnZablIzWVhKbElqb3hPVGc0TlRVc0luTmxjWFZsYm1OcFlXeEpibk4wWVd4aFkyRnZJam94TENKelpYRjFaVzVqYVdGc1EzSmxaR1Z1WTJsaGJDSTZNU3dpWVcxaWFXVnVkR1VpT2lKb2IyMXZiRzluWVdOaGJ5SXNJbWxoZENJNk1UYzRNelV6T0RNek56TTNOWDA="
 DEVELOPER_KEY = "c17de8d857e54c9da66d5a0581040039"
 
@@ -29,24 +34,30 @@ def obter_token():
         'Content-Type': 'application/x-www-form-urlencoded'
     }
     payload = {'grant_type': 'client_credentials', 'scope': 'validacao-contas.info'}
-    response = requests.post(TOKEN_URL, data=payload, headers=headers)
-    if response.status_code == 200:
-        return response.json().get('access_token')
-    else:
-        st.error(f"Erro na autenticação: {response.status_code}")
-        st.text(f"Detalhe do erro: {response.text}")
+    
+    try:
+        session = requests.Session()
+        session.verify = False
+        response = session.post(TOKEN_URL, data=payload, headers=headers, timeout=(10, 20))
+        
+        if response.status_code == 200:
+            return response.json().get('access_token')
+        else:
+            st.error(f"Erro na autenticação BB: {response.status_code}")
+            st.text(f"Detalhe do erro: {response.text}")
+            return None
+    except Exception as e:
+        st.error(f"Erro de conexão ao obter token do BB: {str(e)}")
         return None
 
-import streamlit as st
-import requests
-
-# ... (Mantenha as constantes e a lista DADOS_TESTE_BB iguais)
-
-def render(conn):
-    st.subheader("🔍 Validação de Contas - Auditoria de Retorno")
+def render(conn, *args, **kwargs):
+    st.subheader("🔍 Validação de Contas - Auditoria de Retorno (Banco do Brasil)")
     
-    idx = st.selectbox("Escolha um cenário de teste:", range(len(DADOS_TESTE_BB)), 
-                       format_func=lambda i: f"CPF: {DADOS_TESTE_BB[i]['cpf']} | Ag: {DADOS_TESTE_BB[i]['agencia']} Cc: {DADOS_TESTE_BB[i]['conta']}")
+    idx = st.selectbox(
+        "Escolha um cenário de teste:", 
+        range(len(DADOS_TESTE_BB)), 
+        format_func=lambda i: f"CPF: {DADOS_TESTE_BB[i]['cpf']} | Ag: {DADOS_TESTE_BB[i]['agencia']} Cc: {DADOS_TESTE_BB[i]['conta']}"
+    )
     
     with st.form("form_bb"):
         agencia = st.text_input("Agência:", value=DADOS_TESTE_BB[idx]['agencia'])
@@ -55,34 +66,37 @@ def render(conn):
         submit = st.form_submit_button("Consultar")
 
     if submit:
-        token = obter_token()
-        if token:
-            headers = {
-                'Authorization': f'Bearer {token}',
-                'gw-dev-app-key': DEVELOPER_KEY,
-                'Content-Type': 'application/json'
-            }
-            url = f"{BASE_URL}/{agencia}-{conta}/situacao"
-            try:
-                resp = requests.get(url, headers=headers, params={'cpfCnpj': cpf_cnpj})
-                
-                # Exibição de todo o conteúdo da resposta
-                st.write(f"### Status Code: {resp.status_code}")
-                
-                if resp.status_code == 200:
-                    st.success("Resposta completa recebida:")
-                    # Exibe o JSON bruto para você mapear todos os campos disponíveis
-                    st.json(resp.json())
+        with st.spinner("Autenticando e consultando na API do Banco do Brasil..."):
+            token = obter_token()
+            if token:
+                headers = {
+                    'Authorization': f'Bearer {token}',
+                    'gw-dev-app-key': DEVELOPER_KEY,
+                    'Content-Type': 'application/json'
+                }
+                url = f"{BASE_URL}/{agencia}-{conta}/situacao"
+                try:
+                    session = requests.Session()
+                    session.verify = False
+                    resp = session.get(url, headers=headers, params={'cpfCnpj': cpf_cnpj}, timeout=(10, 20))
                     
-                    # Debug: Verifique se existe algum campo que não estamos vendo
-                    dados = resp.json()
-                    st.write("---")
-                    st.write("Campos disponíveis no JSON:")
-                    st.write(list(dados.keys()))
-                else:
-                    st.error("Erro na requisição:")
-                    st.json(resp.json())
+                    st.write(f"### Status Code: {resp.status_code}")
                     
-            except Exception as e:
-                st.error(f"Erro na conexão: {str(e)}")
+                    if resp.status_code == 200:
+                        st.success("Resposta completa recebida:")
+                        st.json(resp.json())
+                        
+                        dados = resp.json()
+                        st.write("---")
+                        st.write("Campos disponíveis no JSON:")
+                        st.write(list(dados.keys()))
+                    else:
+                        st.error("Erro na requisição:")
+                        try:
+                            st.json(resp.json())
+                        except Exception:
+                            st.text(resp.text)
+                        
+                except Exception as e:
+                    st.error(f"Erro na conexão com a API do BB: {str(e)}")
 

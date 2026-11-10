@@ -1,39 +1,17 @@
 # -*- coding: utf-8 -*-
 import streamlit as st
-import requests
 import pandas as pd
-import urllib3
 from datetime import datetime
-
-# Desabilita avisos de SSL (mesmo padrão do SIAFE)
-urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+from sefaz_client import requisitar_sefaz
 
 def consultar_inconsistencia_sefaz(ano, mes):
-    # Recupera credenciais e URL base do secrets
-    usuario = st.secrets["sefaz"]["SIAFE_CPF"]
-    senha = st.secrets["sefaz"]["SIAFE_SENHA"]
-    BASE_URL = st.secrets["sefaz"]["BASE_URL"]
-
+    # Endpoint de inconsistências da folha de pagamento na SEFAZ
+    endpoint = f"folha-pagamento/inconsistencia-pag/{ano}/{mes}"
+    
     try:
-        session = requests.Session()
-        session.verify = False
-        session.headers.update({"Content-Type": "application/json"})
-
-        # 1. Autenticação na API
-        payload_auth = {"usuario": usuario, "senha": senha}
-        r_auth = session.post(f"{BASE_URL}/auth", json=payload_auth, timeout=10)
-        r_auth.raise_for_status()
-
-        token = r_auth.json().get("token")
-        session.headers.update({"Authorization": f"Bearer {token}"})
-
-        # 2. Chamada ao endpoint de inconsistências
-        url = f"{BASE_URL}/folha-pagamento/inconsistencia-pag/{ano}/{mes}"
-        r = session.get(url, timeout=15)
-        r.raise_for_status()
-
-        return r.json()
-
+        # Utiliza parâmetros nomeados para evitar conflitos na assinatura da função
+        resultado = requisitar_sefaz(endpoint=endpoint, metodo="GET")
+        return resultado
     except Exception as e:
         return f"Erro na API (Status/Falha): {str(e)}"
 
@@ -50,6 +28,16 @@ def renderizar_inconsistencia_sefaz(ano, mes, auth_ui):
     if st.button("Consultar Inconsistências na SEFAZ", type="primary"):
         with st.spinner(f"Buscando dados na SEFAZ para {mes:02d}/{ano}..."):
             data = consultar_inconsistencia_sefaz(ano, mes)
+
+            # Validação unificada de retorno com erro do sefaz_client
+            if isinstance(data, dict) and data.get("erro"):
+                err_msg = data.get("mensagem", "Erro desconhecido na API")
+                perfil_usuario = st.session_state.get("perfil_usuario")
+                if perfil_usuario in ['a', 'g']:
+                    st.error(f"⚠️ {err_msg}")
+                else:
+                    st.warning("⚠️ O serviço de integração SEFAZ está temporariamente indisponível. Por favor, contate o suporte técnico.")
+                return
 
             if isinstance(data, list):
                 if data:
@@ -92,3 +80,4 @@ def renderizar_inconsistencia_sefaz(ano, mes, auth_ui):
 def render(conn, ano, mes, meses_lista=None, *args, **kwargs):
     import auth_ui
     renderizar_inconsistencia_sefaz(int(ano), int(mes), auth_ui)
+

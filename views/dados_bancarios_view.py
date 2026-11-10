@@ -3,9 +3,14 @@ from datetime import datetime
 import re
 import time
 import pandas as pd
-import requests
 import streamlit as st
 import urllib3
+import sys
+import os
+
+# Adiciona a raiz do projeto ao path para garantir a importação correta do sefaz_client
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+from sefaz_client import requisitar_sefaz
 
 # Importações necessárias para o novo menu plano
 import auth_ui
@@ -109,11 +114,10 @@ def formatar_exibicao_conta(valor):
     return f"⚠️ {val_limpo}"
 
 def consultar_credor_sefaz_individual(ano, cpf_ou_credor, matricula_para_conferir):
+    """
+    Consulta o credor individualmente utilizando o sefaz_client padronizado (requisitar_sefaz).
+    """
     try:
-        usuario = st.secrets["sefaz"]["SIAFE_CPF"]
-        senha = st.secrets["sefaz"]["SIAFE_SENHA"]
-        BASE_URL = st.secrets["sefaz"]["BASE_URL"]
-
         cpf_limpo = re.sub(r"\D", "", str(cpf_ou_credor)).zfill(11)
         matricula_limpa = re.sub(
             r"\D", "", str(matricula_para_conferir).split(".")[0]
@@ -122,66 +126,52 @@ def consultar_credor_sefaz_individual(ano, cpf_ou_credor, matricula_para_conferi
         if not cpf_limpo:
             return "CPF Inválido"
 
-        session = requests.Session()
-        session.verify = False
+        endpoint = f"apoio-geral/credor/{ano}/{cpf_limpo}"
         
-        # Adicionando os mesmos headers validados no curl e no consulta_credor_view
-        session.headers.update({
-            "Content-Type": "application/json",
-            "Accept": "application/json, text/plain, */*",
-            "User-Agent": "curl/7.29.0"
-        })
+        # Utiliza o cliente centralizado sefaz_client
+        data = requisitar_sefaz("GET", endpoint)
 
-        payload_auth = {"usuario": usuario, "senha": senha}
-        r_auth = session.post(f"{BASE_URL}/auth", json=payload_auth, timeout=(10, 20))
-        r_auth.raise_for_status()
-
-        res_json = r_auth.json()
-        token = res_json.get("token")
-        
-        if not token:
-            return "ERRO API (Token Nulo)"
-
-        session.headers.update({"Authorization": f"Bearer {token}"})
-
-        url = f"{BASE_URL}/apoio-geral/credor/{ano}/{cpf_limpo}"
-
-        try:
-            r = session.get(url, timeout=(10, 30))
-        except requests.exceptions.Timeout:
-            return "ERRO TIMEOUT"
-        except requests.exceptions.ConnectionError:
-            return "ERRO CONEXÃO"
-
-        if r.status_code == 200:
-            data = r.json()
-            if isinstance(data, dict):
-                dados_bancarios = data.get(
-                    "dadosBancarios", data.get("domiciliosBancario", [])
-                )
-
-                existe_matricula = False
-                for v in dados_bancarios:
-                    raw_val = str(v.get("idFuncional", v.get("matricula", "")))
-                    partes = raw_val.split(";")
-                    for p in partes:
-                        if re.sub(r"\D", "", p) == matricula_limpa:
-                            existe_matricula = True
-                            break
-                    if existe_matricula:
-                        break
-
-                if existe_matricula:
-                    return "✅ MATRÍCULA ATIVA"
-                else:
-                    return "⚠️ MATRÍCULA NÃO ENCONTRADA"
+        # Tratamento do dicionário de erro retornado pelo sefaz_client
+        if isinstance(data, dict) and data.get("erro"):
+            tipo_erro = data.get("tipo")
+            if tipo_erro == "timeout":
+                return "ERRO TIMEOUT"
+            elif tipo_erro == "conexao":
+                return "ERRO CONEXÃO"
+            elif tipo_erro == "http":
+                # Verifica se foi 404 (Não cadastrado)
+                msg = data.get("mensagem", "")
+                if "404" in msg:
+                    return "NÃO CADASTRADO"
+                return f"ERRO API (HTTP)"
             else:
-                return "NÃO CADASTRADO"
+                return f"ERRO API ({data.get('mensagem', 'Desconhecido')})"
 
-        elif r.status_code == 404:
+        if not data:
             return "NÃO CADASTRADO"
+
+        if isinstance(data, dict):
+            dados_bancarios = data.get(
+                "dadosBancarios", data.get("domiciliosBancario", [])
+            )
+
+            existe_matricula = False
+            for v in dados_bancarios:
+                raw_val = str(v.get("idFuncional", v.get("matricula", "")))
+                partes = raw_val.split(";")
+                for p in partes:
+                    if re.sub(r"\D", "", p) == matricula_limpa:
+                        existe_matricula = True
+                        break
+                if existe_matricula:
+                    break
+
+            if existe_matricula:
+                return "✅ MATRÍCULA ATIVA"
+            else:
+                return "⚠️ MATRÍCULA NÃO ENCONTRADA"
         else:
-            return f"ERRO API ({r.status_code})"
+            return "NÃO CADASTRADO"
 
     except Exception as e:
         print(f"DEBUG EXCEPTION: {str(e)}")
