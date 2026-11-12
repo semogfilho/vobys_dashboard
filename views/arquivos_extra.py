@@ -671,7 +671,7 @@ def render(conn, ano, mes, meses_lista=None):
             st.session_state[cache_key_sup] = buscar_lista_numeros_suplementares(conn, ano, mes)
         opcoes_sup = st.session_state[cache_key_sup]
 
-        # Lista unificada combinando Ordinária '001' + opções suplementares disponíveis
+        # Lista unificada absoluta contendo TODOS os códigos possíveis em sequência (001 + suplementares)
         lista_opcoes = ["001"] + [str(s) for s in opcoes_sup] if opcoes_sup else ["001"]
 
         state_selecao_key = f"tipo_ou_sup_selecionado_{ano}_{mes}"
@@ -685,58 +685,64 @@ def render(conn, ano, mes, meses_lista=None):
 
         idx_atual = lista_opcoes.index(current_val)
 
+        # Cabeçalho visual unificado indicando as categorias
         st.markdown("""
         <style>
-            .unified-table {
+            .unified-header-box {
+                display: flex;
                 border: 1px solid rgba(150, 150, 150, 0.25);
-                border-radius: 8px;
-                overflow: hidden;
-                background: #ffffff;
-                box-shadow: 0 1px 3px rgba(0,0,0,0.02);
-                margin-top: 2px;
-                margin-bottom: 10px;
-            }
-            .unified-header {
-                display: grid;
-                grid-template-columns: 1fr 3fr;
+                border-bottom: none;
+                border-top-left-radius: 6px;
+                border-top-right-radius: 6px;
                 background-color: #f8f9fa;
-                border-bottom: 1px solid rgba(150, 150, 150, 0.2);
                 font-size: 11px;
                 font-weight: 700;
                 color: #555;
                 text-transform: uppercase;
                 letter-spacing: 0.5px;
-                text-align: center;
             }
-            .unified-th {
+            .header-ord {
+                width: 90px;
                 padding: 7px 10px;
-            }
-            .unified-th:first-child {
+                text-align: center;
                 border-right: 1px solid rgba(150, 150, 150, 0.2);
             }
+            .header-sup {
+                flex-grow: 1;
+                padding: 7px 10px;
+                text-align: center;
+            }
+            .radio-wrapper {
+                border: 1px solid rgba(150, 150, 150, 0.25);
+                border-bottom-left-radius: 6px;
+                border-bottom-right-radius: 6px;
+                padding: 6px 12px;
+                background: #ffffff;
+                margin-bottom: 12px;
+            }
         </style>
-        <div class="unified-table">
-            <div class="unified-header">
-                <div class="unified-th">Ordinária</div>
-                <div class="unified-th">Suplementar</div>
-            </div>
+        <div class="unified-header-box">
+            <div class="header-ord">Ordinária</div>
+            <div class="header-sup">Suplementar</div>
         </div>
         """, unsafe_allow_html=True)
 
-        # Único st.radio unificado garantindo exclusão mútua nativa e fluida
-        sel_unificado = st.radio(
-            "Tipo de Folha",
+        # Único componente st.radio contendo todas as opções da tela, garantindo exclusão mútua perfeita
+        st.markdown('<div class="radio-wrapper">', unsafe_allow_html=True)
+        sel_unico = st.radio(
+            "Seleção de Tipo de Folha",
             options=lista_opcoes,
             index=idx_atual,
             horizontal=True,
             label_visibility="collapsed",
-            key=f"radio_unificado_{ano}_{mes}"
+            key=f"radio_unico_geral_{ano}_{mes}"
         )
+        st.markdown('</div>', unsafe_allow_html=True)
 
-        if sel_unificado:
-            st.session_state[state_selecao_key] = sel_unificado
+        if sel_unico:
+            st.session_state[state_selecao_key] = sel_unico
 
-        # Define as variáveis globais finais com base na única seleção ativa
+        # Definição final das variáveis globais com base na única seleção ativa
         if st.session_state[state_selecao_key] == "001":
             tipo_folha_global = "Ordinária"
             numero_suplementar = "001"
