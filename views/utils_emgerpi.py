@@ -10,7 +10,6 @@ except ImportError:
         return "SELECT json_data FROM dual"
 
 def executar_query_emgerpi(conn, ano, mes, codigo_externo, executar_query_func):
-    # Passa o codigo_externo para a query filtrar na origem
     sql_json = get_query_json_patronal_emgerpi(ano, mes, codigo_externo)
     try:
         df_res = executar_query_func(conn, sql_json, {"ano": ano, "mes": mes, "codigo_externo": codigo_externo})
@@ -58,10 +57,13 @@ def processar_dados_emgerpi(json_retorno, codigo_externo):
         return None, pd.DataFrame()
     
     try:
-        lista_lotes = []
-        
+        target_code = str(codigo_externo).strip().zfill(3)
+        todos_pagamentos = []
+        lote_referencia = None
+
+        # Processa cada linha de forma estritamente isolada pelo seu ID de origem
         for item in json_retorno:
-            id_origem = item.get("id_origem", "N/D")
+            id_origem = str(item.get("id_origem", "N/D"))
             conteudo = item.get("json_content")
 
             if not conteudo:
@@ -71,52 +73,50 @@ def processar_dados_emgerpi(json_retorno, codigo_externo):
                 conteudo = conteudo.decode('utf-8', errors='ignore')
 
             obj = json.loads(conteudo) if isinstance(conteudo, str) else conteudo
-            if isinstance(obj, list):
-                for sub_obj in obj:
-                    if isinstance(sub_obj, dict):
-                        lista_lotes.append((id_origem, sub_obj))
-            elif isinstance(obj, dict):
-                lista_lotes.append((id_origem, obj))
+            lotes_lista = obj if isinstance(obj, list) else [obj]
 
-        target_code = str(codigo_externo).strip().zfill(3)
+            for lote in lotes_lista:
+                if isinstance(lote, dict):
+                    raw_ext = lote.get("codigoExterno", "001")
+                    ext_code = str(raw_ext).strip().zfill(3)
+                    
+                    if ext_code == target_code:
+                        if lote_referencia is None:
+                            lote_referencia = lote # Guarda a estrutura base para o arquivo JSON final
 
-        lote_filtrado = None
-        id_origem_encontrado = "N/D"
+                        pagamentos = lote.get("pagamentos", [])
+                        for pag in pagamentos:
+                            if isinstance(pag, dict):
+                                pag_copia = dict(pag)
+                                # Vincula o ID correto e individual do evento a cada linha de pagamento
+                                pag_copia['idSiafeEvento'] = id_origem
+                                pag_copia['codigoExterno'] = target_code
+                                pag_copia['alvoSelecionado'] = target_code
+                                todos_pagamentos.append(pag_copia)
 
-        for id_orig, lote in lista_lotes:
-            if isinstance(lote, dict):
-                raw_ext = lote.get("codigoExterno", "001")
-                ext_code = str(raw_ext).strip().zfill(3)
-                if ext_code == target_code:
-                    lote_filtrado = lote
-                    id_origem_encontrado = id_orig
-                    break
-
-        if not lote_filtrado and len(lista_lotes) == 1:
-            id_origem_encontrado, lote_filtrado = lista_lotes[0]
-
-        if lote_filtrado:
-            lote_limpo = json.loads(json.dumps(lote_filtrado))
+        if lote_referencia:
+            lote_limpo = json.loads(json.dumps(lote_referencia))
             lote_limpo.pop("_id_arquivo_origem", None)
             lote_limpo.pop("__id_origem_temp", None)
-
             lote_limpo["codigoExterno"] = target_code
-            json_str = json.dumps(lote_limpo, ensure_ascii=False, indent=2)
             
-            pagamentos = lote_limpo.get("pagamentos", [])
-            df = pd.json_normalize(pagamentos)
+            # Reconstrói a lista de pagamentos no JSON unificando todos os itens mapeados com seus respectivos IDs
+            lote_limpo["pagamentos"] = []
+            for p in todos_pagamentos:
+                p_limpo = {k: v for k, v in p.items() if k not in ['idSiafeEvento', 'codigoExterno', 'alvoSelecionado']}
+                lote_limpo["pagamentos"].append(p_limpo)
+
+            json_str = json.dumps(lote_limpo, ensure_ascii=False, indent=2)
+            df = pd.DataFrame(todos_pagamentos)
             
             if not df.empty:
-                df['idSiafeEvento'] = id_origem_encontrado
-                df['codigoExterno'] = target_code
-                df['alvoSelecionado'] = target_code
-                
-                cols = ['idSiafeEvento', 'codigoExterno', 'alvoSelecionado'] + [c for c in df.columns if c not in ['idSiafeEvento', 'codigoExterno', 'alvoSelecionado']]
-                df = df[cols]
+                cols_principais = ['idSiafeEvento', 'codigoExterno', 'alvoSelecionado']
+                outras_cols = [c for c in df.columns if c not in cols_principais]
+                df = df[cols_principais + outras_cols]
 
             return json_str, df
     except Exception as e:
-        st.error(f"Erro ao processar JSON: {str(e)}")
+        st.error(f"Erro ao processar JSON EMGERPI: {str(e)}")
         pass
     
     return None, pd.DataFrame()

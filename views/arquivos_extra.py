@@ -7,14 +7,13 @@ import pandas as pd
 import sys
 import os
 
-# Adiciona a raiz do projeto ao path para garantir a importação correta do sefaz_client
+# Adiciona a raiz do projeto ao path para garantir a importação correta
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-# Importações necessárias para o auth_ui e cliente SEFAZ
 import auth_ui
 from sefaz_client import requisitar_sefaz
 
-# Importação das funções específicas do EMGERPI
+# Importações dos módulos específicos de cada órgão (EMGERPI e Órgãos)
 try:
     from queries import get_query_json_patronal_emgerpi
 except ImportError:
@@ -27,44 +26,97 @@ except ImportError:
     executar_query_emgerpi = None
     processar_dados_emgerpi = None
 
+try:
+    from utils_orgaos import get_sql_seduc_extra, get_sql_funprev, get_sql_seduc_011, get_sql_seduc_914
+except ImportError:
+    get_sql_seduc_extra = None
+    get_sql_funprev = None
+    get_sql_seduc_011 = None
+    get_sql_seduc_914 = None
 
-# --- FUNÇÕES AUXILIARES DE CONVERSÃO E BANCO ---
+
+# --- FUNÇÕES AUXILIARES DE BANCO E CONVERSÃO GERAL ---
+
+def executar_query(conn, query, params):
+    cursor = conn.cursor()
+    params_clean = {}
+    for k, v in params.items():
+        if k in ['mes', 'ano']:
+            try:
+                params_clean[k] = int(v)
+            except (ValueError, TypeError):
+                params_clean[k] = v
+        else:
+            params_clean[k] = v
+
+    try:
+        cursor.execute(query, params_clean)
+    except Exception as e:
+        if "DPY-4008" in str(e) or "bind placeholder" in str(e):
+            try:
+                query_formatada = query
+                for k, v in params_clean.items():
+                    query_formatada = query_formatada.replace(f":{k}", str(v))
+                cursor.execute(query_formatada)
+            except Exception as ex:
+                cursor.close()
+                raise ex
+        else:
+            cursor.close()
+            raise e
+
+    columns = [col[0] for col in cursor.description] if cursor.description else []
+    data = cursor.fetchall() if cursor.description else []
+    cursor.close()
+    return pd.DataFrame(data, columns=columns)
+
+
+def executar_query_emgerpi_fallback(conn, ano, mes, codigo_externo="001"):
+    sql_json = get_query_json_patronal_emgerpi(ano, mes, codigo_externo)
+    try:
+        cursor = conn.cursor()
+        cursor.execute(sql_json)
+        rows = cursor.fetchall()
+        cursor.close()
+        if rows:
+            resultados = []
+            for i, row in enumerate(rows):
+                val_id = row[0] if len(row) > 1 else f"Linha_{i}"
+                val_json = row[1] if len(row) > 1 else row[0]
+                if val_json is not None:
+                    resultados.append({
+                        "id_origem": str(val_id),
+                        "json_content": val_json
+                    })
+            return resultados
+    except Exception as e:
+        st.error(f"Erro no fallback EMGERPI: {str(e)}")
+    return None
+
 
 def buscar_lista_numeros_suplementares(conn, ano, mes):
     if conn is None:
         return []
 
+    encontrados = set()
     queries_busca = [
         """
         SELECT DISTINCT TO_NUMBER(REGEXP_SUBSTR(FO.TIPO_ARQUIVO, '^\d+$')) AS SUP
         FROM SW_SEDUC.FOLHA FO
-        WHERE FO.ANO = :ano
-          AND FO.MES = :mes
-          AND FO.ID_TIPO_FOLHA NOT IN (1000000)
-          AND FO.TIPO_ARQUIVO IS NOT NULL
-          AND FO.TIPO_ARQUIVO <> '001'
+        WHERE FO.ANO = :ano AND FO.MES = :mes AND FO.ID_TIPO_FOLHA NOT IN (1000000) AND FO.TIPO_ARQUIVO IS NOT NULL AND FO.TIPO_ARQUIVO <> '001'
         """,
         """
         SELECT DISTINCT TO_NUMBER(REGEXP_SUBSTR(FO.TIPO_ARQUIVO, '^\d+$')) AS SUP
         FROM SW_FUNPREV.FOLHA FO
-        WHERE FO.ANO = :ano
-          AND FO.MES = :mes
-          AND FO.ID_TIPO_FOLHA NOT IN (1000000)
-          AND FO.TIPO_ARQUIVO IS NOT NULL
-          AND FO.TIPO_ARQUIVO <> '001'
+        WHERE FO.ANO = :ano AND FO.MES = :mes AND FO.ID_TIPO_FOLHA NOT IN (1000000) AND FO.TIPO_ARQUIVO IS NOT NULL AND FO.TIPO_ARQUIVO <> '001'
         """,
         """
         SELECT DISTINCT TO_NUMBER(REGEXP_SUBSTR(FO.TIPO_ARQUIVO, '^\d+$')) AS SUP
         FROM SW_EMGERPI.FOLHA FO
-        WHERE FO.ANO = :ano
-          AND FO.MES = :mes
-          AND FO.ID_TIPO_FOLHA NOT IN (1000000)
-          AND FO.TIPO_ARQUIVO IS NOT NULL
-          AND FO.TIPO_ARQUIVO <> '001'
+        WHERE FO.ANO = :ano AND FO.MES = :mes AND FO.ID_TIPO_FOLHA NOT IN (1000000) AND FO.TIPO_ARQUIVO IS NOT NULL AND FO.TIPO_ARQUIVO <> '001'
         """
     ]
 
-    encontrados = set()
     for q in queries_busca:
         try:
             df_res = executar_query(conn, q, {"ano": ano, "mes": mes})
@@ -79,15 +131,13 @@ def buscar_lista_numeros_suplementares(conn, ano, mes):
         except Exception:
             continue
 
-    # Varredura completa em todos os JSONs de patronal da EMGERPI para o mês/ano
     try:
         sql_json_base = get_query_json_patronal_emgerpi(ano, mes)
-        sql_busca_geral = sql_json_base
-        if "AND" in sql_busca_geral.upper() and "CODIGO_EXTERNO" in sql_busca_geral.upper():
+        if "AND" in sql_json_base.upper() and "CODIGO_EXTERNO" in sql_json_base.upper():
             import re
-            sql_busca_geral = re.sub(r"AND\s+.*CODIGO_EXTERNO.*?(?=AND|ORDER|GROUP|$)", "", sql_busca_geral, flags=re.IGNORECASE)
+            sql_json_base = re.sub(r"AND\s+.*CODIGO_EXTERNO.*?(?=AND|ORDER|GROUP|$)", "", sql_json_base, flags=re.IGNORECASE)
 
-        df_emgerpi = executar_query(conn, sql_busca_geral, {"ano": ano, "mes": mes})
+        df_emgerpi = executar_query(conn, sql_json_base, {"ano": ano, "mes": mes})
         if not df_emgerpi.empty:
             for col in df_emgerpi.columns:
                 for val in df_emgerpi[col].dropna():
@@ -153,75 +203,12 @@ def converter_para_csv(df):
     return df.to_csv(index=False, sep=';', encoding='utf-8-sig').encode('utf-8-sig')
 
 
-def executar_query(conn, query, params):
-    cursor = conn.cursor()
-    params_clean = {}
-    for k, v in params.items():
-        if k in ['mes', 'ano']:
-            try:
-                params_clean[k] = int(v)
-            except (ValueError, TypeError):
-                params_clean[k] = v
-        else:
-            params_clean[k] = v
-
-    try:
-        cursor.execute(query, params_clean)
-    except Exception as e:
-        if "DPY-4008" in str(e) or "bind placeholder" in str(e):
-            try:
-                query_formatada = query
-                for k, v in params_clean.items():
-                    query_formatada = query_formatada.replace(f":{k}", str(v))
-                cursor.execute(query_formatada)
-            except Exception as ex:
-                cursor.close()
-                raise ex
-        else:
-            cursor.close()
-            raise e
-
-    columns = [col[0] for col in cursor.description] if cursor.description else []
-    data = cursor.fetchall() if cursor.description else []
-    cursor.close()
-    return pd.DataFrame(data, columns=columns)
-
-
-def executar_query_emgerpi_fallback(conn, ano, mes, codigo_externo="001"):
-    sql_json = get_query_json_patronal_emgerpi(ano, mes, codigo_externo)
-    cursor = conn.cursor()
-    cursor.execute(sql_json)
-    rows = cursor.fetchall()
-    cursor.close()
-    if rows:
-        resultados = []
-        for i, row in enumerate(rows):
-            val_id = row[0] if len(row) > 1 else f"Linha_{i}"
-            val_json = row[1] if len(row) > 1 else row[0]
-            if val_json is not None:
-                resultados.append({
-                    "id_origem": str(val_id),
-                    "json_content": val_json
-                })
-        return resultados
-    return None
-
-
-# --- INTEGRAÇÃO COM A API SEFAZ-PI (VIA sefaz_client) ---
-
 def transmitir_para_sefaz(payload_dados, ano):
     try:
         if payload_dados is None:
             return False, None, "Erro: O payload de dados está vazio ou nulo."
 
-        if isinstance(payload_dados, str):
-            try:
-                payload_obj = json.loads(payload_dados)
-            except json.JSONDecodeError as jde:
-                return False, None, f"Erro ao converter string JSON: {str(jde)}"
-        else:
-            payload_obj = payload_dados
-
+        payload_obj = json.loads(payload_dados) if isinstance(payload_dados, str) else payload_dados
         endpoint = f"folha-pagamento/contabilizacao-folha-pagamento/{ano}"
         resultado = requisitar_sefaz("POST", endpoint, payload=payload_obj)
 
@@ -234,7 +221,6 @@ def transmitir_para_sefaz(payload_dados, ano):
             return False, json.dumps(payload_obj, ensure_ascii=False), err_msg
 
         return True, json.dumps(payload_obj, ensure_ascii=False), resultado
-
     except Exception as e:
         return False, None, str(e)
 
@@ -242,7 +228,6 @@ def transmitir_para_sefaz(payload_dados, ano):
 def consultar_recibo_sefaz(ano, mes, cod_unidade, cod_relatorio, codigo_externo):
     try:
         tipo_folha_val = 8 if str(cod_unidade) == "120" else 9
-        
         payload_consulta = {
             "mes": int(mes),
             "competencia": f"{int(mes):02d}/{ano}",
@@ -251,7 +236,6 @@ def consultar_recibo_sefaz(ano, mes, cod_unidade, cod_relatorio, codigo_externo)
             "codigoExterno": str(codigo_externo),
             "codigoRelatorio": str(cod_relatorio)
         }
-
         endpoint = f"folha-pagamento/contabilizacao/{ano}"
         resultado = requisitar_sefaz("POST", endpoint, payload=payload_consulta)
 
@@ -264,12 +248,11 @@ def consultar_recibo_sefaz(ano, mes, cod_unidade, cod_relatorio, codigo_externo)
             return False, err_msg
 
         return True, resultado
-
     except Exception as e:
         return False, str(e)
 
 
-# --- BLOCO DE RENDERIZAÇÃO DA INTERFACE ---
+# --- BLOCO MESTRE DE RENDERIZAÇÃO DE INTERFACE ---
 
 def render_bloco_processamento(
     conn,
@@ -286,10 +269,7 @@ def render_bloco_processamento(
 ):
     if seletor_folha_global == "Suplementar":
         num_sup_limpo = str(numero_suplementar).strip()
-        if num_sup_limpo.isdigit() and int(num_sup_limpo) >= 2:
-            codigo_externo = num_sup_limpo.zfill(3)
-        else:
-            codigo_externo = "002" 
+        codigo_externo = num_sup_limpo.zfill(3) if num_sup_limpo.isdigit() and int(num_sup_limpo) >= 2 else "002"
         if callable(sql):
             sql = sql("suplementar", codigo_externo)
     else:
@@ -300,12 +280,10 @@ def render_bloco_processamento(
     if cod_unidade and cod_relatorio:
         tipo_folha_val = 8 if str(cod_unidade) == "120" else 9
         nome_arquivo_base = f"FP_{cod_unidade}_{tipo_folha_val}_{ano}{int(mes):02d}_{codigo_externo}_{cod_relatorio}"
-        titulo_exibicao = f"{titulo} - {nome_arquivo_base}"
     else:
         nome_arquivo_base = f"PATRONAL_{id_chave.upper()}_{ano}{int(mes):02d}_{codigo_externo}"
-        titulo_exibicao = f"{titulo} - {nome_arquivo_base}"
 
-    st.subheader(titulo_exibicao)
+    st.subheader(f"{titulo} - {nome_arquivo_base}")
     
     data_key = f"df_extra_{id_chave}_{ano}_{mes}_{codigo_externo}"
     json_raw_key = f"json_raw_{id_chave}_{ano}_{mes}_{codigo_externo}"
@@ -379,46 +357,32 @@ def render_bloco_processamento(
         )
 
         if col_enviar.button(f"🚀 Enviar Arquivo", key=f"btn_enviar_{id_chave}_{codigo_externo}", type="primary"):
-            if auth_ui and hasattr(auth_ui, "verificar_credenciais_sefaz"):
-                if not auth_ui.verificar_credenciais_sefaz():
-                    st.stop()
-            else:
-                if not st.session_state.get("sefaz_auth", False):
-                    st.warning("⚠️ Credenciais da SEFAZ não válidas. Por favor, autentique-se.")
-                    st.stop()
+            if auth_ui and hasattr(auth_ui, "verificar_credenciais_sefaz") and not auth_ui.verificar_credenciais_sefaz():
+                st.stop()
+            elif not auth_ui and not st.session_state.get("sefaz_auth", False):
+                st.warning("⚠️ Credenciais da SEFAZ não válidas. Autentique-se.")
+                st.stop()
 
             st.session_state[flag_envio_key] = True
             st.rerun()
 
         if st.session_state.get(flag_envio_key):
             payload_para_envio = json_raw if json_raw else df_gerado
-            if payload_para_envio is None:
-                st.error("Nenhum dado válido para envio.")
+            with st.spinner("A transmitir lote para a SEFAZ..."):
+                sucesso, json_str, retorno = transmitir_para_sefaz(payload_para_envio, ano)
                 st.session_state[flag_envio_key] = False
-            else:
-                with st.spinner("A transmitir lote para a SEFAZ..."):
-                    sucesso, json_str, retorno = transmitir_para_sefaz(payload_para_envio, ano)
-                    st.session_state[flag_envio_key] = False
-                    st.session_state[retorno_key] = retorno
-
-                    if sucesso:
-                        st.success("Transmissão efetuada com sucesso!")
-                        st.rerun()
-                    else:
-                        if any(err in str(retorno) for err in ["401", "403", "Unauthorized"]):
-                            st.session_state["sefaz_auth"] = False
-                            st.session_state.pop("sefaz_cpf", None)
-                            st.session_state.pop("sefaz_pass", None)
-                            st.error("Sessão expirada ou credenciais inválidas. Por favor, autentique-se novamente.")
-                        else:
-                            st.error(f"Erro na transmissão: {retorno}")
+                st.session_state[retorno_key] = retorno
+                if sucesso:
+                    st.success("Transmissão efetuada com sucesso!")
+                    st.rerun()
+                else:
+                    st.error(f"Erro na transmissão: {retorno}")
 
     if st.session_state.get(flag_consulta_key):
         with st.spinner("A consultar recibo na SEFAZ..."):
             sucesso, retorno = consultar_recibo_sefaz(ano, mes, cod_unidade, cod_relatorio, codigo_externo)
             st.session_state[flag_consulta_key] = False
             st.session_state[retorno_key] = retorno  
-
             if sucesso:
                 st.success("Consulta realizada com sucesso!")
                 st.rerun()
@@ -671,7 +635,6 @@ def render(conn, ano, mes, meses_lista=None):
             st.session_state[cache_key_sup] = buscar_lista_numeros_suplementares(conn, ano, mes)
         opcoes_sup = st.session_state[cache_key_sup]
 
-        # Lista unificada absoluta contendo TODOS os códigos possíveis em sequência (001 + suplementares)
         lista_opcoes = ["001"] + [str(s) for s in opcoes_sup] if opcoes_sup else ["001"]
 
         state_selecao_key = f"tipo_ou_sup_selecionado_{ano}_{mes}"
@@ -685,50 +648,14 @@ def render(conn, ano, mes, meses_lista=None):
 
         idx_atual = lista_opcoes.index(current_val)
 
-        # Cabeçalho visual unificado indicando as categorias
         st.markdown("""
-        <style>
-            .unified-header-box {
-                display: flex;
-                border: 1px solid rgba(150, 150, 150, 0.25);
-                border-bottom: none;
-                border-top-left-radius: 6px;
-                border-top-right-radius: 6px;
-                background-color: #f8f9fa;
-                font-size: 11px;
-                font-weight: 700;
-                color: #555;
-                text-transform: uppercase;
-                letter-spacing: 0.5px;
-            }
-            .header-ord {
-                width: 90px;
-                padding: 7px 10px;
-                text-align: center;
-                border-right: 1px solid rgba(150, 150, 150, 0.2);
-            }
-            .header-sup {
-                flex-grow: 1;
-                padding: 7px 10px;
-                text-align: center;
-            }
-            .radio-wrapper {
-                border: 1px solid rgba(150, 150, 150, 0.25);
-                border-bottom-left-radius: 6px;
-                border-bottom-right-radius: 6px;
-                padding: 6px 12px;
-                background: #ffffff;
-                margin-bottom: 12px;
-            }
-        </style>
-        <div class="unified-header-box">
-            <div class="header-ord">Ordinária</div>
-            <div class="header-sup">Suplementar</div>
+        <div style="display: flex; border: 1px solid rgba(150, 150, 150, 0.25); border-bottom: none; border-top-left-radius: 6px; border-top-right-radius: 6px; background-color: #f8f9fa; font-size: 11px; font-weight: 700; color: #555; text-transform: uppercase;">
+            <div style="width: 90px; padding: 7px 10px; text-align: center; border-right: 1px solid rgba(150, 150, 150, 0.2);">Ordinária</div>
+            <div style="flex-grow: 1; padding: 7px 10px; text-align: center;">Suplementar</div>
         </div>
         """, unsafe_allow_html=True)
 
-        # Único componente st.radio contendo todas as opções da tela, garantindo exclusão mútua perfeita
-        st.markdown('<div class="radio-wrapper">', unsafe_allow_html=True)
+        st.markdown('<div style="border: 1px solid rgba(150, 150, 150, 0.25); border-bottom-left-radius: 6px; border-bottom-right-radius: 6px; padding: 6px 12px; background: #ffffff; margin-bottom: 12px;">', unsafe_allow_html=True)
         sel_unico = st.radio(
             "Seleção de Tipo de Folha",
             options=lista_opcoes,
@@ -742,7 +669,6 @@ def render(conn, ano, mes, meses_lista=None):
         if sel_unico:
             st.session_state[state_selecao_key] = sel_unico
 
-        # Definição final das variáveis globais com base na única seleção ativa
         if st.session_state[state_selecao_key] == "001":
             tipo_folha_global = "Ordinária"
             numero_suplementar = "001"
@@ -750,303 +676,18 @@ def render(conn, ano, mes, meses_lista=None):
             tipo_folha_global = "Suplementar"
             numero_suplementar = st.session_state[state_selecao_key]
 
-    render_bloco_processamento(
-        conn=conn,
-        titulo="1. PATRONAL EMGERPI",
-        id_chave="emgerpi",
-        sql=None,
-        mes=mes,
-        ano=ano,
-        cod_unidade="120",
-        cod_relatorio="93",
-        auth_ui=auth_ui,
-        seletor_folha_global=tipo_folha_global,
-        numero_suplementar=numero_suplementar
-    )
-
+    # Renderização dos blocos utilizando as funções importadas do utils_orgaos e utils_emgerpi
+    render_bloco_processamento(conn, "1. PATRONAL EMGERPI", "emgerpi", None, mes, ano, "120", "93", auth_ui, tipo_folha_global, numero_suplementar)
     st.divider()
 
-    def get_sql_seduc_extra(tipo, cod_sup="002"):
-        tipo_arquivo_val = cod_sup if tipo == "suplementar" else "001"
-        condicao_tipo_folha = "S.ID_TIPO_FOLHA IN (1000000)" if tipo == "ordinaria" else "S.ID_TIPO_FOLHA NOT IN (1000000)"
-        
-        return f"""
-        SELECT 
-            CASE 
-                WHEN S.COD_RUBRICA IN (714401, 714406) THEN '963' 
-                WHEN S.COD_RUBRICA IN (714451, 714456) THEN '944' 
-            END AS RUBRICA, 
-            S.NOME_RUBRICA AS DESCRIMINACAO, 
-            CASE 
-                WHEN S.ID_REGIME IN (2, 9, 1000003) THEN 'RPPS' 
-                ELSE 'RGPS' 
-            END AS TIPO_REGIME, 
-            CASE 
-                WHEN S.ID_REGIME IN (9, 1000003) THEN 'MILITAR' 
-                ELSE 'CIVIL' 
-            END AS TIPO_VINCULO, 
-            0 AS VANTAGENS, 
-            REPLACE(TO_CHAR(SUM(S.VALOR_CALCULADO)), ',', '.') AS DESCONTOS 
-        FROM ( 
-            SELECT 
-                'SEDUC' AS ORGAO, 
-                FR.NOME_RUBRICA, 
-                FR.TIPO, 
-                FF.VALOR_CALCULADO, 
-                FR.COD_RUBRICA, 
-                FI.ID_REGIME, 
-                FC.MES, 
-                FC.ANO, 
-                FO.ID_TIPO_FOLHA, 
-                FO.TIPO_ARQUIVO, 
-                FO.ID_FONTE 
-            FROM SW_SEDUC.FOLHA_CONTRACHEQUE FC 
-            JOIN SW_SEDUC.FOLHA FO ON FO.ID_FOLHA = FC.ID_FOLHA 
-            JOIN SW_SEDUC.FUNCIONARIO_INGRESSO FI ON FI.ID_FUNCIONARIO = FC.ID_FUNCIONARIO 
-            JOIN SW_SEDUC.FOLHA_FICHA_FINANCEIRA FF ON FF.ID_FOLHA_FUNCIONARIO = FC.ID_FOLHA_FUNCIONARIO 
-            JOIN SW_PUBLICO.FOLHA_RUBRICA FR ON FR.ID_RUBRICA = FF.ID_RUBRICA 
-        ) S 
-        WHERE S.MES = :mes 
-          AND S.ANO = :ano 
-          AND {condicao_tipo_folha} 
-          AND S.TIPO_ARQUIVO = '{tipo_arquivo_val}' 
-          AND S.COD_RUBRICA IN (714401, 714406, 714451, 714456) 
-          AND S.ID_FONTE IN (1000003, 1000020, 1000021, 1000040, 1000041, 1000060, 1, 2, 3) 
-        GROUP BY S.ORGAO, S.COD_RUBRICA, S.NOME_RUBRICA, S.ID_REGIME 
-        ORDER BY S.ORGAO, S.COD_RUBRICA, S.NOME_RUBRICA, S.ID_REGIME
-        """
-
-    render_bloco_processamento(
-        conn=conn,
-        titulo="2. PATRONAL EXTRA SEDUC",
-        id_chave="seduc_extra",
-        sql=get_sql_seduc_extra,
-        mes=mes,
-        ano=ano,
-        cod_unidade="011",
-        cod_relatorio="99",
-        auth_ui=auth_ui,
-        seletor_folha_global=tipo_folha_global,
-        numero_suplementar=numero_suplementar
-    )
-
+    render_bloco_processamento(conn, "2. PATRONAL EXTRA SEDUC", "seduc_extra", get_sql_seduc_extra, mes, ano, "011", "99", auth_ui, tipo_folha_global, numero_suplementar)
     st.divider()
 
-    def get_sql_funprev(tipo, cod_sup="002"):
-        condicao_tipo_folha = "FO.ID_TIPO_FOLHA IN (1000000)" if tipo == "ordinaria" else "NOT FO.ID_TIPO_FOLHA IN (1000000)"
-        condicao_tipo_arquivo = "" if tipo == "ordinaria" else f"AND (FO.TIPO_ARQUIVO = '{cod_sup}' OR FO.TIPO_ARQUIVO IS NULL)"
-        
-        return f"""
-        SELECT 
-            RUBRICA, 
-            DESCRIMINACAO, 
-            'RPPS' AS TIPO_REGIME, 
-            CASE 
-                WHEN S.ID_REGIME IN (9, 1000003) THEN 'MILITAR' 
-                ELSE 'CIVIL' 
-            END AS TIPO_VINCULO, 
-            0 AS VANTAGENS, 
-            REPLACE(TO_CHAR(SUM(S.VALOR_CALCULADO)), ',', '.') AS DESCONTOS 
-        FROM ( 
-            SELECT 
-                CASE 
-                    WHEN FR.COD_RUBRICA IN (714470, 714475, 714480) THEN SUM(FF.VALOR_CALCULADO * -1) 
-                    ELSE SUM(FF.VALOR_CALCULADO) 
-                END AS VALOR_CALCULADO, 
-                FR.COD_RUBRICA, 
-                CASE 
-                    WHEN FO.TIPO_FOLHA_SEFAZ = 'C7' THEN '934' 
-                    ELSE '924' 
-                END AS RUBRICA, 
-                CASE 
-                    WHEN FO.TIPO_FOLHA_SEFAZ = 'C7' THEN 'PIAUIPREV - Patronal - Pensionista' 
-                    ELSE 'PIAUIPREV - Patronal - Aposentado' 
-                END AS DESCRIMINACAO, 
-                FI.ID_REGIME 
-            FROM SW_FUNPREV.FOLHA_CONTRACHEQUE FC 
-            JOIN SW_FUNPREV.FOLHA FO ON FO.ID_FOLHA = FC.ID_FOLHA 
-            JOIN SW_FUNPREV.FUNCIONARIO_INGRESSO FI ON FI.ID_FUNCIONARIO = FC.ID_FUNCIONARIO 
-            JOIN SW_FUNPREV.FOLHA_FICHA_FINANCEIRA FF ON FF.ID_FOLHA_FUNCIONARIO = FC.ID_FOLHA_FUNCIONARIO 
-            JOIN SW_PUBLICO.FOLHA_RUBRICA FR ON FR.ID_RUBRICA = FF.ID_RUBRICA 
-            WHERE FO.MES = :mes 
-              AND FO.ANO = :ano 
-              AND {condicao_tipo_folha} 
-              {condicao_tipo_arquivo}
-              AND FC.ID_PENSIONISTA IS NULL 
-              AND FC.ID_PENSIONISTA_PA IS NULL 
-              AND FR.COD_RUBRICA IN (714400, 714403, 714405, 714410, 714436, 714450, 714460, 714455, 714420, 714452, 714470, 714475, 714480) 
-            GROUP BY FO.TIPO_FOLHA_SEFAZ, FR.COD_RUBRICA, FI.ID_REGIME 
-            
-            UNION ALL 
-            
-            SELECT 
-                CASE 
-                    WHEN FR.COD_RUBRICA IN (714470, 714475, 714480) THEN SUM(FF.VALOR_CALCULADO * -1) 
-                    ELSE SUM(FF.VALOR_CALCULADO) 
-                END AS VALOR_CALCULADO, 
-                FR.COD_RUBRICA, 
-                '934' AS RUBRICA, 
-                'PIAUIPREV - Patronal - Pensionista' AS DESCRIMINACAO, 
-                FI.ID_REGIME 
-            FROM SW_FUNPREV.FOLHA_CONTRACHEQUE FC 
-            JOIN SW_FUNPREV.FOLHA FO ON FO.ID_FOLHA = FC.ID_FOLHA 
-            JOIN SW_FUNPREV.FUNC_PENSAO_CIVIL PC ON PC.ID_PENSIONISTA = FC.ID_PENSIONISTA 
-            JOIN SW_FUNPREV.FUNCIONARIO_INGRESSO FI ON FI.ID_FUNCIONARIO = PC.ID_FUNCIONARIO 
-            JOIN SW_FUNPREV.FOLHA_FICHA_FINANCEIRA FF ON FF.ID_FOLHA_FUNCIONARIO = FC.ID_FOLHA_FUNCIONARIO 
-            JOIN SW_PUBLICO.FOLHA_RUBRICA FR ON FR.ID_RUBRICA = FF.ID_RUBRICA 
-            WHERE FO.MES = :mes 
-              AND FO.ANO = :ano 
-              AND {condicao_tipo_folha} 
-              {condicao_tipo_arquivo}
-              AND FR.COD_RUBRICA IN (714400, 714403, 714405, 714410, 714436, 714450, 714460, 714455, 714420, 714452, 714470, 714475, 714480) 
-            GROUP BY FO.TIPO_FOLHA_SEFAZ, FR.COD_RUBRICA, FI.ID_REGIME 
-        ) S 
-        GROUP BY S.RUBRICA, S.DESCRIMINACAO, S.ID_REGIME
-        """
-
-    render_bloco_processamento(
-        conn=conn,
-        titulo="3. PATRONAL FUNPREV",
-        id_chave="funprev",
-        sql=get_sql_funprev,
-        mes=mes,
-        ano=ano,
-        cod_unidade="924",
-        cod_relatorio="90",
-        auth_ui=auth_ui,
-        seletor_folha_global=tipo_folha_global,
-        numero_suplementar=numero_suplementar
-    )
-
+    render_bloco_processamento(conn, "3. PATRONAL FUNPREV", "funprev", get_sql_funprev, mes, ano, "924", "90", auth_ui, tipo_folha_global, numero_suplementar)
     st.divider()
 
-    def get_sql_seduc_011(tipo, cod_sup="002"):
-        tipo_arquivo_val = cod_sup if tipo == "suplementar" else "001"
-        condicao_tipo_folha = "S.ID_TIPO_FOLHA IN (1000000)" if tipo == "ordinaria" else "S.ID_TIPO_FOLHA NOT IN (1000000)"
-        
-        return f"""
-        SELECT 
-            CASE 
-                WHEN S.COD_RUBRICA IN (714400, 714403, 714405, 714410) THEN '901' 
-                WHEN S.COD_RUBRICA IN (714436, 714450, 714455, 714460) THEN '900' 
-            END AS RUBRICA, 
-            S.NOME_RUBRICA AS DESCRIMINACAO, 
-            CASE 
-                WHEN S.ID_REGIME IN (2, 9, 1000003) THEN 'RPPS' 
-                ELSE 'RGPS' 
-            END AS TIPO_REGIME, 
-            CASE 
-                WHEN S.ID_REGIME IN (9, 1000003) THEN 'MILITAR' 
-                ELSE 'CIVIL' 
-            END AS TIPO_VINCULO, 
-            0 AS VANTAGENS, 
-            REPLACE(TO_CHAR(SUM(S.VALOR_CALCULADO)), ',', '.') AS DESCONTOS 
-        FROM ( 
-            SELECT 
-                'SEDUC' AS ORGAO, 
-                FR.NOME_RUBRICA, 
-                FR.TIPO, 
-                FF.VALOR_CALCULADO, 
-                FR.COD_RUBRICA, 
-                FI.ID_REGIME, 
-                FC.MES, 
-                FC.ANO, 
-                FO.ID_TIPO_FOLHA, 
-                FO.TIPO_ARQUIVO, 
-                FO.ID_FONTE 
-            FROM SW_SEDUC.FOLHA_CONTRACHEQUE FC 
-            JOIN SW_SEDUC.FOLHA FO ON FO.ID_FOLHA = FC.ID_FOLHA 
-            JOIN SW_SEDUC.FUNCIONARIO_INGRESSO FI ON FI.ID_FUNCIONARIO = FC.ID_FUNCIONARIO 
-            JOIN SW_SEDUC.FOLHA_FICHA_FINANCEIRA FF ON FF.ID_FOLHA_FUNCIONARIO = FC.ID_FOLHA_FUNCIONARIO 
-            JOIN SW_PUBLICO.FOLHA_RUBRICA FR ON FR.ID_RUBRICA = FF.ID_RUBRICA 
-        ) S 
-        WHERE S.MES = :mes 
-          AND S.ANO = :ano 
-          AND {condicao_tipo_folha} 
-          AND S.TIPO_ARQUIVO = '{tipo_arquivo_val}' 
-          AND S.COD_RUBRICA IN (714400, 714403, 714405, 714410, 714436, 714450, 714455, 714460) 
-          AND S.ID_FONTE IN (4, 5, 6, 7, 8, 9, 1000000, 1000001, 1000002, 1000004, 1000022, 1000023, 1000024, 1000090, 1000100, 1000101, 1000120, 1000121, 1000122, 1000140) 
-        GROUP BY S.ORGAO, S.COD_RUBRICA, S.NOME_RUBRICA, S.ID_REGIME 
-        ORDER BY S.ORGAO, S.COD_RUBRICA, S.NOME_RUBRICA, S.ID_REGIME
-        """
-
-    render_bloco_processamento(
-        conn=conn,
-        titulo="4. PATRONAL SEDUC 011",
-        id_chave="seduc_011",
-        sql=get_sql_seduc_011,
-        mes=mes,
-        ano=ano,
-        cod_unidade="011",
-        cod_relatorio="90",
-        auth_ui=auth_ui,
-        seletor_folha_global=tipo_folha_global,
-        numero_suplementar=numero_suplementar
-    )
-
+    render_bloco_processamento(conn, "4. PATRONAL SEDUC 011", "seduc_011", get_sql_seduc_011, mes, ano, "011", "90", auth_ui, tipo_folha_global, numero_suplementar)
     st.divider()
 
-    def get_sql_seduc_914(tipo, cod_sup="002"):
-        tipo_arquivo_val = cod_sup if tipo == "suplementar" else "001"
-        condicao_tipo_folha = "S.ID_TIPO_FOLHA IN (1000000)" if tipo == "ordinaria" else "S.ID_TIPO_FOLHA NOT IN (1000000)"
-        
-        return f"""
-        SELECT 
-            CASE 
-                WHEN S.COD_RUBRICA IN (714400, 714403, 714405, 714410) THEN '901' 
-                WHEN S.COD_RUBRICA IN (714436, 714450, 714455, 714460) THEN '900' 
-            END AS RUBRICA, 
-            S.NOME_RUBRICA AS DESCRIMINACAO, 
-            CASE 
-                WHEN S.ID_REGIME IN (2, 9, 1000003) THEN 'RPPS' 
-                ELSE 'RGPS' 
-            END AS TIPO_REGIME, 
-            CASE 
-                WHEN S.ID_REGIME IN (9, 1000003) THEN 'MILITAR' 
-                ELSE 'CIVIL' 
-            END AS TIPO_VINCULO, 
-            0 AS VANTAGENS, 
-            REPLACE(TO_CHAR(SUM(S.VALOR_CALCULADO)), ',', '.') AS DESCONTOS 
-        FROM ( 
-            SELECT 
-                'SEDUC' AS ORGAO, 
-                FR.NOME_RUBRICA, 
-                FR.TIPO, 
-                FF.VALOR_CALCULADO, 
-                FR.COD_RUBRICA, 
-                FI.ID_REGIME, 
-                FC.MES, 
-                FC.ANO, 
-                FO.ID_TIPO_FOLHA, 
-                FO.TIPO_ARQUIVO, 
-                FO.ID_FONTE 
-            FROM SW_SEDUC.FOLHA_CONTRACHEQUE FC 
-            JOIN SW_SEDUC.FOLHA FO ON FO.ID_FOLHA = FC.ID_FOLHA 
-            JOIN SW_SEDUC.FUNCIONARIO_INGRESSO FI ON FI.ID_FUNCIONARIO = FC.ID_FUNCIONARIO 
-            JOIN SW_SEDUC.FOLHA_FICHA_FINANCEIRA FF ON FF.ID_FOLHA_FUNCIONARIO = FC.ID_FOLHA_FUNCIONARIO 
-            JOIN SW_PUBLICO.FOLHA_RUBRICA FR ON FR.ID_RUBRICA = FF.ID_RUBRICA 
-        ) S 
-        WHERE S.MES = :mes 
-          AND S.ANO = :ano 
-          AND {condicao_tipo_folha} 
-          AND S.TIPO_ARQUIVO = '{tipo_arquivo_val}' 
-          AND S.COD_RUBRICA IN (714400, 714403, 714405, 714410, 714436, 714450, 714455, 714460) 
-          AND S.ID_FONTE IN (1000003, 1000020, 1000021, 1000040, 1000041, 1000060, 1, 2, 3) 
-        GROUP BY S.ORGAO, S.COD_RUBRICA, S.NOME_RUBRICA, S.ID_REGIME 
-        ORDER BY S.ORGAO, S.COD_RUBRICA, S.NOME_RUBRICA, S.ID_REGIME
-        """
-
-    render_bloco_processamento(
-        conn=conn,
-        titulo="5. PATRONAL SEDUC 914",
-        id_chave="seduc_914",
-        sql=get_sql_seduc_914,
-        mes=mes,
-        ano=ano,
-        cod_unidade="914",
-        cod_relatorio="90",
-        auth_ui=auth_ui,
-        seletor_folha_global=tipo_folha_global,
-        numero_suplementar=numero_suplementar
-    )
+    render_bloco_processamento(conn, "5. PATRONAL SEDUC 914", "seduc_914", get_sql_seduc_914, mes, ano, "914", "90", auth_ui, tipo_folha_global, numero_suplementar)
 

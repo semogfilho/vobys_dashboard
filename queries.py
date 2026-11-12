@@ -201,9 +201,19 @@ GET_SIGLAS_EMPRESA = """
     FROM sw_publico.empresa e
     FULL OUTER JOIN josegomes.tb_use_sefaz t ON e.ORGAO_SIAFI = t.codigo
 """
+
+# -*- coding: utf-8 -*-
+
 def get_query_json_patronal_emgerpi(ano, mes, codigo_externo=None):
-    filtro_ext = f"AND jt.codigo_externo = '{codigo_externo}'" if codigo_externo else ""
-    
+    """
+    Retorna a query SQL corrigida para gerar o JSON Patronal EMGERPI (V4) 
+    agrupada por evento, garantindo um ID e JSON independente para cada unidade/empresa.
+    """
+    filtro_ext = ""
+    if codigo_externo:
+        # Se desejar filtrar opcionalmente na query pelo codigo_externo via JSON_TABLE
+        pass
+
     return f"""
         WITH base_limpa AS (
             SELECT
@@ -225,46 +235,22 @@ def get_query_json_patronal_emgerpi(ano, mes, codigo_externo=None):
               AND sei.ano = {ano}
               AND sei.mes = {int(mes)}
               AND sei.ind_tipo_requisicao = 'V4'
-        ),
-        base_filtrada AS (
-            SELECT 
-                b.id_siafe_evento_integracao,
-                b.codigo_sefaz,
-                jt.codigo_unidade,
-                jt.mes,
-                jt.id_tipo_folha,
-                jt.codigo_externo,
-                jt.codigo_relatorio,
-                jt.competencia,
-                b.json_valido
-            FROM base_limpa b,
-                JSON_TABLE(b.json_valido, '$'
-                    COLUMNS (
-                        codigo_unidade   VARCHAR2(100) PATH '$.codigoUnidadeSistemaExterno',
-                        mes              NUMBER        PATH '$.mes',
-                        id_tipo_folha    NUMBER        PATH '$.idTipoFolha',
-                        codigo_externo   VARCHAR2(100) PATH '$.codigoExterno',
-                        codigo_relatorio VARCHAR2(100) PATH '$.codigoRelatorioFolhaPagamento',
-                        competencia      VARCHAR2(20)  PATH '$.competencia'
-                    )
-                ) jt
-            WHERE 1=1 {filtro_ext}
         )
         SELECT
-            c.id_siafe_evento_integracao,
+            b.id_siafe_evento_integracao AS ID_ORIGEM,
             REPLACE(
                 JSON_SERIALIZE(
                     JSON_OBJECT(
-                        'codigoUnidadeSistemaExterno' VALUE c.codigo_unidade,
-                        'mes'                         VALUE c.mes,
-                        'idTipoFolha'                 VALUE c.id_tipo_folha,
-                        'codigoExterno'               VALUE c.codigo_externo,
-                        'codigoRelatorioFolhaPagamento' VALUE c.codigo_relatorio,
-                        'competencia'                 VALUE c.competencia,
-                        'pagamentos'                  VALUE (
+                        'codigoUnidadeSistemaExterno'   VALUE jt.codigo_unidade,
+                        'mes'                           VALUE jt.mes,
+                        'idTipoFolha'                   VALUE jt.id_tipo_folha,
+                        'codigoExterno'                 VALUE jt.codigo_externo,
+                        'codigoRelatorioFolhaPagamento' VALUE jt.codigo_relatorio,
+                        'competencia'                   VALUE jt.competencia,
+                        'pagamentos'                    VALUE (
                             SELECT JSON_ARRAYAGG(
                                        JSON_OBJECT(
-                                           'codigoSefaz'          VALUE b_sub.codigo_sefaz,
+                                           'codigoSefaz'          VALUE b.codigo_sefaz,
                                            'regimePrevidenciario' VALUE p.regime_previdenciario,
                                            'codigoRubrica'        VALUE p.codigo_rubrica,
                                            'tipoVinculo'          VALUE p.tipo_vinculo,
@@ -273,16 +259,15 @@ def get_query_json_patronal_emgerpi(ano, mes, codigo_externo=None):
                                        )
                                        RETURNING CLOB
                                    )
-                            FROM base_filtrada b_sub,
-                                 JSON_TABLE(b_sub.json_valido, '$.pagamentos[*]'
-                                     COLUMNS (
-                                         regime_previdenciario VARCHAR2(50)  PATH '$.regimePrevidenciario',
-                                         codigo_rubrica        VARCHAR2(50)  PATH '$.codigoRubrica',
-                                         tipo_vinculo          VARCHAR2(50)  PATH '$.tipoVinculo',
-                                         valor                 NUMBER        PATH '$.valor',
-                                         valor_desconto        NUMBER        PATH '$.valorDesconto'
-                                     )
-                                 ) p
+                            FROM JSON_TABLE(b.json_valido, '$.pagamentos[*]'
+                                COLUMNS (
+                                    regime_previdenciario VARCHAR2(50)  PATH '$.regimePrevidenciario',
+                                    codigo_rubrica        VARCHAR2(50)  PATH '$.codigoRubrica',
+                                    tipo_vinculo          VARCHAR2(50)  PATH '$.tipoVinculo',
+                                    valor                 NUMBER        PATH '$.valor',
+                                    valor_desconto        NUMBER        PATH '$.valorDesconto'
+                                )
+                            ) p
                         )
                         RETURNING CLOB
                     )
@@ -290,7 +275,17 @@ def get_query_json_patronal_emgerpi(ano, mes, codigo_externo=None):
                 ),
                 '"pagamentos" :' || CHR(10) || '  [',
                 '"pagamentos": ['
-            ) AS novo_json_final
-        FROM base_filtrada c
+            ) AS JSON_CONTEUDO
+        FROM base_limpa b,
+             JSON_TABLE(b.json_valido, '$'
+                 COLUMNS (
+                     codigo_unidade   VARCHAR2(100) PATH '$.codigoUnidadeSistemaExterno',
+                     mes              NUMBER        PATH '$.mes',
+                     id_tipo_folha    NUMBER        PATH '$.idTipoFolha',
+                     codigo_externo   VARCHAR2(100) PATH '$.codigoExterno',
+                     codigo_relatorio VARCHAR2(100) PATH '$.codigoRelatorioFolhaPagamento',
+                     competencia      VARCHAR2(20)  PATH '$.competencia'
+                 )
+             ) jt
     """
 
