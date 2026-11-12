@@ -18,11 +18,9 @@ def _gerar_link_siape(df):
         orgao = str(row.get("ORGAO", "")).lower()
         tipo_registro = str(row.get("TIPO_REGISTRO", "")).upper()
 
-        # Se já for um link http ou não tiver ID_FOLHA válido, mantém como está
         if descricao.startswith("http") or pd.isna(id_folha):
             return descricao
 
-        # Link específico para Folha de Estagiário
         if tipo_registro == "ESTAGIARIO":
             return (
                 f"https://siape.sead.pi.gov.br/adm/{orgao}/"
@@ -31,7 +29,6 @@ def _gerar_link_siape(df):
                 f"{int(id_folha)}/dados-folha#{descricao}"
             )
 
-        # Link padrão para Folha de Funcionário (NORMAL)
         return (
             f"https://siape.sead.pi.gov.br/adm/{orgao}/"
             f"folha-funcionario/folhas/folhas/folha-de-pagamento/"
@@ -45,7 +42,6 @@ def _gerar_link_siape(df):
 def executar_auditoria(conn, ano, mes, apenas_inconsistentes=False):
     cursor = conn.cursor()
     cursor.execute("SELECT owner FROM all_tables WHERE table_name = 'FOLHA' AND owner LIKE 'SW_%'")
-    #cursor.execute("SELECT owner FROM all_tables WHERE owner in ('SW_SADA','SW_SEDUC') and  table_name = 'FOLHA' AND owner LIKE 'SW_%'")
     schemas_geral = [row[0] for row in cursor.fetchall()]
 
     cursor.execute("SELECT owner FROM all_tables WHERE table_name = 'ESTAG_FOLHA' AND owner LIKE 'SW_%'")
@@ -57,26 +53,21 @@ def executar_auditoria(conn, ano, mes, apenas_inconsistentes=False):
         orgao_nome = schema.replace('SW_', '')
 
         # --- 1. QUERY DA FOLHA TRADICIONAL ---
-        condicao_qtd_f1 = f"""
-            AND (
-                SELECT COUNT(*)
-                FROM {schema}.FOLHA_FUNC ff
-                WHERE ff.id_folha = f1.id_folha
-                  AND ff.IND_REMUNERACAO = 'S'
-            ) > 0
-        """ if apenas_inconsistentes else ""
-
         where_clause_f1 = f"""
             f1.ANO = {ano}
             AND f1.MES = {int(mes)}
-            {condicao_qtd_f1}
         """
 
         if apenas_inconsistentes:
             where_clause_f1 += f"""
                 AND (
                      (
-                          (f1.TIPO_ARQUIVO > '001' AND f1.TIPO_ARQUIVO < '020')
+                          (
+                              -- Se for suplementar, a faixa válida começa em '002' (não exige '001')
+                              (UPPER(t.DESCRICAO_TIPO) LIKE '%SUPLEMENTAR%' AND f1.TIPO_ARQUIVO > '002' AND f1.TIPO_ARQUIVO < '020')
+                              OR
+                              (UPPER(t.DESCRICAO_TIPO) NOT LIKE '%SUPLEMENTAR%' AND f1.TIPO_ARQUIVO > '001' AND f1.TIPO_ARQUIVO < '020')
+                          )
                           OR
                           (f1.TIPO_ARQUIVO > '020')
                      )
@@ -92,14 +83,18 @@ def executar_auditoria(conn, ano, mes, apenas_inconsistentes=False):
                             AND u2.COD_UNID_ORCAMENTARIA = u.COD_UNID_ORCAMENTARIA
                             AND f2.TIPO_ARQUIVO =
                                 CASE
-                                    WHEN f1.TIPO_ARQUIVO < '020' THEN '001'
+                                    WHEN f1.TIPO_ARQUIVO < '020' THEN 
+                                        CASE 
+                                            WHEN UPPER(t.DESCRICAO_TIPO) LIKE '%SUPLEMENTAR%' THEN '002'
+                                            ELSE '001'
+                                        END
                                     ELSE '020'
                                 END
                      )
                      OR
                      (
                           f1.TIPO_ARQUIVO IN ('001', '020')
-                          And (
+                          AND (
                               SELECT COUNT(*)
                               FROM {schema}.FOLHA f_dup
                               JOIN {schema}.FOLHA_CODIGO_SEFAZ fs_dup ON fs_dup.ID_CODIGO_SEFAZ = f_dup.ID_CODIGO_SEFAZ
@@ -118,10 +113,25 @@ def executar_auditoria(conn, ano, mes, apenas_inconsistentes=False):
         coluna_situacao_f1 = f"""
             CASE
                 WHEN f1.TIPO_ARQUIVO IN ('001', '020') THEN 'Estrutural SEFAZ duplicado'
-                WHEN f1.TIPO_ARQUIVO > '001' AND f1.TIPO_ARQUIVO < '020' THEN 'Tipo de Arquivo Fora da Sequencia (001)'
+                WHEN UPPER(t.DESCRICAO_TIPO) LIKE '%SUPLEMENTAR%' AND f1.TIPO_ARQUIVO > '002' AND f1.TIPO_ARQUIVO < '020' THEN 'Tipo de Arquivo Fora da Sequencia (002)'
+                WHEN UPPER(t.DESCRICAO_TIPO) NOT LIKE '%SUPLEMENTAR%' AND f1.TIPO_ARQUIVO > '001' AND f1.TIPO_ARQUIVO < '020' THEN 'Tipo de Arquivo Fora da Sequencia (001)'
                 ELSE 'Tipo de Arquivo Fora da Sequencia (020)'
             END as SITUACAO,
         """ if apenas_inconsistentes else ""
+
+        if apenas_inconsistentes:
+            select_pagamentos = "0 as QTDE_PAGAMENTOS"
+            join_detalhes = ""
+        else:
+            select_pagamentos = "NVL(det.qtd, 0) as QTDE_PAGAMENTOS"
+            join_detalhes = f"""
+                LEFT JOIN (
+                    SELECT id_folha, COUNT(*) as qtd
+                    FROM {schema}.FOLHA_FUNC
+                    WHERE IND_REMUNERACAO = 'S'
+                    GROUP BY id_folha
+                ) det ON det.id_folha = f1.id_folha
+            """
 
         subquery_folha = f"""
             SELECT
@@ -138,29 +148,21 @@ def executar_auditoria(conn, ano, mes, apenas_inconsistentes=False):
                 f1.DATA_FECHAMENTO,
                 f1.DATA_CADASTRO,
                 'NORMAL' as TIPO_REGISTRO,
-                (SELECT COUNT(*) FROM {schema}.FOLHA_FUNC ff WHERE ff.id_folha = f1.id_folha AND ff.IND_REMUNERACAO = 'S') as QTDE_PAGAMENTOS
+                {select_pagamentos}
             FROM {schema}.FOLHA f1
             JOIN SW_PUBLICO.FOLHA_TAB_TIPO t ON f1.ID_TIPO_FOLHA = t.ID_TIPO_FOLHA
             JOIN {schema}.FOLHA_CODIGO_SEFAZ fs ON fs.ID_CODIGO_SEFAZ = f1.ID_CODIGO_SEFAZ
             JOIN {schema}.FOLHA_UNID_ORCAMENTARIA u ON u.ID_UNID_ORCAMENTARIA = f1.ID_UNID_ORCAMENTARIA
+            {join_detalhes}
             WHERE {where_clause_f1}
         """
         query_parts.append(subquery_folha)
 
         # --- 2. QUERY DA FOLHA DE ESTAGIÁRIOS ---
         if schema in schemas_estag:
-            condicao_qtd_ef = f"""
-                AND (
-                    SELECT COUNT(*)
-                    FROM {schema}.Estagiario_Pagamento ep
-                    WHERE ep.id_folha = ef.id_folha
-                ) > 0
-            """ if apenas_inconsistentes else ""
-
             where_clause_ef = f"""
                 ef.ANO = {ano}
                 AND ef.MES = {int(mes)}
-                {condicao_qtd_ef}
             """
 
             if apenas_inconsistentes:
@@ -208,6 +210,19 @@ def executar_auditoria(conn, ano, mes, apenas_inconsistentes=False):
                 END as SITUACAO,
             """ if apenas_inconsistentes else ""
 
+            if apenas_inconsistentes:
+                select_pagamentos_estag = "0 as QTDE_PAGAMENTOS"
+                join_detalhes_estag = ""
+            else:
+                select_pagamentos_estag = "NVL(det_e.qtd, 0) as QTDE_PAGAMENTOS"
+                join_detalhes_estag = f"""
+                    LEFT JOIN (
+                        SELECT id_folha, COUNT(*) as qtd
+                        FROM {schema}.Estagiario_Pagamento
+                        GROUP BY id_folha
+                    ) det_e ON det_e.id_folha = ef.id_folha
+                """
+
             subquery_estagiario = f"""
                 SELECT
                     ef.ID_FOLHA,
@@ -223,10 +238,11 @@ def executar_auditoria(conn, ano, mes, apenas_inconsistentes=False):
                     ef.DATA_FECHAMENTO,
                     ef.DATA_CADASTRO,
                     'ESTAGIARIO' as TIPO_REGISTRO,
-                    (SELECT COUNT(*) FROM {schema}.Estagiario_Pagamento ep WHERE ep.id_folha = ef.id_folha) as QTDE_PAGAMENTOS
+                    {select_pagamentos_estag}
                 FROM {schema}.ESTAG_FOLHA ef
                 JOIN SW_PUBLICO.FOLHA_TAB_TIPO t ON ef.ID_TIPO_FOLHA = t.ID_TIPO_FOLHA
                 JOIN {schema}.FOLHA_CODIGO_SEFAZ fs ON fs.ID_CODIGO_SEFAZ = ef.ID_CODIGO_SEFAZ
+                {join_detalhes_estag}
                 WHERE {where_clause_ef}
             """
             query_parts.append(subquery_estagiario)
@@ -259,7 +275,11 @@ def executar_auditoria_com_a_Quantidade(conn, ano, mes, apenas_inconsistentes=Fa
             where_clause += f"""
                 AND (
                      (
-                          (f1.TIPO_ARQUIVO > '001' AND f1.TIPO_ARQUIVO < '020')
+                          (
+                              (UPPER(t.DESCRICAO_TIPO) LIKE '%SUPLEMENTAR%' AND f1.TIPO_ARQUIVO > '002' AND f1.TIPO_ARQUIVO < '020')
+                              OR
+                              (UPPER(t.DESCRICAO_TIPO) NOT LIKE '%SUPLEMENTAR%' AND f1.TIPO_ARQUIVO > '001' AND f1.TIPO_ARQUIVO < '020')
+                          )
                           OR 
                           (f1.TIPO_ARQUIVO > '020')
                      )
@@ -275,7 +295,11 @@ def executar_auditoria_com_a_Quantidade(conn, ano, mes, apenas_inconsistentes=Fa
                            AND u2.COD_UNID_ORCAMENTARIA = u.COD_UNID_ORCAMENTARIA
                            AND f2.TIPO_ARQUIVO = 
                                CASE 
-                                   WHEN f1.TIPO_ARQUIVO < '020' THEN '001'
+                                   WHEN f1.TIPO_ARQUIVO < '020' THEN 
+                                       CASE 
+                                           WHEN UPPER(t.DESCRICAO_TIPO) LIKE '%SUPLEMENTAR%' THEN '002'
+                                           ELSE '001'
+                                       END
                                    ELSE '020'
                                END
                      )
@@ -308,7 +332,8 @@ def executar_auditoria_com_a_Quantidade(conn, ano, mes, apenas_inconsistentes=Fa
                 t.DESCRICAO_TIPO,
                 CASE 
                     WHEN f1.TIPO_ARQUIVO IN ('001', '020') THEN 'registro duplicado'
-                    WHEN f1.TIPO_ARQUIVO > '001' AND f1.TIPO_ARQUIVO < '020' THEN 'Fora da Sequencia (001)'
+                    WHEN UPPER(t.DESCRICAO_TIPO) LIKE '%SUPLEMENTAR%' AND f1.TIPO_ARQUIVO > '002' AND f1.TIPO_ARQUIVO < '020' THEN 'Fora da Sequencia (002)'
+                    WHEN UPPER(t.DESCRICAO_TIPO) NOT LIKE '%SUPLEMENTAR%' AND f1.TIPO_ARQUIVO > '001' AND f1.TIPO_ARQUIVO < '020' THEN 'Fora da Sequencia (001)'
                     ELSE 'Fora da sequencia (020)'
                 END as SITUACAO,
                 f1.CHAVE_FOLHA,
@@ -462,7 +487,7 @@ def executar_auditoria_antigo(conn, ano, mes):
     if not query_parts:
         return pd.DataFrame()
 
-    query_final = " UNION ALL ".join(query_parts)
+    query_final = " UNION ALL ".join(query_parts) + " ORDER BY CODIGO_SEFAZ, TIPO_ARQUIVO, TIPO_FOLHA_SEFAZ, CODIGO_RELATORIO, ORGAO"
     df = pd.read_sql(query_final, conn)
     
     if not df.empty:

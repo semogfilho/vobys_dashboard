@@ -1,0 +1,224 @@
+# -*- coding: utf-8 -*-
+
+def get_sql_seduc_extra(tipo, cod_sup="002"):
+    tipo_arquivo_val = cod_sup if tipo == "suplementar" else "001"
+    condicao_tipo_folha = "S.ID_TIPO_FOLHA IN (1000000)" if tipo == "ordinaria" else "S.ID_TIPO_FOLHA NOT IN (1000000)"
+    
+    return f"""
+    SELECT 
+        CASE 
+            WHEN S.COD_RUBRICA IN (714401, 714406) THEN '963' 
+            WHEN S.COD_RUBRICA IN (714451, 714456) THEN '944' 
+        END AS RUBRICA, 
+        S.NOME_RUBRICA AS DESCRIMINACAO, 
+        CASE 
+            WHEN S.ID_REGIME IN (2, 9, 1000003) THEN 'RPPS' 
+            ELSE 'RGPS' 
+        END AS TIPO_REGIME, 
+        CASE 
+            WHEN S.ID_REGIME IN (9, 1000003) THEN 'MILITAR' 
+            ELSE 'CIVIL' 
+        END AS TIPO_VINCULO, 
+        0 AS VANTAGENS, 
+        REPLACE(TO_CHAR(SUM(S.VALOR_CALCULADO)), ',', '.') AS DESCONTOS 
+    FROM ( 
+        SELECT 
+            'SEDUC' AS ORGAO, 
+            FR.NOME_RUBRICA, 
+            FR.TIPO, 
+            FF.VALOR_CALCULADO, 
+            FR.COD_RUBRICA, 
+            FI.ID_REGIME, 
+            FC.MES, 
+            FC.ANO, 
+            FO.ID_TIPO_FOLHA, 
+            FO.TIPO_ARQUIVO, 
+            FO.ID_FONTE 
+        FROM SW_SEDUC.FOLHA_CONTRACHEQUE FC 
+        JOIN SW_SEDUC.FOLHA FO ON FO.ID_FOLHA = FC.ID_FOLHA 
+        JOIN SW_SEDUC.FUNCIONARIO_INGRESSO FI ON FI.ID_FUNCIONARIO = FC.ID_FUNCIONARIO 
+        JOIN SW_SEDUC.FOLHA_FICHA_FINANCEIRA FF ON FF.ID_FOLHA_FUNCIONARIO = FC.ID_FOLHA_FUNCIONARIO 
+        JOIN SW_PUBLICO.FOLHA_RUBRICA FR ON FR.ID_RUBRICA = FF.ID_RUBRICA 
+    ) S 
+    WHERE S.MES = :mes 
+      AND S.ANO = :ano 
+      AND {condicao_tipo_folha} 
+      AND S.TIPO_ARQUIVO = '{tipo_arquivo_val}' 
+      AND S.COD_RUBRICA IN (714401, 714406, 714451, 714456) 
+      AND S.ID_FONTE IN (1000003, 1000020, 1000021, 1000040, 1000041, 1000060, 1, 2, 3) 
+    GROUP BY S.ORGAO, S.COD_RUBRICA, S.NOME_RUBRICA, S.ID_REGIME 
+    ORDER BY S.ORGAO, S.COD_RUBRICA, S.NOME_RUBRICA, S.ID_REGIME
+    """
+
+def get_sql_funprev(tipo, cod_sup="002"):
+    condicao_tipo_folha = "FO.ID_TIPO_FOLHA IN (1000000)" if tipo == "ordinaria" else "NOT FO.ID_TIPO_FOLHA IN (1000000)"
+    condicao_tipo_arquivo = "" if tipo == "ordinaria" else f"AND (FO.TIPO_ARQUIVO = '{cod_sup}' OR FO.TIPO_ARQUIVO IS NULL)"
+    
+    return f"""
+    SELECT 
+        RUBRICA, 
+        DESCRIMINACAO, 
+        'RPPS' AS TIPO_REGIME, 
+        CASE 
+            WHEN S.ID_REGIME IN (9, 1000003) THEN 'MILITAR' 
+            ELSE 'CIVIL' 
+        END AS TIPO_VINCULO, 
+        0 AS VANTAGENS, 
+        REPLACE(TO_CHAR(SUM(S.VALOR_CALCULADO)), ',', '.') AS DESCONTOS 
+    FROM ( 
+        SELECT 
+            CASE 
+                WHEN FR.COD_RUBRICA IN (714470, 714475, 714480) THEN SUM(FF.VALOR_CALCULADO * -1) 
+                ELSE SUM(FF.VALOR_CALCULADO) 
+            END AS VALOR_CALCULADO, 
+            FR.COD_RUBRICA, 
+            CASE 
+                WHEN FO.TIPO_FOLHA_SEFAZ = 'C7' THEN '934' 
+                ELSE '924' 
+            END AS RUBRICA, 
+            CASE 
+                WHEN FO.TIPO_FOLHA_SEFAZ = 'C7' THEN 'PIAUIPREV - Patronal - Pensionista' 
+                ELSE 'PIAUIPREV - Patronal - Aposentado' 
+            END AS DESCRIMINACAO, 
+            FI.ID_REGIME 
+        FROM SW_FUNPREV.FOLHA_CONTRACHEQUE FC 
+        JOIN SW_FUNPREV.FOLHA FO ON FO.ID_FOLHA = FC.ID_FOLHA 
+        JOIN SW_FUNPREV.FUNCIONARIO_INGRESSO FI ON FI.ID_FUNCIONARIO = FC.ID_FUNCIONARIO 
+        JOIN SW_FUNPREV.FOLHA_FICHA_FINANCEIRA FF ON FF.ID_FOLHA_FUNCIONARIO = FC.ID_FOLHA_FUNCIONARIO 
+        JOIN SW_PUBLICO.FOLHA_RUBRICA FR ON FR.ID_RUBRICA = FF.ID_RUBRICA 
+        WHERE FO.MES = :mes 
+          AND FO.ANO = :ano 
+          AND {condicao_tipo_folha} 
+          {condicao_tipo_arquivo}
+          AND FC.ID_PENSIONISTA IS NULL 
+          AND FC.ID_PENSIONISTA_PA IS NULL 
+          AND FR.COD_RUBRICA IN (714400, 714403, 714405, 714410, 714436, 714450, 714460, 714455, 714420, 714452, 714470, 714475, 714480) 
+        GROUP BY FO.TIPO_FOLHA_SEFAZ, FR.COD_RUBRICA, FI.ID_REGIME 
+        
+        UNION ALL 
+        
+        SELECT 
+            CASE 
+                WHEN FR.COD_RUBRICA IN (714470, 714475, 714480) THEN SUM(FF.VALOR_CALCULADO * -1) 
+                ELSE SUM(FF.VALOR_CALCULADO) 
+            END AS VALOR_CALCULADO, 
+            FR.COD_RUBRICA, 
+            '934' AS RUBRICA, 
+            'PIAUIPREV - Patronal - Pensionista' AS DESCRIMINACAO, 
+            FI.ID_REGIME 
+        FROM SW_FUNPREV.FOLHA_CONTRACHEQUE FC 
+        JOIN SW_FUNPREV.FOLHA FO ON FO.ID_FOLHA = FC.ID_FOLHA 
+        JOIN SW_FUNPREV.FUNC_PENSAO_CIVIL PC ON PC.ID_PENSIONISTA = FC.ID_PENSIONISTA 
+        JOIN SW_FUNPREV.FUNCIONARIO_INGRESSO FI ON FI.ID_FUNCIONARIO = PC.ID_FUNCIONARIO 
+        JOIN SW_FUNPREV.FOLHA_FICHA_FINANCEIRA FF ON FF.ID_FOLHA_FUNCIONARIO = FC.ID_FOLHA_FUNCIONARIO 
+        JOIN SW_PUBLICO.FOLHA_RUBRICA FR ON FR.ID_RUBRICA = FF.ID_RUBRICA 
+        WHERE FO.MES = :mes 
+          AND FO.ANO = :ano 
+          AND {condicao_tipo_folha} 
+          {condicao_tipo_arquivo}
+          AND FR.COD_RUBRICA IN (714400, 714403, 714405, 714410, 714436, 714450, 714460, 714455, 714420, 714452, 714470, 714475, 714480) 
+        GROUP BY FO.TIPO_FOLHA_SEFAZ, FR.COD_RUBRICA, FI.ID_REGIME 
+    ) S 
+    GROUP BY S.RUBRICA, S.DESCRIMINACAO, S.ID_REGIME
+    """
+
+def get_sql_seduc_011(tipo, cod_sup="002"):
+    tipo_arquivo_val = cod_sup if tipo == "suplementar" else "001"
+    condicao_tipo_folha = "S.ID_TIPO_FOLHA IN (1000000)" if tipo == "ordinaria" else "S.ID_TIPO_FOLHA NOT IN (1000000)"
+    
+    return f"""
+    SELECT 
+        CASE 
+            WHEN S.COD_RUBRICA IN (714400, 714403, 714405, 714410) THEN '901' 
+            WHEN S.COD_RUBRICA IN (714436, 714450, 714455, 714460) THEN '900' 
+        END AS RUBRICA, 
+        S.NOME_RUBRICA AS DESCRIMINACAO, 
+        CASE 
+            WHEN S.ID_REGIME IN (2, 9, 1000003) THEN 'RPPS' 
+            ELSE 'RGPS' 
+        END AS TIPO_REGIME, 
+        CASE 
+            WHEN S.ID_REGIME IN (9, 1000003) THEN 'MILITAR' 
+            ELSE 'CIVIL' 
+        END AS TIPO_VINCULO, 
+        0 AS VANTAGENS, 
+        REPLACE(TO_CHAR(SUM(S.VALOR_CALCULADO)), ',', '.') AS DESCONTOS 
+    FROM ( 
+        SELECT 
+            'SEDUC' AS ORGAO, 
+            FR.NOME_RUBRICA, 
+            FR.TIPO, 
+            FF.VALOR_CALCULADO, 
+            FR.COD_RUBRICA, 
+            FI.ID_REGIME, 
+            FC.MES, 
+            FC.ANO, 
+            FO.ID_TIPO_FOLHA, 
+            FO.TIPO_ARQUIVO, 
+            FO.ID_FONTE 
+        FROM SW_SEDUC.FOLHA_CONTRACHEQUE FC 
+        JOIN SW_SEDUC.FOLHA FO ON FO.ID_FOLHA = FC.ID_FOLHA 
+        JOIN SW_SEDUC.FUNCIONARIO_INGRESSO FI ON FI.ID_FUNCIONARIO = FC.ID_FUNCIONARIO 
+        JOIN SW_SEDUC.FOLHA_FICHA_FINANCEIRA FF ON FF.ID_FOLHA_FUNCIONARIO = FC.ID_FOLHA_FUNCIONARIO 
+        JOIN SW_PUBLICO.FOLHA_RUBRICA FR ON FR.ID_RUBRICA = FF.ID_RUBRICA 
+    ) S 
+    WHERE S.MES = :mes 
+      AND S.ANO = :ano 
+      AND {condicao_tipo_folha} 
+      AND S.TIPO_ARQUIVO = '{tipo_arquivo_val}' 
+      AND S.COD_RUBRICA IN (714400, 714403, 714405, 714410, 714436, 714450, 714455, 714460) 
+      AND S.ID_FONTE IN (4, 5, 6, 7, 8, 9, 1000000, 1000001, 1000002, 1000004, 1000022, 1000023, 1000024, 1000090, 1000100, 1000101, 1000120, 1000121, 1000122, 1000140) 
+    GROUP BY S.ORGAO, S.COD_RUBRICA, S.NOME_RUBRICA, S.ID_REGIME 
+    ORDER BY S.ORGAO, S.COD_RUBRICA, S.NOME_RUBRICA, S.ID_REGIME
+    """
+
+def get_sql_seduc_914(tipo, cod_sup="002"):
+    tipo_arquivo_val = cod_sup if tipo == "suplementar" else "001"
+    condicao_tipo_folha = "S.ID_TIPO_FOLHA IN (1000000)" if tipo == "ordinaria" else "S.ID_TIPO_FOLHA NOT IN (1000000)"
+    
+    return f"""
+    SELECT 
+        CASE 
+            WHEN S.COD_RUBRICA IN (714400, 714403, 714405, 714410) THEN '901' 
+            WHEN S.COD_RUBRICA IN (714436, 714450, 714455, 714460) THEN '900' 
+        END AS RUBRICA, 
+        S.NOME_RUBRICA AS DESCRIMINACAO, 
+        CASE 
+            WHEN S.ID_REGIME IN (2, 9, 1000003) THEN 'RPPS' 
+            ELSE 'RGPS' 
+        END AS TIPO_REGIME, 
+        CASE 
+            WHEN S.ID_REGIME IN (9, 1000003) THEN 'MILITAR' 
+            ELSE 'CIVIL' 
+        END AS TIPO_VINCULO, 
+        0 AS VANTAGENS, 
+        REPLACE(TO_CHAR(SUM(S.VALOR_CALCULADO)), ',', '.') AS DESCONTOS 
+    FROM ( 
+        SELECT 
+            'SEDUC' AS ORGAO, 
+            FR.NOME_RUBRICA, 
+            FR.TIPO, 
+            FF.VALOR_CALCULADO, 
+            FR.COD_RUBRICA, 
+            FI.ID_REGIME, 
+            FC.MES, 
+            FC.ANO, 
+            FO.ID_TIPO_FOLHA, 
+            FO.TIPO_ARQUIVO, 
+            FO.ID_FONTE 
+        FROM SW_SEDUC.FOLHA_CONTRACHEQUE FC 
+        JOIN SW_SEDUC.FOLHA FO ON FO.ID_FOLHA = FC.ID_FOLHA 
+        JOIN SW_SEDUC.FUNCIONARIO_INGRESSO FI ON FI.ID_FUNCIONARIO = FC.ID_FUNCIONARIO 
+        JOIN SW_SEDUC.FOLHA_FICHA_FINANCEIRA FF ON FF.ID_FOLHA_FUNCIONARIO = FC.ID_FOLHA_FUNCIONARIO 
+        JOIN SW_PUBLICO.FOLHA_RUBRICA FR ON FR.ID_RUBRICA = FF.ID_RUBRICA 
+    ) S 
+    WHERE S.MES = :mes 
+      AND S.ANO = :ano 
+      AND {condicao_tipo_folha} 
+      AND S.TIPO_ARQUIVO = '{tipo_arquivo_val}' 
+      AND S.COD_RUBRICA IN (714400, 714403, 714405, 714410, 714436, 714450, 714455, 714460) 
+      AND S.ID_FONTE IN (1000003, 1000020, 1000021, 1000040, 1000041, 1000060, 1, 2, 3) 
+    GROUP BY S.ORGAO, S.COD_RUBRICA, S.NOME_RUBRICA, S.ID_REGIME 
+    ORDER BY S.ORGAO, S.COD_RUBRICA, S.NOME_RUBRICA, S.ID_REGIME
+    """
+

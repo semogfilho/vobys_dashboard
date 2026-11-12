@@ -14,15 +14,98 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 import auth_ui
 from sefaz_client import requisitar_sefaz
 
-# Importação da query específica do EMGERPI
+# Importação das funções específicas do EMGERPI
 try:
     from queries import get_query_json_patronal_emgerpi
 except ImportError:
-    def get_query_json_patronal_emgerpi(ano, mes):
+    def get_query_json_patronal_emgerpi(ano, mes, codigo_externo=None):
         return "SELECT json_data FROM dual"
+
+try:
+    from utils_emgerpi import executar_query_emgerpi, processar_dados_emgerpi
+except ImportError:
+    executar_query_emgerpi = None
+    processar_dados_emgerpi = None
 
 
 # --- FUNÇÕES AUXILIARES DE CONVERSÃO E BANCO ---
+
+def buscar_lista_numeros_suplementares(conn, ano, mes):
+    if conn is None:
+        return []
+
+    queries_busca = [
+        """
+        SELECT DISTINCT TO_NUMBER(REGEXP_SUBSTR(FO.TIPO_ARQUIVO, '^\d+$')) AS SUP
+        FROM SW_SEDUC.FOLHA FO
+        WHERE FO.ANO = :ano
+          AND FO.MES = :mes
+          AND FO.ID_TIPO_FOLHA NOT IN (1000000)
+          AND FO.TIPO_ARQUIVO IS NOT NULL
+          AND FO.TIPO_ARQUIVO <> '001'
+        """,
+        """
+        SELECT DISTINCT TO_NUMBER(REGEXP_SUBSTR(FO.TIPO_ARQUIVO, '^\d+$')) AS SUP
+        FROM SW_FUNPREV.FOLHA FO
+        WHERE FO.ANO = :ano
+          AND FO.MES = :mes
+          AND FO.ID_TIPO_FOLHA NOT IN (1000000)
+          AND FO.TIPO_ARQUIVO IS NOT NULL
+          AND FO.TIPO_ARQUIVO <> '001'
+        """,
+        """
+        SELECT DISTINCT TO_NUMBER(REGEXP_SUBSTR(FO.TIPO_ARQUIVO, '^\d+$')) AS SUP
+        FROM SW_EMGERPI.FOLHA FO
+        WHERE FO.ANO = :ano
+          AND FO.MES = :mes
+          AND FO.ID_TIPO_FOLHA NOT IN (1000000)
+          AND FO.TIPO_ARQUIVO IS NOT NULL
+          AND FO.TIPO_ARQUIVO <> '001'
+        """
+    ]
+
+    encontrados = set()
+    for q in queries_busca:
+        try:
+            df_res = executar_query(conn, q, {"ano": ano, "mes": mes})
+            if not df_res.empty:
+                for val in df_res.iloc[:, 0].dropna():
+                    try:
+                        num = int(val)
+                        if num >= 2:
+                            encontrados.add(num)
+                    except Exception:
+                        continue
+        except Exception:
+            continue
+
+    # Varredura completa em todos os JSONs de patronal da EMGERPI para o mês/ano
+    try:
+        sql_json_base = get_query_json_patronal_emgerpi(ano, mes)
+        sql_busca_geral = sql_json_base
+        if "AND" in sql_busca_geral.upper() and "CODIGO_EXTERNO" in sql_busca_geral.upper():
+            import re
+            sql_busca_geral = re.sub(r"AND\s+.*CODIGO_EXTERNO.*?(?=AND|ORDER|GROUP|$)", "", sql_busca_geral, flags=re.IGNORECASE)
+
+        df_emgerpi = executar_query(conn, sql_busca_geral, {"ano": ano, "mes": mes})
+        if not df_emgerpi.empty:
+            for col in df_emgerpi.columns:
+                for val in df_emgerpi[col].dropna():
+                    val_str = str(val)
+                    if "codigoExterno" in val_str:
+                        import re
+                        matches = re.findall(r'"codigoExterno"\s*:\s*"([^"]+)"', val_str)
+                        for ext_code in matches:
+                            if ext_code.isdigit():
+                                num = int(ext_code)
+                                if num >= 2:
+                                    encontrados.add(num)
+    except Exception:
+        pass
+
+    lista_nums = sorted(list(encontrados))
+    return [f"{n:03d}" for n in lista_nums]
+
 
 def construir_payload_json(df, mes, ano, cod_unidade, cod_relatorio, codigo_externo="001"):
     if df is None or df.empty:
@@ -104,14 +187,23 @@ def executar_query(conn, query, params):
     return pd.DataFrame(data, columns=columns)
 
 
-def executar_query_emgerpi(conn, ano, mes):
-    sql_json = get_query_json_patronal_emgerpi(ano, mes)
+def executar_query_emgerpi_fallback(conn, ano, mes, codigo_externo="001"):
+    sql_json = get_query_json_patronal_emgerpi(ano, mes, codigo_externo)
     cursor = conn.cursor()
     cursor.execute(sql_json)
-    row = cursor.fetchone()
+    rows = cursor.fetchall()
     cursor.close()
-    if row:
-        return row[0]
+    if rows:
+        resultados = []
+        for i, row in enumerate(rows):
+            val_id = row[0] if len(row) > 1 else f"Linha_{i}"
+            val_json = row[1] if len(row) > 1 else row[0]
+            if val_json is not None:
+                resultados.append({
+                    "id_origem": str(val_id),
+                    "json_content": val_json
+                })
+        return resultados
     return None
 
 
@@ -179,17 +271,31 @@ def consultar_recibo_sefaz(ano, mes, cod_unidade, cod_relatorio, codigo_externo)
 
 # --- BLOCO DE RENDERIZAÇÃO DA INTERFACE ---
 
-def render_bloco_processamento(conn, titulo, id_chave, sql, mes, ano, cod_unidade=None, cod_relatorio=None, auth_ui=None, seletor_folha_global="Ordinária"):
-    
-    codigo_externo = "001"
+def render_bloco_processamento(
+    conn,
+    titulo,
+    id_chave,
+    sql,
+    mes,
+    ano,
+    cod_unidade=None,
+    cod_relatorio=None,
+    auth_ui=None,
+    seletor_folha_global="Ordinária",
+    numero_suplementar="002"
+):
     if seletor_folha_global == "Suplementar":
-        codigo_externo = "002"
+        num_sup_limpo = str(numero_suplementar).strip()
+        if num_sup_limpo.isdigit() and int(num_sup_limpo) >= 2:
+            codigo_externo = num_sup_limpo.zfill(3)
+        else:
+            codigo_externo = "002" 
         if callable(sql):
-            sql = sql("suplementar")
+            sql = sql("suplementar", codigo_externo)
     else:
         codigo_externo = "001"
         if callable(sql):
-            sql = sql("ordinaria")
+            sql = sql("ordinaria", "001")
 
     if cod_unidade and cod_relatorio:
         tipo_folha_val = 8 if str(cod_unidade) == "120" else 9
@@ -213,38 +319,27 @@ def render_bloco_processamento(conn, titulo, id_chave, sql, mes, ano, cod_unidad
         try:
             with st.spinner(f"A gerar dados para {titulo}..."):
                 if id_chave == "emgerpi":
-                    json_str = executar_query_emgerpi(conn, ano, mes)
-                    if json_str:
-                        try:
-                            if isinstance(json_str, str):
-                                dados_json_obj = json.loads(json_str)
-                            else:
-                                dados_json_obj = json_str
-                            
+                    if executar_query_emgerpi is not None and processar_dados_emgerpi is not None:
+                        json_retorno = executar_query_emgerpi(conn, ano, mes, codigo_externo, executar_query)
+                        json_str, df = processar_dados_emgerpi(json_retorno, codigo_externo)
+                        st.session_state[json_raw_key] = json_str
+                        st.session_state[data_key] = df
+                    else:
+                        json_retorno = executar_query_emgerpi_fallback(conn, ano, mes, codigo_externo)
+                        if json_retorno and len(json_retorno) > 0:
+                            conteudo = json_retorno[0].get("json_content")
+                            dados_json_obj = json.loads(conteudo) if isinstance(conteudo, str) else conteudo
                             if isinstance(dados_json_obj, dict):
-                                json_codigo_externo = str(dados_json_obj.get("codigoExterno", "001"))
-                                
-                                # VALIDAÇÃO RIGOROSA: Se o tipo selecionado for suplementar (002)
-                                # e o JSON do banco for ordinária (001) sem dados suplementares, descartamos.
-                                if codigo_externo == "002" and json_codigo_externo != "002":
-                                    dados_json_obj = None
-                                else:
-                                    dados_json_obj["codigoExterno"] = str(codigo_externo)
-                        except Exception:
-                            dados_json_obj = None
-
-                        if dados_json_obj:
-                            json_str = json.dumps(dados_json_obj, ensure_ascii=False, indent=2)
-                            st.session_state[json_raw_key] = json_str
-                            dados = dados_json_obj
-                            pagamentos = dados.get("pagamentos", dados) if isinstance(dados, dict) else dados
-                            st.session_state[data_key] = pd.json_normalize(pagamentos)
+                                dados_json_obj["codigoExterno"] = str(codigo_externo)
+                                st.session_state[json_raw_key] = json.dumps(dados_json_obj, ensure_ascii=False, indent=2)
+                                pagamentos = dados_json_obj.get("pagamentos", [])
+                                st.session_state[data_key] = pd.json_normalize(pagamentos)
+                            else:
+                                st.session_state[json_raw_key] = None
+                                st.session_state[data_key] = pd.DataFrame()
                         else:
                             st.session_state[json_raw_key] = None
                             st.session_state[data_key] = pd.DataFrame()
-                    else:
-                        st.session_state[json_raw_key] = None
-                        st.session_state[data_key] = pd.DataFrame()
                 elif sql:
                     df = executar_query(conn, sql, {"mes": mes, "ano": ano})
                     st.session_state[data_key] = df
@@ -565,20 +660,89 @@ def render(conn, ano, mes, meses_lista=None):
     st.title("📁 Gerador e Transmissor de Arquivos Extras")
     mes_nome = meses_lista.get(int(mes), str(mes))
     
-    col_comp, col_tipo_folha = st.columns([1.5, 2.5])
+    col_comp, col_painel = st.columns([1.2, 4])
     
     with col_comp:
-        st.caption(f"**Competência Selecionada:** {mes_nome}/{ano}")
+        st.caption(f"**Competência:** {mes_nome}/{ano}")
         
-    with col_tipo_folha:
-        tipo_folha_global = st.radio(
-            "Tipo de Folha Geral:",
-            options=["Ordinária", "Suplementar"],
+    with col_painel:
+        cache_key_sup = f"lista_sup_{ano}_{mes}"
+        if cache_key_sup not in st.session_state:
+            st.session_state[cache_key_sup] = buscar_lista_numeros_suplementares(conn, ano, mes)
+        opcoes_sup = st.session_state[cache_key_sup]
+
+        # Lista unificada combinando Ordinária '001' + opções suplementares disponíveis
+        lista_opcoes = ["001"] + [str(s) for s in opcoes_sup] if opcoes_sup else ["001"]
+
+        state_selecao_key = f"tipo_ou_sup_selecionado_{ano}_{mes}"
+        if state_selecao_key not in st.session_state:
+            st.session_state[state_selecao_key] = "001"
+
+        current_val = st.session_state[state_selecao_key]
+        if current_val not in lista_opcoes:
+            current_val = "001"
+            st.session_state[state_selecao_key] = "001"
+
+        idx_atual = lista_opcoes.index(current_val)
+
+        st.markdown("""
+        <style>
+            .unified-table {
+                border: 1px solid rgba(150, 150, 150, 0.25);
+                border-radius: 8px;
+                overflow: hidden;
+                background: #ffffff;
+                box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+                margin-top: 2px;
+                margin-bottom: 10px;
+            }
+            .unified-header {
+                display: grid;
+                grid-template-columns: 1fr 3fr;
+                background-color: #f8f9fa;
+                border-bottom: 1px solid rgba(150, 150, 150, 0.2);
+                font-size: 11px;
+                font-weight: 700;
+                color: #555;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+                text-align: center;
+            }
+            .unified-th {
+                padding: 7px 10px;
+            }
+            .unified-th:first-child {
+                border-right: 1px solid rgba(150, 150, 150, 0.2);
+            }
+        </style>
+        <div class="unified-table">
+            <div class="unified-header">
+                <div class="unified-th">Ordinária</div>
+                <div class="unified-th">Suplementar</div>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+        # Único st.radio unificado garantindo exclusão mútua nativa e fluida
+        sel_unificado = st.radio(
+            "Tipo de Folha",
+            options=lista_opcoes,
+            index=idx_atual,
             horizontal=True,
-            key="radio_tipo_folha_global"
+            label_visibility="collapsed",
+            key=f"radio_unificado_{ano}_{mes}"
         )
 
-    st.divider()
+        if sel_unificado:
+            st.session_state[state_selecao_key] = sel_unificado
+
+        # Define as variáveis globais finais com base na única seleção ativa
+        if st.session_state[state_selecao_key] == "001":
+            tipo_folha_global = "Ordinária"
+            numero_suplementar = "001"
+        else:
+            tipo_folha_global = "Suplementar"
+            numero_suplementar = st.session_state[state_selecao_key]
 
     render_bloco_processamento(
         conn=conn,
@@ -590,13 +754,14 @@ def render(conn, ano, mes, meses_lista=None):
         cod_unidade="120",
         cod_relatorio="93",
         auth_ui=auth_ui,
-        seletor_folha_global=tipo_folha_global
+        seletor_folha_global=tipo_folha_global,
+        numero_suplementar=numero_suplementar
     )
 
     st.divider()
 
-    def get_sql_seduc_extra(tipo):
-        tipo_arquivo_val = "002" if tipo == "suplementar" else "001"
+    def get_sql_seduc_extra(tipo, cod_sup="002"):
+        tipo_arquivo_val = cod_sup if tipo == "suplementar" else "001"
         condicao_tipo_folha = "S.ID_TIPO_FOLHA IN (1000000)" if tipo == "ordinaria" else "S.ID_TIPO_FOLHA NOT IN (1000000)"
         
         return f"""
@@ -655,13 +820,15 @@ def render(conn, ano, mes, meses_lista=None):
         cod_unidade="011",
         cod_relatorio="99",
         auth_ui=auth_ui,
-        seletor_folha_global=tipo_folha_global
+        seletor_folha_global=tipo_folha_global,
+        numero_suplementar=numero_suplementar
     )
 
     st.divider()
 
-    def get_sql_funprev(tipo):
+    def get_sql_funprev(tipo, cod_sup="002"):
         condicao_tipo_folha = "FO.ID_TIPO_FOLHA IN (1000000)" if tipo == "ordinaria" else "NOT FO.ID_TIPO_FOLHA IN (1000000)"
+        condicao_tipo_arquivo = "" if tipo == "ordinaria" else f"AND (FO.TIPO_ARQUIVO = '{cod_sup}' OR FO.TIPO_ARQUIVO IS NULL)"
         
         return f"""
         SELECT 
@@ -698,6 +865,7 @@ def render(conn, ano, mes, meses_lista=None):
             WHERE FO.MES = :mes 
               AND FO.ANO = :ano 
               AND {condicao_tipo_folha} 
+              {condicao_tipo_arquivo}
               AND FC.ID_PENSIONISTA IS NULL 
               AND FC.ID_PENSIONISTA_PA IS NULL 
               AND FR.COD_RUBRICA IN (714400, 714403, 714405, 714410, 714436, 714450, 714460, 714455, 714420, 714452, 714470, 714475, 714480) 
@@ -723,6 +891,7 @@ def render(conn, ano, mes, meses_lista=None):
             WHERE FO.MES = :mes 
               AND FO.ANO = :ano 
               AND {condicao_tipo_folha} 
+              {condicao_tipo_arquivo}
               AND FR.COD_RUBRICA IN (714400, 714403, 714405, 714410, 714436, 714450, 714460, 714455, 714420, 714452, 714470, 714475, 714480) 
             GROUP BY FO.TIPO_FOLHA_SEFAZ, FR.COD_RUBRICA, FI.ID_REGIME 
         ) S 
@@ -739,13 +908,14 @@ def render(conn, ano, mes, meses_lista=None):
         cod_unidade="924",
         cod_relatorio="90",
         auth_ui=auth_ui,
-        seletor_folha_global=tipo_folha_global
+        seletor_folha_global=tipo_folha_global,
+        numero_suplementar=numero_suplementar
     )
 
     st.divider()
 
-    def get_sql_seduc_011(tipo):
-        tipo_arquivo_val = "002" if tipo == "suplementar" else "001"
+    def get_sql_seduc_011(tipo, cod_sup="002"):
+        tipo_arquivo_val = cod_sup if tipo == "suplementar" else "001"
         condicao_tipo_folha = "S.ID_TIPO_FOLHA IN (1000000)" if tipo == "ordinaria" else "S.ID_TIPO_FOLHA NOT IN (1000000)"
         
         return f"""
@@ -804,13 +974,14 @@ def render(conn, ano, mes, meses_lista=None):
         cod_unidade="011",
         cod_relatorio="90",
         auth_ui=auth_ui,
-        seletor_folha_global=tipo_folha_global
+        seletor_folha_global=tipo_folha_global,
+        numero_suplementar=numero_suplementar
     )
 
     st.divider()
 
-    def get_sql_seduc_914(tipo):
-        tipo_arquivo_val = "002" if tipo == "suplementar" else "001"
+    def get_sql_seduc_914(tipo, cod_sup="002"):
+        tipo_arquivo_val = cod_sup if tipo == "suplementar" else "001"
         condicao_tipo_folha = "S.ID_TIPO_FOLHA IN (1000000)" if tipo == "ordinaria" else "S.ID_TIPO_FOLHA NOT IN (1000000)"
         
         return f"""
@@ -869,6 +1040,7 @@ def render(conn, ano, mes, meses_lista=None):
         cod_unidade="914",
         cod_relatorio="90",
         auth_ui=auth_ui,
-        seletor_folha_global=tipo_folha_global
+        seletor_folha_global=tipo_folha_global,
+        numero_suplementar=numero_suplementar
     )
 

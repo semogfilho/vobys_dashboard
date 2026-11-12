@@ -158,7 +158,7 @@ def get_listas_schemas_responsaveis():
     # Órgãos alocados para o Deividy
     schemas_deividy = [
         'SW_SECESP', 'SW_SECULT', 'SW_SETRE', 'SW_DETRAN', 'SW_SEMAR', 
-        'SW_SASC', 'SW_IMEPI', 'SW_SEJUSPI', 'SW_SEADPREVPI','SW_REENVIO'
+        'SW_SASC', 'SW_IMEPI', 'SW_SEJUSPI', 'SW_SEADPREVPI'
     ]
     
     # Órgãos alocados para a Sarah
@@ -201,56 +201,57 @@ GET_SIGLAS_EMPRESA = """
     FROM sw_publico.empresa e
     FULL OUTER JOIN josegomes.tb_use_sefaz t ON e.ORGAO_SIAFI = t.codigo
 """
-
-# -*- coding: utf-8 -*-
-
-def get_query_json_patronal_emgerpi(ano, mes):
-    """
-    Retorna a query SQL para geração e consolidação do JSON Patronal EMGERPI (V4).
-    """
+def get_query_json_patronal_emgerpi(ano, mes, codigo_externo=None):
+    filtro_ext = f"AND jt.codigo_externo = '{codigo_externo}'" if codigo_externo else ""
+    
     return f"""
         WITH base_limpa AS (
-            SELECT 
+            SELECT
                 sei.id_siafe_evento_integracao,
                 sei.codigo_sefaz,
-                MIN(sei.codigo_sefaz) OVER () AS min_codigo_sefaz,
                 SUBSTR(
                     UTL_RAW.CAST_TO_VARCHAR2(seip.json),
                     INSTR(UTL_RAW.CAST_TO_VARCHAR2(seip.json), '{{'),
                     INSTR(UTL_RAW.CAST_TO_VARCHAR2(seip.json), '}}', -1) - INSTR(UTL_RAW.CAST_TO_VARCHAR2(seip.json), '{{') + 1
                 ) AS json_valido
             FROM SW_PUBLICO.SIAFE_EVENTO_INTEGRACAO sei
-            INNER JOIN SW_PUBLICO.EMPRESA e 
-                ON e.id_empresa = sei.id_empresa
             INNER JOIN SW_PUBLICO.Siafe_Evento_Integ_Payload seip
                 ON seip.id_siafe_evento_integracao = sei.id_siafe_evento_integracao
-            WHERE e.cnpj = '06.643.068/0001-75' 
-              AND sei.ano = {ano} 
-              AND sei.mes = {int(mes)} 
+            WHERE sei.id_empresa IN (
+                    SELECT e.id_empresa 
+                    FROM SW_PUBLICO.EMPRESA e 
+                    WHERE e.cnpj = '06.643.068/0001-75'
+                )
+              AND sei.ano = {ano}
+              AND sei.mes = {int(mes)}
               AND sei.ind_tipo_requisicao = 'V4'
-              order by sei.codigo_sefaz
         ),
-        cabecalho_principal AS (
+        base_filtrada AS (
             SELECT 
-                MAX(CASE WHEN b.codigo_sefaz = b.min_codigo_sefaz THEN jt.codigo_unidade END) AS codigo_unidade,
-                MAX(CASE WHEN b.codigo_sefaz = b.min_codigo_sefaz THEN jt.mes END) AS mes,
-                MAX(CASE WHEN b.codigo_sefaz = b.min_codigo_sefaz THEN jt.id_tipo_folha END) AS id_tipo_folha,
-                MAX(CASE WHEN b.codigo_sefaz = b.min_codigo_sefaz THEN jt.codigo_externo END) AS codigo_externo,
-                MAX(CASE WHEN b.codigo_sefaz = b.min_codigo_sefaz THEN jt.codigo_relatorio END) AS codigo_relatorio,
-                MAX(CASE WHEN b.codigo_sefaz = b.min_codigo_sefaz THEN jt.competencia END) AS competencia
+                b.id_siafe_evento_integracao,
+                b.codigo_sefaz,
+                jt.codigo_unidade,
+                jt.mes,
+                jt.id_tipo_folha,
+                jt.codigo_externo,
+                jt.codigo_relatorio,
+                jt.competencia,
+                b.json_valido
             FROM base_limpa b,
-                 JSON_TABLE(b.json_valido, '$'
-                     COLUMNS (
-                         codigo_unidade   VARCHAR2(100) PATH '$.codigoUnidadeSistemaExterno',
-                         mes              NUMBER        PATH '$.mes',
-                         id_tipo_folha    NUMBER        PATH '$.idTipoFolha',
-                         codigo_externo   VARCHAR2(100) PATH '$.codigoExterno',
-                         codigo_relatorio VARCHAR2(100) PATH '$.codigoRelatorioFolhaPagamento',
-                         competencia      VARCHAR2(20)  PATH '$.competencia'
-                     )
-                 ) jt
+                JSON_TABLE(b.json_valido, '$'
+                    COLUMNS (
+                        codigo_unidade   VARCHAR2(100) PATH '$.codigoUnidadeSistemaExterno',
+                        mes              NUMBER        PATH '$.mes',
+                        id_tipo_folha    NUMBER        PATH '$.idTipoFolha',
+                        codigo_externo   VARCHAR2(100) PATH '$.codigoExterno',
+                        codigo_relatorio VARCHAR2(100) PATH '$.codigoRelatorioFolhaPagamento',
+                        competencia      VARCHAR2(20)  PATH '$.competencia'
+                    )
+                ) jt
+            WHERE 1=1 {filtro_ext}
         )
-        SELECT 
+        SELECT
+            c.id_siafe_evento_integracao,
             REPLACE(
                 JSON_SERIALIZE(
                     JSON_OBJECT(
@@ -272,8 +273,8 @@ def get_query_json_patronal_emgerpi(ano, mes):
                                        )
                                        RETURNING CLOB
                                    )
-                            FROM base_limpa b_sub,
-                                 JSON_TABLE(b_sub.json_valido, '$.pagamentos[*]' 
+                            FROM base_filtrada b_sub,
+                                 JSON_TABLE(b_sub.json_valido, '$.pagamentos[*]'
                                      COLUMNS (
                                          regime_previdenciario VARCHAR2(50)  PATH '$.regimePrevidenciario',
                                          codigo_rubrica        VARCHAR2(50)  PATH '$.codigoRubrica',
@@ -284,13 +285,12 @@ def get_query_json_patronal_emgerpi(ano, mes):
                                  ) p
                         )
                         RETURNING CLOB
-                    ) 
+                    )
                     PRETTY
                 ),
                 '"pagamentos" :' || CHR(10) || '  [',
                 '"pagamentos": ['
             ) AS novo_json_final
-        FROM cabecalho_principal c
+        FROM base_filtrada c
     """
-
 

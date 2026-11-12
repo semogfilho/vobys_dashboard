@@ -1,0 +1,70 @@
+def render(conn, ano, mes, meses_lista=None):
+    if meses_lista is None:
+        meses_lista = {
+            1: "Janeiro", 2: "Fevereiro", 3: "Março", 4: "Abril",
+            5: "Maio", 6: "Junho", 7: "Julho", 8: "Agosto",
+            9: "Setembro", 10: "Outubro", 11: "Novembro", 12: "Dezembro"
+        }
+
+    st.title("📁 Gerador e Transmissor de Arquivos Extras")
+    mes_nome = meses_lista.get(int(mes), str(mes))
+    
+    col_comp, col_painel = st.columns([1.2, 4])
+    
+    with col_comp:
+        st.caption(f"**Competência:** {mes_nome}/{ano}")
+        
+    with col_painel:
+        cache_key_sup = f"lista_sup_{ano}_{mes}"
+        if cache_key_sup not in st.session_state:
+            st.session_state[cache_key_sup] = buscar_lista_numeros_suplementares(conn, ano, mes)
+        opcoes_sup = st.session_state[cache_key_sup]
+
+        # Monta a lista unificada de opções disponíveis para esta competência
+        # Ex: ["001 (Ordinária)"] + ["002 (Suplementar)", "003 (Suplementar)"]
+        opcoes_gerais = ["001 (Ordinária)"]
+        for sup in opcoes_sup:
+            opcoes_gerais.append(f"{sup} (Suplementar)")
+
+        state_selecao_key = f"selecao_folha_unificada_{ano}_{mes}"
+        if state_selecao_key not in st.session_state:
+            st.session_state[state_selecao_key] = opcoes_gerais[0]
+
+        if st.session_state[state_selecao_key] not in opcoes_gerais:
+            st.session_state[state_selecao_key] = opcoes_gerais[0]
+
+        idx_atual = opcoes_gerais.index(st.session_state[state_selecao_key])
+
+        st.markdown("""
+        <style>
+            .unified-box {
+                border: 1px solid rgba(150, 150, 150, 0.25);
+                border-radius: 8px;
+                padding: 10px 15px;
+                background: #ffffff;
+                box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+                margin-bottom: 12px;
+            }
+        </style>
+        """, unsafe_allow_html=True)
+
+        # Seletor unificado limpo e sem conflitos
+        escolha_atual = st.radio(
+            "Selecione o tipo e número da folha:",
+            options=opcoes_gerais,
+            index=idx_atual,
+            horizontal=True,
+            key=f"radio_unificado_{ano}_{mes}"
+        )
+
+        st.session_state[state_selecao_key] = escolha_atual
+
+        # Extrai o tipo global e o número suplementar com base na escolha unificada
+        if "Ordinária" in escolha_atual:
+            tipo_folha_global = "Ordinária"
+            numero_suplementar = "001"
+        else:
+            tipo_folha_global = "Suplementar"
+            # Extrai os dígitos do número (ex: "002 (Suplementar)" -> "002")
+            numero_suplementar = escolha_atual.split(" ")[0]
+

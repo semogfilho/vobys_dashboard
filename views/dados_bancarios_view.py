@@ -536,6 +536,7 @@ def renderizar_dados_bancarios(
 
                             if sucesso:
                                 st.session_state.df_bancario.loc[mask, "ENVIADO"] = "SIM"
+                                st.session_state.df_bancario.loc[mask, "Envio/Checagem"] = pd.Timestamp.now().strftime("%d/%m/%Y %H:%M:%S")
                                 st.session_state.df_bancario.loc[mask, "SEFAZ"] = (
                                     "✅ MATRÍCULA ATIVA"
                                 )
