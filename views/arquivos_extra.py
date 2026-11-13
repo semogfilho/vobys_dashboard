@@ -324,6 +324,12 @@ def render_bloco_processamento(
                     if not df.empty and cod_unidade and cod_relatorio:
                         payload_obj = construir_payload_json(df, mes, ano, cod_unidade, cod_relatorio, codigo_externo)
                         st.session_state[json_raw_key] = json.dumps(payload_obj, ensure_ascii=False, indent=2)
+
+                # Feedback visual caso venha vazio
+                df_verificacao = st.session_state.get(data_key)
+                if df_verificacao is None or df_verificacao.empty:
+                    st.warning(f"⚠️ Nenhum registro encontrado para gerar o arquivo de {titulo} ({ano}/{int(mes):02d} - Ext: {codigo_externo}).")
+
                 st.session_state.pop(retorno_key, None)
                 st.session_state.pop(flag_envio_key, None)
                 st.session_state.pop(flag_consulta_key, None)
@@ -676,7 +682,7 @@ def render(conn, ano, mes, meses_lista=None):
             tipo_folha_global = "Suplementar"
             numero_suplementar = st.session_state[state_selecao_key]
 
-    # Renderização dos blocos utilizando as funções importadas do utils_orgaos e utils_emgerpi
+    # Renderização dos blocos utilizando as funções importadas dos módulos auxiliares
     render_bloco_processamento(conn, "1. PATRONAL EMGERPI", "emgerpi", None, mes, ano, "120", "93", auth_ui, tipo_folha_global, numero_suplementar)
     st.divider()
 
