@@ -82,10 +82,11 @@ def executar_query_emgerpi_fallback(conn, ano, mes, codigo_externo="001"):
             resultados = []
             for i, row in enumerate(rows):
                 val_id = row[0] if len(row) > 1 else f"Linha_{i}"
-                val_json = row[1] if len(row) > 1 else row[0]
+                val_json = row[-1] if len(row) > 1 else row[0]
                 if val_json is not None:
                     resultados.append({
                         "id_origem": str(val_id),
+                        "status_vobys": str(row[1]) if len(row) > 2 else "N/D",
                         "json_content": val_json
                     })
             return resultados
@@ -492,6 +493,18 @@ def render_bloco_processamento(
         with st.expander("🔍 Visualizar Prévia dos Dados", expanded=False):
             df_exibicao = df_gerado.copy()
             
+            # Transforma idSiafeEvento em link HTML se o status não for VALIDADO
+            if 'idSiafeEvento' in df_exibicao.columns and 'status' in df_exibicao.columns:
+                def formatar_id_link(row):
+                    ev_id = str(row['idSiafeEvento'])
+                    st_val = str(row['status']).strip().upper()
+                    if st_val != 'VALIDADO':
+                        url = f"https://siape.sead.pi.gov.br/adm/sead/gerencial/gerencial/integracao-sistema-financeiro-siafe/informacoes-a-transmitir/evento-transmissao/{ev_id}"
+                        return f'<a href="{url}" target="_blank" style="color: #0066cc; text-decoration: underline; font-weight: 600;">{ev_id}</a>'
+                    return ev_id
+
+                df_exibicao['idSiafeEvento'] = df_exibicao.apply(formatar_id_link, axis=1)
+
             cols_valores = ['VANTAGENS', 'DESCONTOS', 'valor', 'valorDesconto']
             for col in cols_valores:
                 if col in df_exibicao.columns:
@@ -528,7 +541,7 @@ def render_bloco_processamento(
             for col in cols_valores:
                 if col in df_tabela_formatada.columns:
                     df_tabela_formatada[col] = df_tabela_formatada[col].apply(
-                        lambda x: f"R$ {x:,.2f}".replace(',', 'v').replace('.', ',').replace('v', '.')
+                        lambda x: f"R$ {x:,.2f}".replace(',', 'v').replace('.', ',').replace('v', '.') if isinstance(x, (int, float)) else x
                     )
 
             html_tabela = df_tabela_formatada.to_html(index=True, classes="custom-preview-table", escape=False)
@@ -682,7 +695,6 @@ def render(conn, ano, mes, meses_lista=None):
             tipo_folha_global = "Suplementar"
             numero_suplementar = st.session_state[state_selecao_key]
 
-    # Renderização dos blocos utilizando as funções importadas dos módulos auxiliares
     render_bloco_processamento(conn, "1. PATRONAL EMGERPI", "emgerpi", None, mes, ano, "120", "93", auth_ui, tipo_folha_global, numero_suplementar)
     st.divider()
 
