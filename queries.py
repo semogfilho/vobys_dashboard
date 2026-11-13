@@ -201,13 +201,13 @@ GET_SIGLAS_EMPRESA = """
     FROM sw_publico.empresa e
     FULL OUTER JOIN josegomes.tb_use_sefaz t ON e.ORGAO_SIAFI = t.codigo
 """
-
+# -*- coding: utf-8 -*-
 # -*- coding: utf-8 -*-
 
 def get_query_json_patronal_emgerpi(ano, mes, codigo_externo=None):
     """
     Retorna a query SQL corrigida para gerar o JSON Patronal EMGERPI (V4) 
-    agrupada por evento, garantindo um ID e JSON independente para cada unidade/empresa.
+    agrupada por evento, garantindo o ID, o status completo mapeado e o JSON independente.
     """
     filtro_ext = ""
     if codigo_externo:
@@ -219,6 +219,7 @@ def get_query_json_patronal_emgerpi(ano, mes, codigo_externo=None):
             SELECT
                 sei.id_siafe_evento_integracao,
                 sei.codigo_sefaz,
+                sei.status_vobys,
                 SUBSTR(
                     UTL_RAW.CAST_TO_VARCHAR2(seip.json),
                     INSTR(UTL_RAW.CAST_TO_VARCHAR2(seip.json), '{{'),
@@ -238,6 +239,18 @@ def get_query_json_patronal_emgerpi(ano, mes, codigo_externo=None):
         )
         SELECT
             b.id_siafe_evento_integracao AS ID_ORIGEM,
+            DECODE(b.status_vobys, 
+                'P', 'PENDENTE', 
+                'T', 'TRANSMITIDO', 
+                'A', 'ABERTO', 
+                'F', 'FECHADO', 
+                'I', 'INCONSISTENCIA DE CADASTRO', 
+                'O', 'OUTRAS INCONSISTENCIAS', 
+                'E', 'ERRO', 
+                'X', 'EXCLUIDO',
+                'V', 'VALIDADO',
+                b.status_vobys
+            ) AS STATUS_REGISTRO,
             REPLACE(
                 JSON_SERIALIZE(
                     JSON_OBJECT(

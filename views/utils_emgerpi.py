@@ -17,15 +17,20 @@ def executar_query_emgerpi(conn, ano, mes, codigo_externo, executar_query_func):
             return None
         
         resultados = []
+        # Espera-se: Coluna 0 = ID, Coluna 1 = Status (opcional), Coluna Final = JSON
         col_id = df_res.columns[0]
-        col_json = df_res.columns[1] if df_res.shape[1] > 1 else df_res.columns[0]
+        col_status = df_res.columns[1] if df_res.shape[1] > 2 else None
+        col_json = df_res.columns[-1] # Sempre a última coluna para garantir flexibilidade
         
         for _, row in df_res.iterrows():
             val_id = row[col_id]
+            val_status = row[col_status] if col_status and col_status in df_res.columns else "N/D"
             val_json = row[col_json]
+            
             if val_json is not None:
                 resultados.append({
                     "id_origem": str(val_id),
+                    "status_vobys": str(val_status),
                     "json_content": val_json
                 })
         return resultados
@@ -41,10 +46,13 @@ def executar_query_emgerpi(conn, ano, mes, codigo_externo, executar_query_func):
             resultados = []
             for i, row in enumerate(rows):
                 val_id = row[0] if len(row) > 1 else f"Linha_{i}"
-                val_json = row[1] if len(row) > 1 else row[0]
+                val_status = row[1] if len(row) > 2 else "N/D"
+                val_json = row[-1] if len(row) > 1 else row[0]
+                
                 if val_json is not None:
                     resultados.append({
                         "id_origem": str(val_id),
+                        "status_vobys": str(val_status),
                         "json_content": val_json
                     })
             return resultados
@@ -61,9 +69,9 @@ def processar_dados_emgerpi(json_retorno, codigo_externo):
         todos_pagamentos = []
         lote_referencia = None
 
-        # Processa cada linha de forma estritamente isolada pelo seu ID de origem
         for item in json_retorno:
             id_origem = str(item.get("id_origem", "N/D"))
+            status_origem = str(item.get("status_vobys", "N/D"))
             conteudo = item.get("json_content")
 
             if not conteudo:
@@ -82,16 +90,15 @@ def processar_dados_emgerpi(json_retorno, codigo_externo):
                     
                     if ext_code == target_code:
                         if lote_referencia is None:
-                            lote_referencia = lote # Guarda a estrutura base para o arquivo JSON final
+                            lote_referencia = lote
 
                         pagamentos = lote.get("pagamentos", [])
                         for pag in pagamentos:
                             if isinstance(pag, dict):
                                 pag_copia = dict(pag)
-                                # Vincula o ID correto e individual do evento a cada linha de pagamento
                                 pag_copia['idSiafeEvento'] = id_origem
+                                pag_copia['status'] = status_origem
                                 pag_copia['codigoExterno'] = target_code
-                                pag_copia['alvoSelecionado'] = target_code
                                 todos_pagamentos.append(pag_copia)
 
         if lote_referencia:
@@ -100,17 +107,18 @@ def processar_dados_emgerpi(json_retorno, codigo_externo):
             lote_limpo.pop("__id_origem_temp", None)
             lote_limpo["codigoExterno"] = target_code
             
-            # Reconstrói a lista de pagamentos no JSON unificando todos os itens mapeados com seus respectivos IDs
             lote_limpo["pagamentos"] = []
             for p in todos_pagamentos:
-                p_limpo = {k: v for k, v in p.items() if k not in ['idSiafeEvento', 'codigoExterno', 'alvoSelecionado']}
+                # Remove colunas auxiliares internas antes de serializar o JSON final de envio
+                p_limpo = {k: v for k, v in p.items() if k not in ['idSiafeEvento', 'status', 'codigoExterno']}
                 lote_limpo["pagamentos"].append(p_limpo)
 
             json_str = json.dumps(lote_limpo, ensure_ascii=False, indent=2)
             df = pd.DataFrame(todos_pagamentos)
             
             if not df.empty:
-                cols_principais = ['idSiafeEvento', 'codigoExterno', 'alvoSelecionado']
+                # Organiza as colunas principais no início da tabela visualizada
+                cols_principais = ['idSiafeEvento', 'status', 'codigoExterno']
                 outras_cols = [c for c in df.columns if c not in cols_principais]
                 df = df[cols_principais + outras_cols]
 
