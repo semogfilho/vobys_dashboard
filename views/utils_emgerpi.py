@@ -105,6 +105,9 @@ def processar_dados_emgerpi(json_retorno, codigo_externo):
             lote_limpo = json.loads(json.dumps(lote_referencia))
             lote_limpo.pop("_id_arquivo_origem", None)
             lote_limpo.pop("__id_origem_temp", None)
+            
+            # Define 120 como unidade padrão no cabeçalho da EMGERPI
+            lote_limpo["codigoUnidadeSistemaExterno"] = "120"
             lote_limpo["codigoExterno"] = target_code
             
             lote_limpo["pagamentos"] = []
