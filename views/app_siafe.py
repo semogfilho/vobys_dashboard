@@ -79,6 +79,7 @@ def render(conn, ano_selecionado, mes_chave=None, meses_disponiveis=None, **kwar
         st.markdown("## 📊 Painel de Pagamentos Pendentes")
         st.markdown("---")
 
+        # --- LINHA 1 DE FILTROS ---
         col_c1, col_c2, col_c3 = st.columns([2, 2, 2])
         with col_c1:
             meses_opcoes = ["TODOS", 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13]
@@ -92,6 +93,15 @@ def render(conn, ano_selecionado, mes_chave=None, meses_disponiveis=None, **kwar
         with col_c3:
             st.markdown("<br>", unsafe_allow_html=True)
             btn_atualizar = st.button("🔄 Recarregar Dados", use_container_width=True)
+
+        # --- LINHA 2 DE FILTROS (Busca por Matrícula, CPF/CNPJ e Nome) ---
+        col_b1, col_b2, col_b3 = st.columns(3)
+        with col_b1:
+            filtro_matricula = st.text_input("🔍 Matrícula:", placeholder="Digite a matrícula...")
+        with col_b2:
+            filtro_cpf = st.text_input("🔍 CPF / CNPJ:", placeholder="Digite o CPF ou CNPJ...")
+        with col_b3:
+            filtro_nome = st.text_input("🔍 Nome:", placeholder="Digite parte do nome...")
 
         if btn_atualizar:
             if "df_siafe_cache" in st.session_state:
@@ -120,14 +130,14 @@ def render(conn, ano_selecionado, mes_chave=None, meses_disponiveis=None, **kwar
 
         df_total['CATEGORIA_CALC'] = df_total['COD_SEFAZ'].apply(lambda x: "FOLHA" if str(x).isdigit() and int(str(x)) <= 999 else "PPF")
 
-        # Mapeia ou unifica o campo de Data de Pagamento de forma robusta
-        col_dt_pag = next((c for c in ['ITEM_DATAPAGAMENTO', 'ITEM_DATAPAGAMENT', 'DATAPAGAMENTO', 'DATA_PAGAMENTO', 'DATAPAGAMENTO'] if c in df_total.columns), None)
+        # Mapeia ou unifica o campo de Data de Pagamento
+        col_dt_pag = next((c for c in ['ITEM_DATAPAGAMENTO', 'ITEM_DATAPAGAMENT', 'DATAPAGAMENTO', 'DATA_PAGAMENTO'] if c in df_total.columns), None)
         if col_dt_pag:
             df_total['DATA_PAGAMENTO_EXIBE'] = df_total[col_dt_pag]
         else:
             df_total['DATA_PAGAMENTO_EXIBE'] = "N/D"
 
-        # Identifica ou cria coluna de mês/competência para exibição clara
+        # Identifica ou cria coluna de mês/competência
         col_comp = next((c for c in ['COMPETENCIA', 'MES', 'ITEM_MES', 'ITEM_COMPETENCIA'] if c in df_total.columns), None)
         if not col_comp:
             if col_dt_pag:
@@ -139,9 +149,11 @@ def render(conn, ano_selecionado, mes_chave=None, meses_disponiveis=None, **kwar
 
         df_filtrado = df_total.copy()
 
+        # Aplica filtro de Categoria
         if cat_escolhida != "TODAS":
             df_filtrado = df_filtrado[df_filtrado['CATEGORIA_CALC'] == cat_escolhida]
 
+        # Aplica filtro de Mês
         if mes_escolhido != "TODOS":
             mes_str = MAPA_MESES_ROBUSTO.get(mes_escolhido, "10")
             competencia_alvo = f"{mes_str}/{ano_selecionado}"
@@ -149,6 +161,22 @@ def render(conn, ano_selecionado, mes_chave=None, meses_disponiveis=None, **kwar
             col_data_filtro = next((c for c in ['COMPETENCIA_EXIBE', 'COMPETENCIA', 'DATA_PAGAMENTO_EXIBE'] if c in df_filtrado.columns), None)
             if col_data_filtro:
                 df_filtrado = df_filtrado[df_filtrado[col_data_filtro].astype(str).str.contains(competencia_alvo, na=False)]
+
+        # Aplica filtros de texto dinâmicos (Matrícula, CPF, Nome)
+        if filtro_matricula:
+            col_mat = next((c for c in ['ITEM_MATRICULA', 'MATRICULA'] if c in df_filtrado.columns), None)
+            if col_mat:
+                df_filtrado = df_filtrado[df_filtrado[col_mat].astype(str).str.contains(filtro_matricula, case=False, na=False)]
+
+        if filtro_cpf:
+            col_cpf = next((c for c in ['ITEM_CPF', 'CPF', 'CNPJ', 'ITEM_CNPJ', 'ITEM_CPFCNPJ'] if c in df_filtrado.columns), None)
+            if col_cpf:
+                df_filtrado = df_filtrado[df_filtrado[col_cpf].astype(str).str.contains(filtro_cpf, case=False, na=False)]
+
+        if filtro_nome:
+            col_nome = next((c for c in ['ITEM_NOME', 'NOME', 'FAVORECIDO', 'ITEM_FAVORECIDO'] if c in df_filtrado.columns), None)
+            if col_nome:
+                df_filtrado = df_filtrado[df_filtrado[col_nome].astype(str).str.contains(filtro_nome, case=False, na=False)]
 
         st.markdown("---")
 
@@ -179,7 +207,6 @@ def render(conn, ano_selecionado, mes_chave=None, meses_disponiveis=None, **kwar
 
         st.markdown("### 📋 Detalhamento Geral")
 
-        # Lista de colunas incluindo explicitamente a Data de Pagamento formatada
         colunas_padrao = [
             'CODIGO', 'COD_SEFAZ', 'SIGLA', 'TIPOPROCESSAMENTO', 
             'COMPETENCIA_EXIBE', 'DATA_PAGAMENTO_EXIBE', 'ITEM_NOME', 
