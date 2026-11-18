@@ -1,7 +1,7 @@
 
 Collecting usage statistics. To deactivate, set browser.gatherUsageStats to false.
 
-2026-11-13 21:48:18.952 Uvicorn server started on 0.0.0.0:8501
+2026-11-18 18:49:44.135 Uvicorn server started on 0.0.0.0:8501
 
   You can now view your Streamlit app in your browser.
 
@@ -9,5 +9,3 @@ Collecting usage statistics. To deactivate, set browser.gatherUsageStats to fals
   Network URL: http://10.0.52.171:8501
   External URL: http://200.23.153.196:8501
 
-/home/jose.gomes/vobys_dashboard/views/app_siafe.py:26: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
-  return pd.read_sql(GET_SIGLAS_EMPRESA, _conn)

@@ -1,29 +1,32 @@
 # -*- coding: utf-8 -*-
 import streamlit as st
+import requests
+import urllib3
 import pandas as pd
-import matplotlib.pyplot as plt
-import numpy as np
-import sys
-import os
-
-# Adiciona a raiz do projeto ao path para garantir a importação correta do sefaz_client
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-
 from queries import GET_SIGLAS_EMPRESA
-from sefaz_client import requisitar_sefaz
+import sefaz_client
+
+# Desabilita avisos de SSL
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 MAPA_MESES_ROBUSTO = {
-    "Jan": "01", "Fev": "02", "Mar": "03", "Abr": "04", "Mai": "05", "Jun": "06",
-    "Jul": "07", "Ago": "08", "Set": "09", "Out": "10", "Nov": "11", "Dez": "12",
     1: "01", 2: "02", 3: "03", 4: "04", 5: "05", 6: "06",
-    7: "07", 8: "08", 9: "09", 10: "10", 11: "11", 12: "12",
+    7: "07", 8: "08", 9: "09", 10: "10", 11: "11", 12: "12", 13: "13",
     "1": "01", "2": "02", "3": "03", "4": "04", "5": "05", "6": "06",
-    "7": "07", "8": "08", "9": "09", "10": "10", "11": "11", "12": "12"
+    "7": "07", "8": "08", "9": "09", "10": "10", "11": "11", "12": "12", "13": "13",
+    "Jan": "01", "Fev": "02", "Mar": "03", "Abr": "04", "Mai": "05", "Jun": "06",
+    "Jul": "07", "Ago": "08", "Set": "09", "Out": "10", "Nov": "11", "Dez": "12", "13º": "13"
 }
 
 @st.cache_data
 def carregar_siglas(_conn):
-    return pd.read_sql(GET_SIGLAS_EMPRESA, _conn)
+    try:
+        df = pd.read_sql(GET_SIGLAS_EMPRESA, _conn)
+        if not df.empty:
+            df.columns = [str(c).upper() for c in df.columns]
+        return df
+    except Exception as e:
+        return pd.DataFrame(columns=['COD_SEFAZ', 'SIGLA'])
 
 def formatar_moeda_br(valor):
     try:
@@ -31,209 +34,174 @@ def formatar_moeda_br(valor):
     except:
         return valor
 
-@st.cache_data(show_spinner="Sincronizando com a API...")
-def buscar_dados_siafe(ano, perfil_usuario):
+@st.cache_data(show_spinner="Sincronizando com a API SEFAZ...")
+def buscar_dados_siafe(ano):
     try:
-        # Utiliza o cliente centralizado sefaz_client (requisitar_sefaz)
         endpoint = f"folha-pagamento/pendente/{ano}"
-        data = requisitar_sefaz("POST", endpoint, payload={})
-
-        if isinstance(data, dict) and data.get("erro"):
-            raise Exception(data.get("mensagem", "Erro desconhecido na API"))
-
+        data = sefaz_client.requisitar_sefaz("POST", endpoint, payload={})
+        
         if not data:
             return pd.DataFrame()
 
         df = pd.DataFrame(data)
-        if 'itens' not in df.columns:
+        if df.empty:
             return pd.DataFrame()
 
-        df_explode = df.explode('itens').reset_index(drop=True)
-        itens_norm = pd.json_normalize(df_explode['itens']).add_prefix('item_')
-        df_final = pd.concat([df_explode.drop(columns=['itens']), itens_norm], axis=1)
+        if 'itens' in df.columns:
+            df_explode = df.explode('itens').reset_index(drop=True)
+            df_explode = df_explode.dropna(subset=['itens'])
+            if df_explode.empty:
+                return pd.DataFrame()
+            itens_norm = pd.json_normalize(df_explode['itens']).add_prefix('item_')
+            df_final = pd.concat([df_explode.drop(columns=['itens']).reset_index(drop=True), itens_norm.reset_index(drop=True)], axis=1)
+        else:
+            df_final = df
 
-        return df_final.rename(columns={'codigoUgSistemaExterno': 'Cod_Sefaz'})
+        # Normaliza todas as colunas para maiúsculas
+        df_final.columns = [str(c).upper() for c in df_final.columns]
+
+        return df_final
 
     except Exception as e:
-        eh_admin = perfil_usuario in ['a', 'g']
-        if eh_admin:
-            st.error(f"⚠️ Erro na API SIAFE: {e}")
-        else:
-            st.warning("⚠️ O serviço de integração SIAFE está temporariamente indisponível. Por favor, contate o suporte técnico.")
         return pd.DataFrame()
 
-def main(conn, ano_selecionado, mes_chave, meses_lista, perfil_usuario):
-    # CSS Customizado Otimizado para Compactação de Tela
-    st.markdown("""
-        <style>
-            .stApp {
-                background-color: #f8fafc;
-            }
-            /* Reduz padding geral de blocos e containers */
-            .block-container {
-                padding-top: 1.5rem;
-                padding-bottom: 1rem;
-            }
-            [data-testid="column"] {
-                display: flex;
-                flex-direction: column;
-                align-items: flex-start !important;
-            }
-            div[data-testid="stHorizontalBlock"] {
-                align-items: flex-start !important;
-            }
-            div[data-testid="stDataFrame"] {
-                margin-top: 0px !important;
-                border-radius: 8px;
-                box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
-            }
-            /* Cartões de métricas mais compactos */
-            .metric-card {
-                background-color: #ffffff;
-                border: 1px solid #e2e8f0;
-                padding: 10px 14px;
-                border-radius: 8px;
-                box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-                margin-bottom: 0.5rem;
-            }
-            .metric-title {
-                font-size: 0.75rem;
-                color: #64748b;
-                font-weight: 600;
-                text-transform: uppercase;
-                letter-spacing: 0.05em;
-            }
-            .metric-value {
-                font-size: 1.25rem;
-                color: #0f172a;
-                font-weight: 700;
-                margin-top: 2px;
-            }
-        </style>
-    """, unsafe_allow_html=True)
+def render(conn, ano_selecionado, mes_chave=None, meses_disponiveis=None, **kwargs):
+    try:
+        st.markdown("""
+            <style>
+                .stApp { background-color: #f8fafc; }
+                .block-container { padding-top: 2rem !important; padding-bottom: 2rem !important; padding-left: 2rem !important; padding-right: 2rem !important; }
+                div[data-testid="stDataFrame"] { border-radius: 8px; box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1); }
+                .metric-card { background-color: #ffffff; border: 1px solid #e2e8f0; padding: 10px 14px; border-radius: 8px; box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05); margin-bottom: 0.5rem; }
+            </style>
+        """, unsafe_allow_html=True)
 
-    mes_num_str = MAPA_MESES_ROBUSTO.get(mes_chave, "01")
-    competencia_busca = f"{mes_num_str}/{ano_selecionado}"
+        st.markdown("## 📊 Painel de Pagamentos Pendentes")
+        st.markdown("---")
 
-    st.title(f"📊 Painel de Pagamentos Pendentes ({competencia_busca})")
-    st.markdown("---")
+        col_c1, col_c2, col_c3 = st.columns([2, 2, 2])
+        with col_c1:
+            meses_opcoes = ["TODOS", 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13]
+            default_idx = meses_opcoes.index(mes_chave) if mes_chave in meses_opcoes else 0
+            mes_escolhido = st.selectbox("📅 Filtrar Mês:", options=meses_opcoes, index=default_idx)
 
-    df_total = buscar_dados_siafe(ano_selecionado, perfil_usuario)
-    if df_total.empty:
-        st.warning("Nenhum dado encontrado.")
-        return
+        with col_c2:
+            categorias_opcoes = ["TODAS", "FOLHA", "PPF"]
+            cat_escolhida = st.selectbox("📁 Categoria:", options=categorias_opcoes, index=0)
 
-    df_total['categoria'] = df_total['Cod_Sefaz'].apply(lambda x: "FOLHA" if str(x).isdigit() and int(x) <= 999 else "PPF")
+        with col_c3:
+            st.markdown("<br>", unsafe_allow_html=True)
+            btn_atualizar = st.button("🔄 Recarregar Dados", use_container_width=True)
 
-    # Seletor integrado com margem reduzida
-    cat_selecionada = st.radio("Selecione a Categoria:", ["FOLHA", "PPF"], horizontal=True)
-    st.markdown("<div style='margin-bottom: 8px;'></div>", unsafe_allow_html=True)
+        if btn_atualizar:
+            if "df_siafe_cache" in st.session_state:
+                del st.session_state["df_siafe_cache"]
+            st.cache_data.clear()
+            st.rerun()
 
-    df_mes = df_total[(df_total['competencia'].astype(str) == competencia_busca) & (df_total['categoria'] == cat_selecionada)].copy()
+        if "df_siafe_cache" not in st.session_state:
+            st.session_state["df_siafe_cache"] = buscar_dados_siafe(ano_selecionado)
 
-    col_esq, col_dir = st.columns([1, 4])
+        df_total = st.session_state.get("df_siafe_cache", pd.DataFrame())
 
-    with col_esq:
-        st.subheader(f"Unidades Gestoras ({cat_selecionada})")
-        resumo = df_mes.groupby(['Cod_Sefaz', 'codigoUg']).agg(
-            QTD=('codigoUg', 'size'),
-            VALOR_BRUTO=('item_valorBruto', 'sum')
-        ).reset_index()
+        if df_total.empty:
+            st.warning("⚠️ Não foi possível obter dados da API SEFAZ para o exercício selecionado no momento. Verifique a conexão ou tente novamente.")
+            return
+
+        # Padroniza coluna de unidade gestora para COD_SEFAZ
+        encontrou_ug = False
+        for col_cand in ['CODIGOUGSISTEMAEXTERNO', 'CODIGOUG', 'UG', 'ORGAO', 'CODIGO', 'CODIGOEXTERNO']:
+            if col_cand in df_total.columns:
+                df_total['COD_SEFAZ'] = df_total[col_cand]
+                encontrou_ug = True
+                break
+        if not encontrou_ug and 'COD_SEFAZ' not in df_total.columns:
+            df_total['COD_SEFAZ'] = "0"
+
+        df_total['CATEGORIA_CALC'] = df_total['COD_SEFAZ'].apply(lambda x: "FOLHA" if str(x).isdigit() and int(str(x)) <= 999 else "PPF")
+
+        # Mapeia ou unifica o campo de Data de Pagamento de forma robusta
+        col_dt_pag = next((c for c in ['ITEM_DATAPAGAMENTO', 'ITEM_DATAPAGAMENT', 'DATAPAGAMENTO', 'DATA_PAGAMENTO', 'DATAPAGAMENTO'] if c in df_total.columns), None)
+        if col_dt_pag:
+            df_total['DATA_PAGAMENTO_EXIBE'] = df_total[col_dt_pag]
+        else:
+            df_total['DATA_PAGAMENTO_EXIBE'] = "N/D"
+
+        # Identifica ou cria coluna de mês/competência para exibição clara
+        col_comp = next((c for c in ['COMPETENCIA', 'MES', 'ITEM_MES', 'ITEM_COMPETENCIA'] if c in df_total.columns), None)
+        if not col_comp:
+            if col_dt_pag:
+                df_total['COMPETENCIA_EXIBE'] = df_total[col_dt_pag].astype(str).str[5:7] + '/' + str(ano_selecionado)
+            else:
+                df_total['COMPETENCIA_EXIBE'] = "N/D"
+        else:
+            df_total['COMPETENCIA_EXIBE'] = df_total[col_comp]
+
+        df_filtrado = df_total.copy()
+
+        if cat_escolhida != "TODAS":
+            df_filtrado = df_filtrado[df_filtrado['CATEGORIA_CALC'] == cat_escolhida]
+
+        if mes_escolhido != "TODOS":
+            mes_str = MAPA_MESES_ROBUSTO.get(mes_escolhido, "10")
+            competencia_alvo = f"{mes_str}/{ano_selecionado}"
+            
+            col_data_filtro = next((c for c in ['COMPETENCIA_EXIBE', 'COMPETENCIA', 'DATA_PAGAMENTO_EXIBE'] if c in df_filtrado.columns), None)
+            if col_data_filtro:
+                df_filtrado = df_filtrado[df_filtrado[col_data_filtro].astype(str).str.contains(competencia_alvo, na=False)]
+
+        st.markdown("---")
 
         df_siglas = carregar_siglas(conn)
-        df_siglas.columns = ['Cod_Sefaz', 'Sigla']
-
-        resumo['Cod_Sefaz'] = resumo['Cod_Sefaz'].astype(str)
-        df_siglas['Cod_Sefaz'] = df_siglas['Cod_Sefaz'].astype(str)
-
-        resumo = resumo.merge(df_siglas, on='Cod_Sefaz', how='left')
-        resumo['Sigla'] = resumo['Sigla'].fillna("N/D")
-
-        resumo = resumo[['Cod_Sefaz', 'Sigla', 'codigoUg', 'QTD', 'VALOR_BRUTO']]
-
-        linha_total = pd.DataFrame({
-            'Cod_Sefaz': ['TOTAL'], 'Sigla': [''], 'codigoUg': [''],
-            'QTD': [resumo['QTD'].sum()], 'VALOR_BRUTO': [resumo['VALOR_BRUTO'].sum()]
-        })
-
-        df_display = pd.concat([resumo, linha_total], ignore_index=True)
-
-        evento = st.dataframe(
-            df_display, width='stretch', hide_index=True,
-            selection_mode="multi-row", on_select="rerun",
-            column_config={
-                "QTD": st.column_config.NumberColumn("QTD", format="%d"),
-                "VALOR_BRUTO": st.column_config.NumberColumn("VALOR BRUTO", format="R$ %.2f")
-            }
-        )
-
-        selected_rows = evento.selection.rows
-        indices_validos = [i for i in selected_rows if i < len(resumo)]
-        modo_filtro = "TOTAL" if (not selected_rows or len(resumo) in selected_rows) else "UNIDADE"
-
-        if modo_filtro == "UNIDADE":
-            sel_data = resumo.iloc[indices_validos]
-            listas_sefaz = sel_data['Cod_Sefaz'].astype(str).tolist()
-            listas_ug = sel_data['codigoUg'].astype(str).tolist()
+        if not df_siglas.empty and 'COD_SEFAZ' in df_filtrado.columns and 'COD_SEFAZ' in df_siglas.columns:
+            df_filtrado['COD_SEFAZ'] = df_filtrado['COD_SEFAZ'].astype(str)
+            df_siglas['COD_SEFAZ'] = df_siglas['COD_SEFAZ'].astype(str)
+            df_filtrado = pd.merge(df_filtrado, df_siglas, on='COD_SEFAZ', how='left')
+            if 'SIGLA' in df_filtrado.columns:
+                df_filtrado['SIGLA'] = df_filtrado['SIGLA'].fillna("N/D")
+            else:
+                df_filtrado['SIGLA'] = "N/D"
         else:
-            listas_sefaz = resumo['Cod_Sefaz'].astype(str).tolist()
-            listas_ug = resumo['codigoUg'].astype(str).tolist()
+            df_filtrado['SIGLA'] = "N/D"
 
-    with col_dir:
-        st.subheader(f"Detalhes - {modo_filtro}")
-        detalhes = df_mes[df_mes.apply(lambda x: (str(x['Cod_Sefaz']), str(x['codigoUg']))
-                                    in zip(listas_sefaz, listas_ug), axis=1)].copy() if modo_filtro == "UNIDADE" else df_mes.copy()
+        # --- KPI CARDS EXECUTIVOS ---
+        tot_reg = len(df_filtrado)
+        col_bruto = next((c for c in ['ITEM_VALORBRUTO', 'VALORBRUTO', 'VALOR'] if c in df_filtrado.columns), None)
+        val_bruto = df_filtrado[col_bruto].sum() if col_bruto else 0.0
 
-        detalhes['Cod_Sefaz'] = detalhes['Cod_Sefaz'].astype(str)
-        df_siglas['Cod_Sefaz'] = df_siglas['Cod_Sefaz'].astype(str)
-        detalhes = detalhes.merge(df_siglas, on='Cod_Sefaz', how='left')
-        detalhes['Sigla'] = detalhes['Sigla'].fillna("N/D")
+        col_liq = next((c for c in ['ITEM_VALORLIQUIDO', 'VALOR LIQUIDO', 'VALORLIQUIDO'] if c in df_filtrado.columns), None)
+        val_liq = df_filtrado[col_liq].sum() if col_liq else 0.0
 
-        # Cartões de Métricas Compactos (em uma única linha)
-        m1, m2, m3 = st.columns(3)
+        k1, k2, k3 = st.columns(3)
+        k1.metric("📦 Total de Registros", f"{tot_reg:,}".replace(",", "."))
+        k2.metric("💰 Valor Bruto Total", formatar_moeda_br(val_bruto))
+        k3.metric("💵 Valor Líquido Total", formatar_moeda_br(val_liq))
 
-        with m1:
-            st.markdown(f"""
-                <div class="metric-card">
-                    <div class="metric-title">Registros</div>
-                    <div class="metric-value">{len(detalhes):,}</div>
-                </div>
-            """, unsafe_allow_html=True)
+        st.markdown("### 📋 Detalhamento Geral")
 
-        with m2:
-            st.markdown(f"""
-                <div class="metric-card">
-                    <div class="metric-title">Total Bruto</div>
-                    <div class="metric-value">{formatar_moeda_br(detalhes['item_valorBruto'].sum())}</div>
-                </div>
-            """, unsafe_allow_html=True)
-
-        with m3:
-            st.markdown(f"""
-                <div class="metric-card">
-                    <div class="metric-title">Total Líquido</div>
-                    <div class="metric-value">{formatar_moeda_br(detalhes['item_valorLiquido'].sum())}</div>
-                </div>
-            """, unsafe_allow_html=True)
-
-        df_exibicao = detalhes.copy()
-
-        cols = ['codigo', 'codigoExterno', 'Cod_Sefaz', 'Sigla', 'tipoProcessamento', 'item_nome', 'item_matricula',
-                'item_dataPagamento', 'item_descricaoStatusPgto', 'item_valorBruto', 'item_valorLiquido']
+        # Lista de colunas incluindo explicitamente a Data de Pagamento formatada
+        colunas_padrao = [
+            'CODIGO', 'COD_SEFAZ', 'SIGLA', 'TIPOPROCESSAMENTO', 
+            'COMPETENCIA_EXIBE', 'DATA_PAGAMENTO_EXIBE', 'ITEM_NOME', 
+            'ITEM_MATRICULA', 'ITEM_DESCRICAOSTATUSPGTO', 
+            'ITEM_VALORBRUTO', 'ITEM_VALORLIQUIDO'
+        ]
+        colunas_existentes = [c for c in colunas_padrao if c in df_filtrado.columns]
 
         st.dataframe(
-            df_exibicao[[c for c in cols if c in df_exibicao.columns]],
-            width='stretch',
+            df_filtrado[colunas_existentes] if colunas_existentes else df_filtrado,
+            use_container_width=True,
             hide_index=True,
+            height=550,
             column_config={
-                "Cod_Sefaz": st.column_config.TextColumn("Cod SEFAZ"),
-                "Sigla": st.column_config.TextColumn("Órgão / Sigla"),
-                "item_valorBruto": st.column_config.NumberColumn("Valor Bruto", format="R$ %.2f"),
-                "item_valorLiquido": st.column_config.NumberColumn("Valor Líquido", format="R$ %.2f")
+                "COD_SEFAZ": st.column_config.TextColumn("Cod SEFAZ"),
+                "SIGLA": st.column_config.TextColumn("Órgão / Sigla"),
+                "COMPETENCIA_EXIBE": st.column_config.TextColumn("Competência / Mês"),
+                "DATA_PAGAMENTO_EXIBE": st.column_config.TextColumn("Data Pagamento"),
+                "ITEM_VALORBRUTO": st.column_config.NumberColumn("Valor Bruto", format="R$ %.2f"),
+                "ITEM_VALORLIQUIDO": st.column_config.NumberColumn("Valor Líquido", format="R$ %.2f")
             }
         )
-
-def render(conn, ano, mes, meses_lista=None):
-  perfil = st.session_state.get("perfil_usuario", "a")
-  main(conn, ano, mes, meses_lista, perfil)
+    except Exception as e:
+        st.error(f"Ocorreu um erro ao renderizar o painel: {e}")
 
