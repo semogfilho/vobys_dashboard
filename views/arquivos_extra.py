@@ -37,6 +37,15 @@ except ImportError:
 
 # --- FUNÇÕES AUXILIARES DE BANCO E CONVERSÃO GERAL ---
 
+def formatar_moeda_br(valor):
+    """Formata um valor numérico para o padrão monetário brasileiro (ex: R$ 1.335.503,66)."""
+    try:
+        val_float = float(valor)
+    except (ValueError, TypeError):
+        val_float = 0.0
+    return f"R$ {val_float:,.2f}".replace(',', 'v').replace('.', ',').replace('v', '.')
+
+
 def executar_query(conn, query, params):
     cursor = conn.cursor()
     params_clean = {}
@@ -448,13 +457,9 @@ def render_bloco_processamento(
             status_obs = dados_recibo.get("status") or dados_recibo.get("situacao") or "Sucesso"
             val_bruto = dados_recibo.get("valorTotalBruto") or dados_recibo.get("valor") or 0.0
             val_liquido = dados_recibo.get("valorTotalLiquido") or 0.0
-            
-            try:
-                val_bruto = float(val_bruto)
-                val_liquido = float(val_liquido)
-            except (ValueError, TypeError):
-                val_bruto = 0.0
-                val_liquido = 0.0
+
+            str_val_bruto = formatar_moeda_br(val_bruto)
+            str_val_liquido = formatar_moeda_br(val_liquido)
 
             st.markdown(f"""
             <div class="receipt-box">
@@ -474,11 +479,11 @@ def render_bloco_processamento(
                     </div>
                     <div class="receipt-item">
                         <label>Valor Bruto</label>
-                        <value>R$ {val_bruto:,.2f}</value>
+                        <value>{str_val_bruto}</value>
                     </div>
                     <div class="receipt-item">
                         <label>Valor Líquido</label>
-                        <value>R$ {val_liquido:,.2f}</value>
+                        <value>{str_val_liquido}</value>
                     </div>
                 </div>
             </div>
@@ -534,14 +539,14 @@ def render_bloco_processamento(
             tot_v = df_exibicao[col_v].sum() if col_v else 0.0
             tot_d = df_exibicao[col_d].sum() if col_d else 0.0
 
-            str_tot_v = f"R$ {tot_v:,.2f}".replace(',', 'v').replace('.', ',').replace('v', '.')
-            str_tot_d = f"R$ {tot_d:,.2f}".replace(',', 'v').replace('.', ',').replace('v', '.')
+            str_tot_v = formatar_moeda_br(tot_v)
+            str_tot_d = formatar_moeda_br(tot_d)
 
             df_tabela_formatada = df_exibicao.copy()
             for col in cols_valores:
                 if col in df_tabela_formatada.columns:
                     df_tabela_formatada[col] = df_tabela_formatada[col].apply(
-                        lambda x: f"R$ {x:,.2f}".replace(',', 'v').replace('.', ',').replace('v', '.') if isinstance(x, (int, float)) else x
+                        lambda x: formatar_moeda_br(x) if isinstance(x, (int, float)) else x
                     )
 
             html_tabela = df_tabela_formatada.to_html(index=True, classes="custom-preview-table", escape=False)

@@ -9,31 +9,14 @@ def garantir_autenticacao_sefaz(servico_nome=None):
     if not st.session_state.get("sefaz_auth", False):
         modal_autenticacao_sefaz(servico_nome)
 
-
-#def garantir_autenticacao_sefaz(servico_nome):
-#    # Se já estiver autenticado, não faz nada
-#    if "sefaz_cpf" in st.session_state:
-#        return True
-    
-    # Se não, dispara o modal
-#    modal_autenticacao_sefaz(servico_nome)
-#    st.stop() # Isso PARA a execução aqui, forçando o usuário a interagir com o modal
-
-# O "Porteiro" - Decido se mostra o diálogo ou libera o acesso
+# Função puramente lógica para checar se está autenticado (sem duplicar botões na sidebar)
 def verificar_credenciais_sefaz():
-    if st.session_state.get('sefaz_auth'):
-        st.sidebar.success("✅ Conectado à SEFAZ")
-        if st.sidebar.button("Desconectar SEFAZ"):
-            for key in ['sefaz_auth', 'sefaz_cpf', 'sefaz_pass']:
-                st.session_state.pop(key, None)
-            st.rerun()
+    if st.session_state.get('sefaz_auth', False):
         return True
-    
-    # Se não está logado, abre o diálogo e retorna False
     modal_autenticacao_sefaz()
     return False
 
-# O "Diálogo" - A parte visual que você queria "estilosa"
+# O "Diálogo" - A parte visual do modal de login da SEFAZ
 @st.dialog("Acesso SEFAZ")
 def modal_autenticacao_sefaz(servico_nome=None):
     if servico_nome:
@@ -59,19 +42,15 @@ def modal_autenticacao_sefaz(servico_nome=None):
         st.write("") 
         
         if st.form_submit_button("✅ Ok"):
-            # Substitua 'testar_conexao_sefaz' pela sua função real de validação
             if testar_conexao_sefaz(user_cpf, user_pass):
                 st.session_state.sefaz_auth = True
                 st.session_state.sefaz_cpf = user_cpf
                 st.session_state.sefaz_pass = user_pass
-                # IMPORTANTE: Limpa a tentativa para destravar o fluxo
                 st.session_state["tentando_enviar_sefaz"] = False
                 st.rerun()
             else:
                 st.error("Credenciais inválidas.")
 
-    # Se o modal fechar (clique no X ou fora), o script passa daqui.
-    # Garantimos que a flag de tentativa seja limpa para evitar que a tela trave:
     if not st.session_state.get("sefaz_auth", False):
         st.session_state["tentando_enviar_sefaz"] = False
 
@@ -88,28 +67,17 @@ def testar_conexao_sefaz(cpf, senha):
 
         payload = {"usuario": cpf, "senha": senha}
         r_auth = session.post(f"{BASE_URL}/auth", json=payload, timeout=(10, 20))
-
-        # Dispara uma exceção automaticamente para status codes 4xx ou 5xx
         r_auth.raise_for_status()
-
         return True
 
     except requests.exceptions.HTTPError as e:
-        # O servidor da SEFAZ respondeu, mas com um código de erro HTTP
-        status_code = e.response.status_code
-        resposta_corpo = e.response.text
-        st.error(f"Erro HTTP da SEFAZ [Status {status_code}]: {resposta_corpo}")
+        status_code = e.response.status_code if e.response else 'Desconhecido'
+        st.error(f"Erro HTTP da SEFAZ [Status {status_code}]: {e.response.text}")
         return False
 
     except requests.exceptions.RequestException as e:
-        # Erros de rede, timeout ou conexão encerrada abruptamente (RemoteDisconnected)
-        if hasattr(e, 'response') and e.response is not None:
-            status_code = e.response.status_code
-            st.error(f"Erro na requisição [Status {status_code}]: {e.response.text}")
-        else:
-            st.error(f"Falha de conexão/infraestrutura com a SEFAZ: {e}")
+        st.error(f"Falha de conexão/infraestrutura com a SEFAZ: {e}")
         return False
-
 
 def carregar_usuarios():
     caminho = os.path.join(os.path.dirname(__file__), "users.toml")
@@ -155,15 +123,7 @@ def gerenciar_sessao_fluxo():
                 st.error("❌ Senha incorreta.")
         else:
             st.error("❌ Usuário não encontrado.")
-#[usuario.comum2]
-#nome = "Usuário Comum2"
-#email = "jose.filho@mv.com.br"
-#tipo = "c"
-#senha_hash = "d4735e3a265e16eee03f59718b9b5d03019c07d8b6c51f90da3a666eec13ab35"
-#requer_reset = "nao"
 
-
-    # --- FLUXO: ESQUECI A SENHA ---
     st.divider()
     if st.button("Esqueci minha senha"):
         st.session_state.modo_recuperacao = True
@@ -185,7 +145,6 @@ def gerenciar_sessao_fluxo():
             st.error("❌ Usuário ou e-mail não encontrado.")
         
         elif usuarios_encontrados:
-            # Estilização com Container para separar o fluxo
             with st.container(border=True):
                 if len(usuarios_encontrados) > 1:
                     st.warning("⚠️ Múltiplas contas encontradas. Selecione o login desejado:")
@@ -199,7 +158,6 @@ def gerenciar_sessao_fluxo():
                 info = usuario_final["info"]
                 email_cadastrado = info.get("email", "")
 
-                # Máscara elegante
                 prefixo, dominio = email_cadastrado.split("@")
                 mascara = f"{prefixo[0]}{'*' * (len(prefixo)-1)}@{dominio}"
                 
@@ -208,7 +166,6 @@ def gerenciar_sessao_fluxo():
                 
                 if st.button("🚀 Enviar Instruções"):
                     if email_input.strip().lower() == email_cadastrado.lower():
-                        import random
                         senha_temp = str(random.randint(100000, 999999))
                         
                         if usuarios.enviar_email_senha(email_cadastrado, senha_temp, info["nome"], login_chave):

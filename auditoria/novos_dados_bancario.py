@@ -421,6 +421,24 @@ def limpar_numeros(valor):
         return re.sub(r'\D', '', str(valor))
     return None
 
+def limpar_agencia(val):
+    if pd.isna(val) or not str(val).strip():
+        return None
+    
+    val_str = str(val).strip().replace(' ', '')
+    
+    # Se houver hífen, pega apenas a parte antes dele
+    if '-' in val_str:
+        val_str = val_str.split('-')[0]
+        
+    # Extrai estritamente apenas os dígitos numéricos (remove letras como 'X')
+    digitos = "".join(filter(str.isdigit, val_str))
+    
+    if not digitos:
+        return None
+        
+    # Trunca para no máximo 4 dígitos e preenche com zeros à esquerda se faltar
+    return digitos[:4].zfill(4)
 
 def montar_json_sefaz(row):
     return {
@@ -440,7 +458,7 @@ def montar_json_sefaz(row):
         "email": remover_acentos(row['EMAIL']).lower() if pd.notnull(row['EMAIL']) else None,
         "dadosBancarios": [{
             "codigoBanco": row['CODIGOBANCO'],
-            "codigoAgencia": str(row['CODIGOAGENCIA']).split('-')[0].zfill(4),
+            "codigoAgencia": limpar_agencia(row.get('CODIGOAGENCIA')),
             "numeroConta": str(row['NUMEROCONTA']).replace(' ', '').replace('.', '').replace('-', '').zfill(13),
             "flgContaPoupanca": bool(row['FLGCONTAPOUPANCA'] == 1),
             "status": row['STATUS'],

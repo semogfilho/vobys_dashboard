@@ -43,7 +43,7 @@ def render(conn, *args, **kwargs):
         df_mod = carregar_todos_modulos()
 
         with col_form:
-            modo_acao = st.radio("Ação:", ["➕ Novo Módulo", "✏️ Editar Módulo"], horizontal=True, key="modo_acao_modulo")
+            modo_acao = st.radio("Ação:", ["➕ Novo Módulo", "✏️ Editar Módulo", "🗑️ Excluir Módulo"], horizontal=True, key="modo_acao_modulo")
 
             if modo_acao == "➕ Novo Módulo":
                 st.subheader("Novo Módulo")
@@ -77,7 +77,7 @@ def render(conn, *args, **kwargs):
                         else:
                             st.warning("Preencha o nome do menu.")
 
-            else:
+            elif modo_acao == "✏️ Editar Módulo":
                 st.subheader("Editar Módulo Existente")
                 if not df_mod.empty:
                     modulo_opcoes = {f"{row['ID']} - {row['NOME_MENU']} ({row['ARQUIVO_VIEW']})": row['ID'] for _, row in df_mod.iterrows()}
@@ -123,6 +123,34 @@ def render(conn, *args, **kwargs):
                                 st.warning("Preencha o nome do menu.")
                 else:
                     st.info("Nenhum módulo cadastrado para editar.")
+
+            else:
+                st.subheader("Excluir Módulo")
+                if not df_mod.empty:
+                    modulo_opcoes = {f"{row['ID']} - {row['NOME_MENU']} ({row['ARQUIVO_VIEW']})": row['ID'] for _, row in df_mod.iterrows()}
+                    
+                    mod_selecionado_label = st.selectbox("Selecione o Módulo para Excluir:", options=list(modulo_opcoes.keys()), key="select_modulo_exclusao")
+                    id_mod_del = modulo_opcoes[mod_selecionado_label]
+                    dados_atuais = df_mod[df_mod['ID'] == id_mod_del].iloc[0]
+
+                    st.warning(f"Tem certeza que deseja excluir o módulo **{dados_atuais['NOME_MENU']}** (ID: {id_mod_del})? Esta ação também removerá as associações de perfis deste módulo.")
+
+                    if st.button("Confirmar Exclusão", type="primary", key=f"btn_del_mod_{id_mod_del}"):
+                        if conn:
+                            try:
+                                cursor = conn.cursor()
+                                cursor.execute("DELETE FROM josegomes.perfil_modulo WHERE id_modulo = :1", (id_mod_del,))
+                                cursor.execute("DELETE FROM josegomes.modulo WHERE id = :1", (id_mod_del,))
+                                conn.commit()
+                                cursor.close()
+                                st.success(f"Módulo '{dados_atuais['NOME_MENU']}' excluído com sucesso!")
+                                st.rerun()
+                            except Exception as e:
+                                st.error(f"Erro ao excluir módulo: {e}")
+                        else:
+                            st.error("Falha na conexão.")
+                else:
+                    st.info("Nenhum módulo cadastrado para excluir.")
 
         with col_list:
             st.subheader("Módulos Cadastrados")

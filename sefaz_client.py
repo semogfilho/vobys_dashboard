@@ -58,7 +58,24 @@ def requisitar_sefaz(metodo, endpoint, payload=None, usuario=None, senha=None):
         else:
             response = session.get(url, timeout=(10, 30))
             
-        response.raise_for_status()
+        # Se o status code for de erro (ex: 400, 422, 500), tratamos manualmente 
+        # para ler o JSON de erro da SEFAZ antes de estourar a exceção nativa.
+        if response.status_code >= 400:
+            status = response.status_code
+            detalhes_msg = ""
+            try:
+                err_json = response.json()
+                if isinstance(err_json, list):
+                    detalhes_msg = " | ".join([item.get('erro', str(item)) for item in err_json])
+                elif isinstance(err_json, dict):
+                    detalhes_msg = err_json.get('erro', err_json.get('message', str(err_json)))
+                else:
+                    detalhes_msg = response.text
+            except Exception:
+                detalhes_msg = response.text if response.text else "Erro na requisição"
+                
+            return {'erro': True, 'tipo': 'http', 'mensagem': f'Erro HTTP {status}: {detalhes_msg}'}
+
         return response.json()
 
     except requests.exceptions.ConnectionError as ce:
@@ -66,7 +83,8 @@ def requisitar_sefaz(metodo, endpoint, payload=None, usuario=None, senha=None):
     except requests.exceptions.Timeout:
         return {'erro': True, 'tipo': 'timeout', 'mensagem': 'Erro: O tempo limite (timeout) de resposta da SEFAZ foi excedido.'}
     except requests.exceptions.HTTPError as he:
-        status = he.response.status_code if he.response else 'Desconhecido'
+        status = he.response.status_code if he.response else '400'
         return {'erro': True, 'tipo': 'http', 'mensagem': f'Erro HTTP {status}: {str(he)}'}
     except Exception as e:
         return {'erro': True, 'tipo': 'geral', 'mensagem': f'Erro na API (Status/Falha): {str(e)}'}
+

@@ -293,8 +293,28 @@ def renderizar_dados_bancarios(
 
         mes_exibicao = "13º" if int(mes) == 13 else f"{int(mes):02d}"
 
-        col_tit, col_filtro, col_atualizar = st.columns(
-            [4, 2, 1], vertical_alignment="bottom"
+        st.markdown(
+            """
+            <style>
+            div[data-testid="stVerticalBlock"] {
+                gap: 0.3rem !important;
+            }
+            hr {
+                margin-top: 0.6rem !important;
+                margin-bottom: 0.6rem !important;
+            }
+            div[data-testid="stContainer"] {
+                padding-top: 4px !important;
+                padding-bottom: 4px !important;
+            }
+            </style>
+        """,
+            unsafe_allow_html=True,
+        )
+
+        # Layout ajustado com coluna extra à direita para afastar o botão da barra de ferramentas do Streamlit
+        col_tit, col_filtro, col_atualizar, col_margem_direita = st.columns(
+            [3.5, 2.0, 1.3, 1.0], vertical_alignment="bottom"
         )
         with col_tit:
             st.subheader(f"🏦 Dados Bancários (Novatos) ({mes_exibicao}/{ano})")
@@ -318,24 +338,8 @@ def renderizar_dados_bancarios(
                 st.session_state.pop("filtro_orgao_selecionado", None)
                 st.rerun()
 
-        st.markdown(
-            """
-            <style>
-            div[data-testid="stVerticalBlock"] {
-                gap: 0.3rem !important;
-            }
-            hr {
-                margin-top: 0.6rem !important;
-                margin-bottom: 0.6rem !important;
-            }
-            div[data-testid="stContainer"] {
-                padding-top: 4px !important;
-                padding-bottom: 4px !important;
-            }
-            </style>
-        """,
-            unsafe_allow_html=True,
-        )
+        # Respiro vertical para evitar colisão com os ícones flutuantes do editor
+        st.markdown("<div style='margin-bottom: 12px;'></div>", unsafe_allow_html=True)
 
         if not st.session_state.df_bancario.empty:
             if "ENVIAR" not in st.session_state.df_bancario.columns:
